@@ -1,0 +1,203 @@
+:root {
+  --text: #3f3b45;
+  --text-h: #17151c;
+  --bg: #faf9f7;
+  --surface: #fff;
+  --border: #e4e1e8;
+  --accent: #6d5bd0;
+  --accent-text: #fff;
+  --accent-bg: rgba(109, 91, 208, 0.08);
+  --error: #b3261e;
+  --error-bg: rgba(179, 38, 30, 0.08);
+
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  font: 18px/1.55 var(--sans);
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #d4d1d9;
+    --text-h: #f5f3f7;
+    --bg: #1a1820;
+    --surface: #232030;
+    --border: #37333f;
+    --accent: #9d8cf2;
+    --accent-text: #14121b;
+    --accent-bg: rgba(157, 140, 242, 0.12);
+    --error: #ff8a80;
+    --error-bg: rgba(255, 138, 128, 0.12);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  max-width: 720px;
+  margin: 0 auto;
+  min-height: 100svh;
+  padding: 40px 24px 64px;
+}
+
+h1 {
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--text-h);
+  margin: 0 0 8px;
+}
+
+button {
+  font: inherit;
+}
+
+button:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Home */
+
+.home-subtitle {
+  margin: 0 0 32px;
+  font-size: 18px;
+}
+
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.tool-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.tool-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.tool-card-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.tool-card-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.tool-card-tagline {
+  font-size: 15px;
+  opacity: 0.8;
+}
+
+/* Tool shell */
+
+.back-button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 16px;
+  padding: 8px 0;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.tool-intro {
+  margin: 0 0 20px;
+  opacity: 0.85;
+}
+
+.tool-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+textarea {
+  font: inherit;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  resize: vertical;
+}
+
+.tool-form button {
+  align-self: flex-start;
+  background: var(--accent);
+  color: var(--accent-text);
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tool-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tool-error {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.tool-result-list {
+  margin: 24px 0 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tool-result-fields {
+  margin: 24px 0 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+}
+
+.tool-result-fields dt {
+  font-weight: 600;
+  color: var(--text-h);
+  white-space: nowrap;
+}
+
+.tool-result-fields dd {
+  margin: 0;
+}
+
+.tool-result-plain {
+  margin: 24px 0 0;
+  white-space: pre-wrap;
+}
