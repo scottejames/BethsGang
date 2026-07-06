@@ -17,13 +17,13 @@ function parseResult(output: string) {
 
 function ToneChecker() {
   const [message, setMessage] = useState('');
+  const [context, setContext] = useState('');
   const { output, loading, error, run } = useAiTool(meta.id);
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (message.trim()) {
-      run(message.trim());
-    }
+    if (!message.trim()) return;
+    run(JSON.stringify({ message: message.trim(), context: context.trim() }));
   }
 
   const parsed = output ? parseResult(output) : null;
@@ -43,6 +43,20 @@ function ToneChecker() {
           rows={6}
           disabled={loading}
         />
+
+        <label className="tool-field">
+          <span>
+            Context <span className="tool-field-hint">(optional — only if it helps)</span>
+          </span>
+          <textarea
+            value={context}
+            onChange={(event) => setContext(event.target.value)}
+            placeholder="e.g. who this is going to, or anything about the situation that's relevant"
+            rows={2}
+            disabled={loading}
+          />
+        </label>
+
         <button type="submit" disabled={loading || !message.trim()}>
           {loading ? 'Checking…' : 'Check tone'}
         </button>

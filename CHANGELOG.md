@@ -35,6 +35,8 @@ All notable changes to this project are documented here.
 - `runLocal.sh` — one-command local dev bootstrapper: checks `node_modules` is installed,
   checks the `ANTHROPIC_API_KEY` sandbox secret is set, typechecks, then starts the
   Amplify sandbox and the Vite dev server together and prints the local app URL.
+- **Pomodoro Timer** tool — 5/10/15 minute focus timer with stop/resume and reset, and a
+  gently pulsing tomato graphic (Twemoji, CC-BY 4.0 — see README "Assets") while running.
 
 ### Changed
 
@@ -46,6 +48,11 @@ All notable changes to this project are documented here.
   existing `runAiTool(toolId, input)` string argument; a small per-tool builder in
   `ai-assist/handler.ts` (`USER_MESSAGE_BUILDERS`) turns that JSON into the actual prompt.
   The shared query/schema didn't need to change, and every other tool is unaffected.
+- Tone Checker now has an optional "Context" field (e.g. who the message is going to, or
+  something relevant about the situation) using the same structured-JSON pattern as Reply
+  Starter. Deliberately phrased low-pressure and factual ("optional — only if it helps",
+  example text about the situation rather than feelings) rather than suggesting emotionally
+  loaded example phrasing, so the field itself doesn't prime worst-case framing.
 
 ### Fixed
 
@@ -56,3 +63,7 @@ All notable changes to this project are documented here.
   `package-lock.json` from scratch; it still failed `npm ci` even freshly generated (an
   npm/bundled-dependency interaction, not a real drift), so `amplify.yml` now uses
   `npm install` instead of `npm ci` for both the backend and frontend install steps.
+- Reply Starter's tool folder (`meta.ts`, `index.tsx`) was left out of the commit that
+  introduced it, so the Amplify Hosting build failed with `Cannot find module
+  './replyStarter'` (worked locally since the files existed on disk; only broke on a clean
+  CI clone). Committed the missing files.

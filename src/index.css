@@ -165,6 +165,12 @@ textarea {
   min-width: 160px;
 }
 
+.tool-field-hint {
+  font-weight: 400;
+  opacity: 0.7;
+  font-size: 13px;
+}
+
 .tool-field select,
 .tool-field input[type='text'] {
   font: inherit;

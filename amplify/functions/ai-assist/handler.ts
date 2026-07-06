@@ -12,7 +12,8 @@ Each step should be small enough to start immediately, described as a physical o
 Do not add commentary, encouragement, or headers — respond with the checklist only, one step per line, formatted as "1. ...".`,
 
   'tone-checker': `You help people with ADHD who worry their written messages (emails, texts, Slack) come across wrong before they send them.
-Given a message, respond in this exact format:
+You may also be given optional context about the situation (e.g. who the message is going to, or something relevant going on around it). Use it to inform your read, but stay grounded in the actual words of the message — don't assume more than what's given, and don't speculate about anyone's feelings or intentions beyond the message itself.
+Given a message (and optional context), respond in this exact format:
 Tone: <one or two words, e.g. "Neutral", "Blunt", "Friendly">
 Likely to land as: <one sentence on how a reader would probably perceive it>
 Suggestion: <one short concrete rewrite tip, or "None needed" if the message is fine as-is>
@@ -69,8 +70,33 @@ function buildReplyStarterMessage(rawInput: string): string {
     .join('\n\n');
 }
 
+interface ToneCheckerInput {
+  message: string;
+  context?: string;
+}
+
+function buildToneCheckerMessage(rawInput: string): string {
+  let parsed: Partial<ToneCheckerInput>;
+  try {
+    parsed = JSON.parse(rawInput);
+  } catch {
+    parsed = { message: rawInput };
+  }
+
+  const message = parsed.message ?? rawInput;
+  const context = parsed.context?.trim();
+
+  return [
+    `Message to check:\n"""\n${message}\n"""`,
+    context ? `Context for the situation: ${context}` : undefined,
+  ]
+    .filter((line): line is string => Boolean(line))
+    .join('\n\n');
+}
+
 const USER_MESSAGE_BUILDERS: Record<string, (rawInput: string) => string> = {
   'reply-starter': buildReplyStarterMessage,
+  'tone-checker': buildToneCheckerMessage,
 };
 
 export const handler: Schema['runAiTool']['functionHandler'] = async (event) => {
