@@ -17,6 +17,60 @@ Tone: <one or two words, e.g. "Neutral", "Blunt", "Friendly">
 Likely to land as: <one sentence on how a reader would probably perceive it>
 Suggestion: <one short concrete rewrite tip, or "None needed" if the message is fine as-is>
 Be reassuring and non-judgmental. Do not rewrite the whole message unless asked.`,
+
+  'reply-starter': `You help people with ADHD who are stuck staring at a message they need to reply to and can't get started.
+You will be given the message to reply to, a desired tone, a desired length, and optionally a short note on the intent the reply should accomplish.
+Write exactly 3 draft replies matching the requested tone and length as closely as possible. If an intent is given, make sure the drafts clearly accomplish it; otherwise cover a few different reasonable angles (e.g. a quick yes, a polite decline or delay, a request for more info) where that fits the message.
+Format as a numbered list ("1. ...", "2. ...", "3. ..."), one draft per number. Do not add commentary, headers, or explanations — just the three drafts.`,
+};
+
+// Tools whose frontend sends structured JSON (instead of a plain string) as `input`
+// register a builder here to turn that JSON into the actual text sent to Claude.
+// Tools not listed here just pass `input` straight through unchanged.
+interface ReplyStarterInput {
+  message: string;
+  tone?: 'formal' | 'neutral' | 'friendly';
+  verbosity?: 'short' | 'medium' | 'long';
+  intent?: string;
+}
+
+const TONE_LABELS: Record<NonNullable<ReplyStarterInput['tone']>, string> = {
+  formal: 'Formal — suitable for business communication',
+  neutral: 'Neutral — suitable for someone you know but aren\'t close with',
+  friendly: 'Friendly — suitable for a close friend',
+};
+
+const VERBOSITY_LABELS: Record<NonNullable<ReplyStarterInput['verbosity']>, string> = {
+  short: 'Short — a sentence or less per draft',
+  medium: 'Medium — one to three sentences per draft',
+  long: 'Long — a short paragraph per draft',
+};
+
+function buildReplyStarterMessage(rawInput: string): string {
+  let parsed: Partial<ReplyStarterInput>;
+  try {
+    parsed = JSON.parse(rawInput);
+  } catch {
+    parsed = { message: rawInput };
+  }
+
+  const message = parsed.message ?? rawInput;
+  const tone = parsed.tone && TONE_LABELS[parsed.tone] ? parsed.tone : 'neutral';
+  const verbosity = parsed.verbosity && VERBOSITY_LABELS[parsed.verbosity] ? parsed.verbosity : 'medium';
+  const intent = parsed.intent?.trim();
+
+  return [
+    `Message to reply to:\n"""\n${message}\n"""`,
+    `Desired tone: ${TONE_LABELS[tone]}`,
+    `Desired length: ${VERBOSITY_LABELS[verbosity]}`,
+    intent ? `Desired intent for the reply: ${intent}` : undefined,
+  ]
+    .filter((line): line is string => Boolean(line))
+    .join('\n\n');
+}
+
+const USER_MESSAGE_BUILDERS: Record<string, (rawInput: string) => string> = {
+  'reply-starter': buildReplyStarterMessage,
 };
 
 export const handler: Schema['runAiTool']['functionHandler'] = async (event) => {
@@ -27,11 +81,14 @@ export const handler: Schema['runAiTool']['functionHandler'] = async (event) => 
     throw new Error(`Unknown tool: ${toolId}`);
   }
 
+  const buildUserMessage = USER_MESSAGE_BUILDERS[toolId];
+  const userMessage = buildUserMessage ? buildUserMessage(input) : input;
+
   const response = await client.messages.create({
     model: 'claude-haiku-4-5',
     max_tokens: 1024,
     system: systemPrompt,
-    messages: [{ role: 'user', content: input }],
+    messages: [{ role: 'user', content: userMessage }],
   });
 
   const textBlock = response.content.find(

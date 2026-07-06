@@ -27,12 +27,25 @@ All notable changes to this project are documented here.
 - `amplify.yml` build spec for Amplify Hosting CI/CD (backend + frontend phases).
 - `README.md` describing dependencies, local dev, deployment, and architecture.
 - `CHANGELOG.md` (this file).
+- `TODO.md` — backlog of future tool ideas (Side Quest Log, Is This Mad?, Just The Facts,
+  Reply Starter, How Long Will This Actually Take, Brain Dump Sorter), linked from
+  README.md under a new "Roadmap" section.
+- **Reply Starter** tool — paste a message you owe a reply to and get 3 short, low-effort
+  draft replies (each with a one-click copy button) to break initiation paralysis.
+- `runLocal.sh` — one-command local dev bootstrapper: checks `node_modules` is installed,
+  checks the `ANTHROPIC_API_KEY` sandbox secret is set, typechecks, then starts the
+  Amplify sandbox and the Vite dev server together and prints the local app URL.
 
 ### Changed
 
 - `ai-assist` Lambda now calls `claude-haiku-4-5` instead of `claude-opus-4-8` — the
   cheapest current Claude model, since Task Breakdown and Tone Checker don't need
   frontier-level reasoning.
+- Reply Starter now has Tone (Formal/Neutral/Friendly), Length (Short/Medium/Long), and an
+  optional free-text "intent" field. The frontend sends these as structured JSON inside the
+  existing `runAiTool(toolId, input)` string argument; a small per-tool builder in
+  `ai-assist/handler.ts` (`USER_MESSAGE_BUILDERS`) turns that JSON into the actual prompt.
+  The shared query/schema didn't need to change, and every other tool is unaffected.
 
 ### Fixed
 

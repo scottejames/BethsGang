@@ -111,3 +111,14 @@ npm run lint     # oxlint
    client-side.
 
 No routing, no new Lambda, no new API endpoint required in the common case.
+
+If a tool needs more than one field of input (e.g. Reply Starter's message + tone + length
++ intent), don't change the shared `runAiTool(toolId, input)` schema — instead have the
+frontend `JSON.stringify` a small payload into `input`, and register a parser for that
+`toolId` in `USER_MESSAGE_BUILDERS` in `ai-assist/handler.ts` to turn it into the actual
+prompt. See `src/tools/replyStarter/` and its entry in `USER_MESSAGE_BUILDERS` for the
+pattern. Tools that don't register a builder just get `input` passed straight through.
+
+## Roadmap
+
+Ideas for future tools, and what's up next, are tracked in [`TODO.md`](./TODO.md).
