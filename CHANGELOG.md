@@ -249,3 +249,20 @@ All notable changes to this project are documented here.
   rather than ship two very similar tools, the facts-extraction became a fourth field on
   this one instead. Rendered as a nested list inside the existing `.tool-result-fields`
   `<dl>` (new `.tool-result-fields-list` CSS rule) rather than a separate output area.
+
+### Fixed
+
+- **High Spoons could break structured tool output.** The high-energy instruction told the
+  model it "can be more thorough and detailed than usual" — at 67+ spoons, this led the
+  model (confirmed by querying the live Lambda directly) to sometimes append a whole extra
+  unstructured paragraph after the requested fields, complete with markdown (`**bold**`,
+  `*italic*`) the app never renders. When the extra content didn't match any parsed field,
+  it silently vanished; when it also caused a required field's exact wording to drift, the
+  whole reply fell back to an unparsed raw-text dump, exposing the markdown directly.
+  Fixed at the shared level rather than per-tool: reworded the high-spoons instruction to
+  channel extra effort into depth *within* the existing fields rather than bonus sections,
+  and added a new `FORMAT_GUARD_INSTRUCTION` prepended to every tool's system prompt
+  (plain text only, no markdown, nothing beyond the requested format) so this can't recur
+  for this or any future structured-output tool. Verified by querying the deployed Lambda
+  directly via a raw AppSync request at low/medium/high spoons — clean output at all three
+  after the fix, where high spoons previously reproduced the bug consistently.

@@ -208,8 +208,15 @@ export function buildEnergyInstruction(spoons: number | undefined): string | und
   if (spoons <= 66) {
     return `The user's current energy is medium (${spoons}/100 spoons). Respond with your usual level of detail.`;
   }
-  return `The user's current energy is high (${spoons}/100 spoons). You can be more thorough and detailed than usual if that's genuinely useful — the user has the capacity for it right now.`;
+  return `The user's current energy is high (${spoons}/100 spoons). You can add more depth than usual if that's genuinely useful — fuller sentences, more nuance within each part of the response — but do not add extra fields, sections, or commentary beyond what the required format below specifies.`;
 }
+
+// Applied to every tool, every time, regardless of energy level — the whole app renders
+// tool output as plain text (see the *ToolChecker/CallScript/etc. components' dt/dd or
+// list rendering), so a model reply containing markdown or bonus sections beyond the
+// requested format doesn't just look odd, it breaks parsing and silently drops content
+// or dumps raw formatting on the user. See CHANGELOG for the incident that motivated this.
+const FORMAT_GUARD_INSTRUCTION = `Respond in plain text only — never use markdown formatting (no **, *, #, backticks, or bullet characters other than "-"). Follow the exact response format requested in the instructions below precisely, with nothing extra before, after, or beyond the fields/sections it specifies — no matter how much detail you're asked to include.`;
 
 export const handler: Schema['runAiTool']['functionHandler'] = async (event) => {
   const { toolId, input: rawInput } = event.arguments;
@@ -228,7 +235,7 @@ export const handler: Schema['runAiTool']['functionHandler'] = async (event) => 
   const response = await client.messages.create({
     model: 'claude-haiku-4-5',
     max_tokens: 1024,
-    system: systemPrompt,
+    system: `${FORMAT_GUARD_INSTRUCTION}\n\n${systemPrompt}`,
     messages: [{ role: 'user', content: userMessage }],
   });
 
