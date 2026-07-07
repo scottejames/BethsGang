@@ -141,3 +141,7 @@ Ideas for future tools, and what's up next, are tracked in [`TODO.md`](./TODO.md
   [Moodist](https://github.com/remvze/moodist) (MIT-licensed), whose own audio is sourced
   from the [Pixabay Content License](https://pixabay.com/service/license-summary/) and
   [CC0](https://creativecommons.org/publicdomain/zero/1.0/) per Moodist's credits.
+- The Pomodoro Timer's "pop" sound is from
+  [3 Pop Sounds](https://opengameart.org/content/3-pop-sounds) on OpenGameArt.org,
+  by Arrall Austin, licensed [CC0](https://creativecommons.org/publicdomain/zero/1.0/)
+  (converted from Ogg Vorbis to MP3 for Safari compatibility).

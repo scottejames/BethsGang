@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import tomatoUrl from '../../assets/tomato.svg';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
@@ -7,6 +7,11 @@ const PRESET_MINUTES = [5, 10, 15] as const;
 type PresetMinutes = (typeof PRESET_MINUTES)[number];
 
 type Status = 'idle' | 'running' | 'paused' | 'done';
+
+// The tomato never shrinks all the way to nothing while ticking down — it
+// holds at this minimum scale until the final "pop", so the shrink stays
+// visible for the whole countdown instead of vanishing early.
+const MIN_VISUAL_SCALE = 0.25;
 
 function formatTime(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
@@ -19,6 +24,13 @@ function PomodoroTimer() {
   const [remainingSeconds, setRemainingSeconds] = useState(durationMinutes * 60);
   const [status, setStatus] = useState<Status>('idle');
   const [startKey, setStartKey] = useState(0);
+  const [visualize, setVisualize] = useState(false);
+
+  // Read inside the interval without needing to restart it when toggled mid-countdown.
+  const visualizeRef = useRef(visualize);
+  useEffect(() => {
+    visualizeRef.current = visualize;
+  }, [visualize]);
 
   // startKey forces a fresh interval even when `status` was already 'running'
   // (e.g. picking a new preset mid-countdown).
@@ -29,6 +41,9 @@ function PomodoroTimer() {
       setRemainingSeconds((current) => {
         if (current <= 1) {
           setStatus('done');
+          if (visualizeRef.current) {
+            void new Audio('/audio/pop.mp3').play();
+          }
           return 0;
         }
         return current - 1;
@@ -55,6 +70,10 @@ function PomodoroTimer() {
   }
 
   const isActive = status !== 'idle';
+  const popped = status === 'done' && visualize;
+  const totalSeconds = durationMinutes * 60;
+  const visualScale =
+    MIN_VISUAL_SCALE + (1 - MIN_VISUAL_SCALE) * Math.min(1, remainingSeconds / totalSeconds);
 
   return (
     <div className="tool-panel">
@@ -76,12 +95,23 @@ function PomodoroTimer() {
         ))}
       </div>
 
+      <label className="toggle-field">
+        <input
+          type="checkbox"
+          checked={visualize}
+          onChange={(event) => setVisualize(event.target.checked)}
+        />
+        <span className="toggle-track" aria-hidden="true" />
+        Visualise remaining time
+      </label>
+
       <div className="pomodoro-display">
         <img
           src={tomatoUrl}
           alt=""
           aria-hidden="true"
-          className={`pomodoro-tomato${status === 'running' ? ' pomodoro-tomato-active' : ''}`}
+          className={`pomodoro-tomato${status === 'running' && !visualize ? ' pomodoro-tomato-active' : ''}${popped ? ' pomodoro-tomato-pop' : ''}`}
+          style={visualize && !popped ? { transform: `scale(${visualScale})` } : undefined}
         />
         <p className="pomodoro-time">{formatTime(remainingSeconds)}</p>
         {status === 'done' && <p className="pomodoro-done">Time's up! Nice work. 🎉</p>}

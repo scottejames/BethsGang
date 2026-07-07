@@ -292,6 +292,61 @@ textarea {
   color: var(--accent-text);
 }
 
+.toggle-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.toggle-field input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.toggle-track {
+  position: relative;
+  flex-shrink: 0;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background-color 0.15s ease;
+}
+
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease;
+}
+
+.toggle-field input:checked + .toggle-track {
+  background: var(--accent);
+}
+
+.toggle-field input:checked + .toggle-track::after {
+  transform: translateX(16px);
+}
+
+.toggle-field input:focus-visible + .toggle-track {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .pomodoro-display {
   display: flex;
   flex-direction: column;
@@ -317,6 +372,29 @@ textarea {
   }
   50% {
     transform: scale(1.08) rotate(-2deg);
+  }
+}
+
+.pomodoro-tomato {
+  transition: transform 1s linear;
+}
+
+.pomodoro-tomato-pop {
+  animation: pomodoro-pop 0.5s ease-out forwards;
+}
+
+@keyframes pomodoro-pop {
+  0% {
+    transform: scale(0.25);
+    opacity: 1;
+  }
+  40% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.1);
+    opacity: 0;
   }
 }
 

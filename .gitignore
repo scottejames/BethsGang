@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Scratch space for transient files (screenshots, etc.) — never committed
+tmp/
+
 # Amplify Gen2 — generated per-environment (sandbox/deploy), don't commit
 .amplify
 amplify_outputs.json

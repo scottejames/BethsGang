@@ -92,3 +92,26 @@ All notable changes to this project are documented here.
   are destination web apps, none expose a documented third-party API). Self-hosting
   verified, appropriately-licensed loops was the responsible choice over hotlinking
   someone else's live site.
+- Home screen tile order: White Noise and Pomodoro Timer now come first, ahead of Task
+  Breakdown / Tone Checker / Reply Starter.
+- Pomodoro Timer: a "Visualise remaining time" toggle. When on, the tomato continuously
+  shrinks (scale, not a fixed animation) in proportion to time remaining instead of the
+  usual pulse, holding at a minimum size near the end so the shrink stays visible for the
+  whole countdown rather than vanishing early — then plays a short "pop" sound
+  (`public/audio/pop.mp3`, see README "Assets") with a quick scale-up-and-fade animation
+  the instant the timer hits zero. Off by default; existing pulse-while-running behaviour
+  is unchanged when the toggle is off.
+
+### Changed
+
+- Task Breakdown's tagline and system prompt now say "big task" instead of "overwhelming
+  task."
+
+### Fixed
+
+- Pomodoro Timer's "Visualise remaining time" control was a button styled identically to
+  the duration presets, wrapping directly beneath them with almost no gap — it read as a
+  4th duration choice instead of a separate setting (caught from a screenshot). Replaced
+  with a proper toggle switch (checkbox + styled track/thumb) with clear spacing above it,
+  and verified with real screenshots (Playwright + a cached Chromium build) in both light
+  and dark themes.
