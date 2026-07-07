@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useAiTool } from '../../hooks/useAiTool';
+import { captureImageForUpload, findImageInClipboard } from '../../lib/imageCapture';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
 
@@ -18,7 +19,38 @@ function parseResult(output: string) {
 function ToneChecker() {
   const [message, setMessage] = useState('');
   const [context, setContext] = useState('');
+  const [imageError, setImageError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { output, loading, error, run } = useAiTool(meta.id);
+  const { loading: extracting, run: runExtraction } = useAiTool('screenshot-to-text');
+
+  async function handleImage(file: File) {
+    setImageError(null);
+    try {
+      const { base64, mediaType } = await captureImageForUpload(file);
+      const text = await runExtraction(JSON.stringify({ imageBase64: base64, mediaType }));
+      if (text) {
+        setMessage(text);
+      } else {
+        setImageError("Couldn't read that screenshot. Please try again, or type the message instead.");
+      }
+    } catch {
+      setImageError("Couldn't read that screenshot. Please try again, or type the message instead.");
+    }
+  }
+
+  function handlePaste(event: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const imageFile = findImageInClipboard(event.clipboardData);
+    if (!imageFile) return;
+    event.preventDefault();
+    void handleImage(imageFile);
+  }
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (file) void handleImage(file);
+  }
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -28,21 +60,45 @@ function ToneChecker() {
 
   const parsed = output ? parseResult(output) : null;
   const hasStructuredResult = parsed && (parsed.tone || parsed.landsAs || parsed.suggestion);
+  const busy = loading || extracting;
 
   return (
     <div className="tool-panel">
       <p className="tool-intro">
         Paste a message you're about to send — an email, a text, a Slack reply — and get a quick
-        read on how it might come across.
+        read on how it might come across. You can also paste (Ctrl/Cmd+V) or upload a screenshot
+        of the conversation instead of typing it out.
       </p>
       <form onSubmit={handleSubmit} className="tool-form">
         <textarea
           value={message}
           onChange={(event) => setMessage(event.target.value)}
-          placeholder="Paste your message here…"
+          onPaste={handlePaste}
+          placeholder="Paste your message here, or paste/upload a screenshot…"
           rows={6}
-          disabled={loading}
+          disabled={busy}
         />
+
+        <div className="tool-form-row">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={busy}
+          >
+            📷 Upload a screenshot
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            hidden
+          />
+          {extracting && <span className="tool-field-hint">Reading screenshot…</span>}
+        </div>
+
+        {imageError && <p className="tool-error">{imageError}</p>}
 
         <label className="tool-field">
           <span>
@@ -53,11 +109,11 @@ function ToneChecker() {
             onChange={(event) => setContext(event.target.value)}
             placeholder="e.g. who this is going to, or anything about the situation that's relevant"
             rows={2}
-            disabled={loading}
+            disabled={busy}
           />
         </label>
 
-        <button type="submit" disabled={loading || !message.trim()}>
+        <button type="submit" disabled={busy || !message.trim()}>
           {loading ? 'Checking…' : 'Check tone'}
         </button>
       </form>

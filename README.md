@@ -171,6 +171,17 @@ complexity uniformly, instead of every tool's own builder needing to know about 
 reusable `src/components/Modal.tsx` backs the popup — reach for it for any future tool
 that needs a similar overlay instead of building another one-off.
 
+A tool can also send an image instead of text — see Tone Checker's screenshot feature.
+The frontend resizes/compresses it client-side (`src/lib/imageCapture.ts`, capped at
+1600px on the long edge) and sends it as `{ imageBase64, mediaType }` JSON, same as any
+other structured input. The Lambda has one internal-only toolId, `screenshot-to-text`
+(no frontend tile, never in `registry.ts` — Tone Checker calls it directly via a second
+`useAiTool('screenshot-to-text')`), whose builder (`buildScreenshotToTextContent`)
+returns an image content block instead of a plain string, and skips the energy
+instruction entirely since complexity/tone doesn't apply to mechanical transcription.
+The extracted text lands back in the same textarea the user would've typed into, so it
+flows through the tool's normal (unmodified) analysis afterwards.
+
 ## Roadmap
 
 Ideas for future tools, and what's up next, are tracked in [`TODO.md`](./TODO.md).

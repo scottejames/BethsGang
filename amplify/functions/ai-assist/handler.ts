@@ -44,6 +44,14 @@ Asks:
 - <a second one, only if there genuinely is one — most messages only have one>
 Put "- Nothing — this is just an update, no action needed" as the only bullet if there's genuinely nothing to act on.
 Be warm but factual. Do not validate a catastrophizing reading even if the context suggests the user is anxious about it — stay grounded in the message itself.`,
+
+  // Internal-only: no frontend tile of its own (never appears in registry.ts). Called
+  // directly by Tone Checker's screenshot feature to turn an image into plain text, which
+  // then flows through the normal 'tone-checker' prompt unchanged — this prompt only
+  // transcribes, it never analyzes tone itself.
+  'screenshot-to-text': `You transcribe screenshots of conversations (texts, WhatsApp, Slack, email, or similar) into plain text so the conversation can be analyzed for tone afterwards.
+Read the image and output every message in chronological order, top to bottom as shown. If multiple speakers are visible, prefix each line with who sent it followed by a colon — use "Me:" for the user's own messages (usually the bubbles on the right, or in a distinct accent color) and "Them:" for the other person's (usually on the left), or the person's name if it's clearly labeled in the screenshot. If you genuinely can't tell who sent a message, prefix it with "Unknown:".
+Output only the transcribed conversation, one message per line — no commentary, no description of the screenshot, no markdown, nothing else.`,
 };
 
 // Tools whose frontend sends structured JSON (instead of a plain string) as `input`
@@ -168,6 +176,39 @@ export function buildIsThisMadMessage(rawInput: string): string {
     .join('\n\n');
 }
 
+const IMAGE_MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
+type ImageMediaType = (typeof IMAGE_MEDIA_TYPES)[number];
+
+function isImageMediaType(value: unknown): value is ImageMediaType {
+  return typeof value === 'string' && (IMAGE_MEDIA_TYPES as readonly string[]).includes(value);
+}
+
+interface ScreenshotToTextInput {
+  imageBase64: string;
+  mediaType: string;
+}
+
+// Unlike every other tool, this one sends an image rather than text — the frontend
+// resizes/compresses it client-side first (see src/lib/imageCapture.ts) to stay well
+// under Claude's and AppSync's payload limits.
+export function buildScreenshotToTextContent(rawInput: string): Anthropic.ContentBlockParam[] {
+  const parsed: Partial<ScreenshotToTextInput> = JSON.parse(rawInput);
+  if (!parsed.imageBase64 || !isImageMediaType(parsed.mediaType)) {
+    throw new Error('screenshot-to-text requires imageBase64 and a supported mediaType');
+  }
+
+  return [
+    {
+      type: 'image',
+      source: { type: 'base64', media_type: parsed.mediaType, data: parsed.imageBase64 },
+    },
+    {
+      type: 'text',
+      text: 'Transcribe the conversation shown in this screenshot.',
+    },
+  ];
+}
+
 const USER_MESSAGE_BUILDERS: Record<string, (rawInput: string) => string> = {
   'reply-starter': buildReplyStarterMessage,
   'tone-checker': buildToneCheckerMessage,
@@ -227,16 +268,24 @@ export const handler: Schema['runAiTool']['functionHandler'] = async (event) => 
   }
 
   const { spoons, input } = parseEnvelope(rawInput);
-  const buildUserMessage = USER_MESSAGE_BUILDERS[toolId];
-  const toolMessage = buildUserMessage ? buildUserMessage(input) : input;
-  const energyInstruction = buildEnergyInstruction(spoons);
-  const userMessage = energyInstruction ? `${energyInstruction}\n\n${toolMessage}` : toolMessage;
+
+  // Screenshot transcription sends an image, not text — energy/complexity doesn't apply
+  // to a mechanical transcription task, so it skips buildEnergyInstruction entirely.
+  const content: string | Anthropic.ContentBlockParam[] =
+    toolId === 'screenshot-to-text'
+      ? buildScreenshotToTextContent(input)
+      : (() => {
+          const buildUserMessage = USER_MESSAGE_BUILDERS[toolId];
+          const toolMessage = buildUserMessage ? buildUserMessage(input) : input;
+          const energyInstruction = buildEnergyInstruction(spoons);
+          return energyInstruction ? `${energyInstruction}\n\n${toolMessage}` : toolMessage;
+        })();
 
   const response = await client.messages.create({
     model: 'claude-haiku-4-5',
     max_tokens: 1024,
     system: `${FORMAT_GUARD_INSTRUCTION}\n\n${systemPrompt}`,
-    messages: [{ role: 'user', content: userMessage }],
+    messages: [{ role: 'user', content }],
   });
 
   const textBlock = response.content.find(

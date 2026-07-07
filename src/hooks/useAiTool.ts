@@ -21,8 +21,10 @@ export function useAiTool(toolId: string) {
         const envelope = JSON.stringify({ spoons, input });
         const result = await runAiTool(toolId, envelope);
         setOutput(result);
+        return result;
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+        return undefined;
       } finally {
         setLoading(false);
       }

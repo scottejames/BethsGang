@@ -269,3 +269,26 @@ All notable changes to this project are documented here.
   reads as more depth within fields, not license to add sections. Verified by querying
   the deployed Lambda directly and repeating the exact user-reported input several times
   after the fix.
+
+## Unreleased (branch: `feature/tone-checker-screenshot`)
+
+### Added
+
+- **Tone Checker: paste or upload a screenshot of a conversation** instead of typing it
+  out. Paste (Ctrl/Cmd+V) an image directly into the message box, or use the new "Upload
+  a screenshot" button; the image is resized/compressed client-side
+  (`src/lib/imageCapture.ts`, capped at 1600px) and sent to a new internal-only Lambda
+  toolId, `screenshot-to-text`, which transcribes the conversation (attributing "Me:" /
+  "Them:" where the screenshot makes it visually clear) using Claude's vision input
+  instead of a text prompt. The transcribed text lands in the same textarea the user
+  would've typed into — editable before submitting — and then flows through Tone
+  Checker's existing analysis completely unchanged. Single screenshot per check for now;
+  multi-screenshot (stitching a scrolled thread) was considered and deliberately deferred.
+  Built on a branch per explicit request, since this is a bigger architectural stretch
+  (first tool to send an image instead of text) than a typical new tool.
+  - Verified with Playwright: the full upload→extract→edit→analyze flow end-to-end
+    (mocking both backend calls), the clipboard-paste path separately, the extraction
+    failure path (friendly error, form stays usable), and that the real resize pipeline
+    (not just the mock) produces valid base64 JPEG and actually caps a 3000×2000 test
+    image down to a small payload. Plus unit tests for `buildScreenshotToTextContent`
+    (image-block construction, validation) and `findImageInClipboard`.

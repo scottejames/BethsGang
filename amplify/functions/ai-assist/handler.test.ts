@@ -15,6 +15,7 @@ import {
   buildEnergyInstruction,
   buildIsThisMadMessage,
   buildReplyStarterMessage,
+  buildScreenshotToTextContent,
   buildToneCheckerMessage,
   parseEnvelope,
 } from './handler';
@@ -169,5 +170,29 @@ describe('buildIsThisMadMessage', () => {
   it('falls back to treating a non-JSON string as the raw message', () => {
     const message = buildIsThisMadMessage('just a plain pasted message');
     expect(message).toContain('just a plain pasted message');
+  });
+});
+
+describe('buildScreenshotToTextContent', () => {
+  it('builds an image content block followed by a text instruction block', () => {
+    const raw = JSON.stringify({ imageBase64: 'ZmFrZS1pbWFnZS1kYXRh', mediaType: 'image/png' });
+    const content = buildScreenshotToTextContent(raw);
+
+    expect(content).toHaveLength(2);
+    expect(content[0]).toEqual({
+      type: 'image',
+      source: { type: 'base64', media_type: 'image/png', data: 'ZmFrZS1pbWFnZS1kYXRh' },
+    });
+    expect(content[1]).toMatchObject({ type: 'text' });
+  });
+
+  it('throws if imageBase64 is missing', () => {
+    const raw = JSON.stringify({ mediaType: 'image/png' });
+    expect(() => buildScreenshotToTextContent(raw)).toThrow();
+  });
+
+  it('throws if mediaType is not a supported image type', () => {
+    const raw = JSON.stringify({ imageBase64: 'ZmFrZQ==', mediaType: 'application/pdf' });
+    expect(() => buildScreenshotToTextContent(raw)).toThrow();
   });
 });

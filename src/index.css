@@ -213,6 +213,17 @@ textarea {
   cursor: not-allowed;
 }
 
+.tool-form button.secondary-button {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.tool-form button.secondary-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .tool-error {
   margin-top: 16px;
   padding: 12px 14px;
