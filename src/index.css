@@ -546,3 +546,91 @@ textarea {
   border-color: var(--accent);
   color: var(--accent);
 }
+
+.energy-button {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.energy-button:hover {
+  border-color: var(--accent);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 30;
+}
+
+.modal-panel {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+
+.modal-panel h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.energy-spoon-row {
+  display: flex;
+  gap: 6px;
+  font-size: 26px;
+  margin: 20px 0 12px;
+}
+
+.spoon-empty {
+  opacity: 0.2;
+  filter: grayscale(1);
+}
+
+.energy-caption {
+  margin: 0 0 20px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.energy-caption-count {
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.modal-panel input[type='range'] {
+  width: 100%;
+}
+
+.energy-done {
+  margin-top: 20px;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--accent);
+  color: var(--accent-text);
+}

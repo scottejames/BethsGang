@@ -34,6 +34,18 @@ mechanics — most of these are just a new system prompt away.
       via a `WhiteNoiseProvider` at the app root + a global mini-player. One sound at a
       time for v1; layering multiple sounds is a possible later enhancement. Not yet
       click-tested against a live sandbox.
+- [x] **Spoons energy level** (was the ⭐ "Energy Check-In" idea below, shipped with more
+      scope than originally proposed) — a global 0-100 "spoons" picker (button + popup,
+      not a tool tile), persisted to `localStorage`, visible on every screen via the same
+      always-mounted pattern as `WhiteNoiseProvider`/`NowPlayingBar`. Every AI tool's
+      request is automatically wrapped with the current spoon count in `useAiTool.ts`; the
+      Lambda unwraps it once and prepends a single shared low/medium/high instruction
+      before the tool-specific prompt — so response complexity/sophistication scales with
+      energy for every AI tool (present and future) with zero per-tool code. Verified with
+      Playwright screenshots (button, popup, live slider updates, persistence across
+      navigation) and isolated unit tests of the envelope parsing / bucketing logic.
+      Non-AI tools (Pomodoro, White Noise) just show the level — there's no "response" for
+      them to make more/less sophisticated.
 
 ## Later / stretch ideas
 
@@ -64,11 +76,9 @@ worth building next marked ⭐. See "Sources" at the bottom of this section.
    ("what do I even do right now") straight to something rewarding, instead of a points
    economy. Cheap to build, nothing to click-test against a sandbox (no AI call), and a
    natural thing to surface as a suggestion from other tools (see "Linking tools" below).
-3. ⭐ **Energy Check-In** (infrastructure + tiny tool, see below) — a persistent low/medium/
-   high energy picker. On its own it's just a mood log; wired into other tools it lets
-   Task Breakdown produce gentler steps on a low-energy day, or filters the future Shared
-   Task Store down to "what actually fits today." This is the concrete version of the
-   "user state" foundational service the rest of the app is currently missing.
+
+~~3. ⭐ **Energy Check-In**~~ — shipped, see "Spoons energy level" under Shipped above (and
+   Infrastructure below for what it unlocks next).
 
 ### AI-backed ideas (new `SYSTEM_PROMPTS` entry, same pattern as existing tools)
 
@@ -150,10 +160,10 @@ Concrete connections worth wiring up as tools accumulate, once the Shared Task S
 - **Is This Mad? / Just The Facts → Reply Starter**: after getting a calm read on an
   incoming message, a "draft a reply" button hands the original message straight to Reply
   Starter instead of requiring a copy-paste round trip.
-- **Energy Check-In → Task Breakdown**: a low-energy reading could ask for even smaller,
-  gentler steps in the breakdown prompt.
-- **Energy Check-In → Shared Task Store**: filter/sort the store by what fits the current
-  energy level rather than showing everything at once.
+- ~~**Energy Check-In → Task Breakdown**~~ — done, and generalized to every AI tool rather
+  than just this one (see "Spoons energy level" under Shipped).
+- **Spoons → Shared Task Store**: filter/sort the store by what fits the current energy
+  level rather than showing everything at once.
 - **Dopamine Menu ↔ Pomodoro**: surface a "pick something from your Dopamine Menu" prompt
   on Pomodoro breaks, instead of the break just being empty time.
 - **Sensory Reset ↔ Meltdown/Shutdown Debrief**: Sensory Reset is the in-the-moment tool;
@@ -194,13 +204,6 @@ Concrete connections worth wiring up as tools accumulate, once the Shared Task S
       future Transition Warning tool, and any future medication/routine reminders.
       Without this, every timer-based tool has to solve "what if the user left the page"
       from scratch.
-- [ ] ⭐ **Energy Check-In (lightweight shared "user state")** — not a full mood tracker,
-      just a small always-available low/medium/high picker living somewhere persistent
-      (maybe the same header area as `NowPlayingBar`), backed by a small
-      `EnergyContext`/`localStorage` for now. Lets other tools read the current value and
-      adapt — see "Linking tools together" above. Much smaller in scope than full user
-      accounts, and doesn't require Amplify Auth to be useful since it can stay entirely
-      per-device until real accounts land.
 - [ ] **User accounts (Amplify Auth) + persistent Data model** — lets tools that need to
       remember state (Side Quest Log entries, Pomodoro settings/streaks, saved messages,
       the Shared Task Store above, etc.) store it in a real database per signed-in user
@@ -210,5 +213,6 @@ Concrete connections worth wiring up as tools accumulate, once the Shared Task S
       (Amplify's `Authenticator` component is the fast path). Bigger lift than a normal
       tool — touches auth, data modeling, and the app shell, not just a new tool folder.
       Worth doing once there's more than one tool that wants persistent state, not before
-      — the Shared Task Store and Energy Check-In above can both ship `localStorage`-only
-      first and migrate onto this later without changing their calling API.
+      — the Shared Task Store above and the shipped Spoons energy level can both stay
+      (or start) `localStorage`-only and migrate onto this later without changing their
+      calling API.

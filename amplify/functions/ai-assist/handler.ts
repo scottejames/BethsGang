@@ -99,16 +99,55 @@ const USER_MESSAGE_BUILDERS: Record<string, (rawInput: string) => string> = {
   'tone-checker': buildToneCheckerMessage,
 };
 
+// Every AI tool request is wrapped by useAiTool.ts as {spoons, input} — spoons
+// is the user's self-reported 0-100 energy level ("Spoon Theory"). Unwrapping
+// happens once here, uniformly, so every current and future AI tool adjusts
+// response complexity automatically without needing its own energy handling.
+interface RequestEnvelope {
+  spoons?: number;
+  input: string;
+}
+
+function parseEnvelope(rawInput: string): RequestEnvelope {
+  try {
+    const parsed = JSON.parse(rawInput);
+    if (parsed && typeof parsed === 'object' && typeof parsed.input === 'string') {
+      return {
+        spoons: typeof parsed.spoons === 'number' ? parsed.spoons : undefined,
+        input: parsed.input,
+      };
+    }
+  } catch {
+    // Not JSON, or not shaped like our envelope — treat the whole raw string as the input.
+  }
+  return { input: rawInput };
+}
+
+function buildEnergyInstruction(spoons: number | undefined): string | undefined {
+  if (spoons === undefined) return undefined;
+
+  if (spoons <= 33) {
+    return `The user's current energy is low (${spoons}/100 spoons). Keep your response as simple and low-effort as possible to process — fewer steps or words, plain and gentle language, nothing that adds extra decisions or nuance to weigh up.`;
+  }
+  if (spoons <= 66) {
+    return `The user's current energy is medium (${spoons}/100 spoons). Respond with your usual level of detail.`;
+  }
+  return `The user's current energy is high (${spoons}/100 spoons). You can be more thorough and detailed than usual if that's genuinely useful — the user has the capacity for it right now.`;
+}
+
 export const handler: Schema['runAiTool']['functionHandler'] = async (event) => {
-  const { toolId, input } = event.arguments;
+  const { toolId, input: rawInput } = event.arguments;
 
   const systemPrompt = SYSTEM_PROMPTS[toolId];
   if (!systemPrompt) {
     throw new Error(`Unknown tool: ${toolId}`);
   }
 
+  const { spoons, input } = parseEnvelope(rawInput);
   const buildUserMessage = USER_MESSAGE_BUILDERS[toolId];
-  const userMessage = buildUserMessage ? buildUserMessage(input) : input;
+  const toolMessage = buildUserMessage ? buildUserMessage(input) : input;
+  const energyInstruction = buildEnergyInstruction(spoons);
+  const userMessage = energyInstruction ? `${energyInstruction}\n\n${toolMessage}` : toolMessage;
 
   const response = await client.messages.create({
     model: 'claude-haiku-4-5',

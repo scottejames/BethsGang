@@ -101,6 +101,23 @@ All notable changes to this project are documented here.
   (`public/audio/pop.mp3`, see README "Assets") with a quick scale-up-and-fade animation
   the instant the timer hits zero. Off by default; existing pulse-while-running behaviour
   is unchanged when the toggle is off.
+- **Spoons energy level** — a global 0-100 "Spoon Theory" energy picker, deliberately not a
+  tool tile: a small `🥄 NN` button rendered once at the app root (`EnergyButton.tsx`),
+  visible on Home and every tool, opening a light-hearted popup (`Modal.tsx` — new,
+  reusable) with a slider, a row of 10 spoon emoji that fill in proportionally, and a
+  caption ("Running on fumes" → "Fully loaded"). Persisted to `localStorage`
+  (`EnergyContext.tsx`), default 70.
+  - Every AI tool automatically picks this up: `useAiTool.ts` wraps whatever a tool sends
+    as `{spoons, input}` before calling `runAiTool`; `ai-assist/handler.ts` unwraps that
+    envelope once and prepends a single shared low/medium/high instruction ("keep it
+    simple" / "usual detail" / "can be more thorough") before the tool-specific message.
+    No changes needed in Task Breakdown, Tone Checker, or Reply Starter themselves, and
+    any future AI tool gets this for free.
+  - Non-AI tools (Pomodoro, White Noise) don't have a generated response to adjust, so
+    they're unaffected beyond the button being visible everywhere.
+  - Verified with Playwright screenshots (popup rendering, live slider updates, badge
+    persisting across navigation) and isolated Node tests of the envelope
+    parse/unwrap/bucket-boundary logic.
 
 ### Changed
 

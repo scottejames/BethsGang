@@ -128,6 +128,16 @@ wraps `<App />`. The tool's own page just becomes one consumer of that context; 
 persistent UI element outside the tool tree (see `src/components/NowPlayingBar.tsx`,
 rendered unconditionally in `App.tsx`) can be another.
 
+The same pattern extends to global settings that every tool should read, not just
+stateful widgets — see `src/context/EnergyContext.tsx` (the Spoons energy level) and its
+`EnergyButton.tsx` (rendered unconditionally in `App.tsx`, not a tool of its own). AI tools
+pick this kind of global setting up automatically via `useAiTool.ts`, which wraps every
+request with the current energy level; see `ai-assist/handler.ts`'s `parseEnvelope` +
+`buildEnergyInstruction` for how the Lambda unwraps it once and adjusts response
+complexity uniformly, instead of every tool's own builder needing to know about it. A
+reusable `src/components/Modal.tsx` backs the popup — reach for it for any future tool
+that needs a similar overlay instead of building another one-off.
+
 ## Roadmap
 
 Ideas for future tools, and what's up next, are tracked in [`TODO.md`](./TODO.md).
