@@ -115,3 +115,13 @@ All notable changes to this project are documented here.
   with a proper toggle switch (checkbox + styled track/thumb) with clear spacing above it,
   and verified with real screenshots (Playwright + a cached Chromium build) in both light
   and dark themes.
+- The pop sound was firing twice when the timer completed with "Visualise remaining time"
+  on. Cause: `setStatus('done')` and the `Audio.play()` call lived inside the *functional
+  updater* passed to `setRemainingSeconds`, which isn't guaranteed to run exactly once —
+  React's `StrictMode` (the whole app is wrapped in it) deliberately double-invokes state
+  updater functions in development specifically to catch impure updaters like this one.
+  Moved the completion side effects out of the updater and into the interval callback
+  itself, reading the current value via a ref instead. Verified with a headless-browser
+  test (Playwright's clock API to fast-forward the countdown, intercepting
+  `HTMLMediaElement.play()` to count calls) that it now fires exactly once, and that it
+  doesn't fire at all when the toggle is off.

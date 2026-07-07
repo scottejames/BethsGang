@@ -32,22 +32,31 @@ function PomodoroTimer() {
     visualizeRef.current = visualize;
   }, [visualize]);
 
+  // Mirrors remainingSeconds so the interval can check "did we just hit zero?"
+  // without putting that check (and its side effects) inside the setState
+  // updater passed to setRemainingSeconds — React may invoke updater functions
+  // more than once per tick (e.g. StrictMode does, in development), so updaters
+  // must stay pure. Side effects belong in the interval callback body instead.
+  const remainingSecondsRef = useRef(remainingSeconds);
+  useEffect(() => {
+    remainingSecondsRef.current = remainingSeconds;
+  }, [remainingSeconds]);
+
   // startKey forces a fresh interval even when `status` was already 'running'
   // (e.g. picking a new preset mid-countdown).
   useEffect(() => {
     if (status !== 'running') return;
 
     const id = window.setInterval(() => {
-      setRemainingSeconds((current) => {
-        if (current <= 1) {
-          setStatus('done');
-          if (visualizeRef.current) {
-            void new Audio('/audio/pop.mp3').play();
-          }
-          return 0;
+      if (remainingSecondsRef.current <= 1) {
+        setRemainingSeconds(0);
+        setStatus('done');
+        if (visualizeRef.current) {
+          void new Audio('/audio/pop.mp3').play();
         }
-        return current - 1;
-      });
+        return;
+      }
+      setRemainingSeconds((current) => current - 1);
     }, 1000);
 
     return () => window.clearInterval(id);
