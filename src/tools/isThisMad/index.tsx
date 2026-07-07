@@ -8,10 +8,20 @@ function parseResult(output: string) {
   const get = (label: string) =>
     lines.find((line) => line.toLowerCase().startsWith(label.toLowerCase()))?.slice(label.length).trim();
 
+  const asksIndex = lines.findIndex((line) => line.toLowerCase().startsWith('asks:'));
+  const asks =
+    asksIndex === -1
+      ? []
+      : lines
+          .slice(asksIndex + 1)
+          .filter((line) => line.startsWith('-'))
+          .map((line) => line.replace(/^-\s*/, ''));
+
   return {
     tone: get('Tone:'),
     meaning: get('Most likely meaning:'),
     reassurance: get('Reassurance:'),
+    asks,
   };
 }
 
@@ -27,13 +37,15 @@ function IsThisMad() {
   }
 
   const parsed = output ? parseResult(output) : null;
-  const hasStructuredResult = parsed && (parsed.tone || parsed.meaning || parsed.reassurance);
+  const hasStructuredResult =
+    parsed && (parsed.tone || parsed.meaning || parsed.reassurance || parsed.asks.length > 0);
 
   return (
     <div className="tool-panel">
       <p className="tool-intro">
-        Paste a message someone else sent you and get a calm, literal read on it — instead
-        of whatever worst-case story your brain is already writing.
+        Paste a message someone else sent you and get a calm, literal read on it — the tone,
+        and what they're actually asking for — instead of whatever worst-case story your
+        brain is already writing.
       </p>
       <form onSubmit={handleSubmit} className="tool-form">
         <textarea
@@ -82,6 +94,18 @@ function IsThisMad() {
             <>
               <dt>Reassurance</dt>
               <dd>{parsed.reassurance}</dd>
+            </>
+          )}
+          {parsed && parsed.asks.length > 0 && (
+            <>
+              <dt>Asks</dt>
+              <dd>
+                <ul className="tool-result-fields-list">
+                  {parsed.asks.map((ask, index) => (
+                    <li key={index}>{ask}</li>
+                  ))}
+                </ul>
+              </dd>
             </>
           )}
         </dl>

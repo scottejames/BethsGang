@@ -11,10 +11,8 @@ mechanics — most of these are just a new system prompt away.
       client-side tool backed by `localStorage`, first tool in the app that isn't
       AI-backed. Good proof that the framework isn't AI-only.
 ~~- [ ] **Is This Mad?**~~ — shipped, see Shipped below.
-- [ ] **Just The Facts** — paste a rambling, emotionally loaded, or passive-aggressive
-      message/instruction from someone else; get back a flat, unemotional bullet list of
-      what they're actually asking you to do. Complements Task Breakdown (which takes a
-      task *you* already know about, this takes someone else's words and extracts the ask).
+~~- [ ] **Just The Facts**~~ — merged into Is This Mad? rather than shipped separately,
+      see Shipped below.
 
 ## Shipped
 
@@ -54,12 +52,17 @@ mechanics — most of these are just a new system prompt away.
       the AppSync response end-to-end, plus unit tests for the message builder.
 - [x] **Is This Mad?** — mirror image of Tone Checker: paste a message *someone else* sent
       *you* (plus optional context) and get a calm, literal read (Tone / Most likely
-      meaning / Reassurance) instead of the worst-case interpretation. Targets
+      meaning / Reassurance / Asks) instead of the worst-case interpretation. Targets
       rejection-sensitive spirals directly — the system prompt explicitly instructs the
       model not to validate a catastrophizing reading even if the given context suggests
-      the user is anxious about it. Grouped with the other "saying" tools on Home, right
-      after Tone Checker. Verified with a Playwright test mocking the AppSync response,
-      plus unit tests for the message builder.
+      the user is anxious about it. Originally shipped without the "Asks" field; the
+      separately-planned **Just The Facts** tool (flat bullet list of the concrete asks
+      in a rambling/passive-aggressive message) turned out to be near-identical in
+      practice — both take a message from someone else and calm it down — so instead of
+      shipping two similar tools, "Asks" was folded into this one's output as a fourth
+      field rather than built standalone. Grouped with the other "saying" tools on Home,
+      right after Tone Checker. Verified with a Playwright test mocking the AppSync
+      response, plus unit tests for the message builder.
 
 ## Later / stretch ideas
 
@@ -163,13 +166,13 @@ Concrete connections worth wiring up as tools accumulate, once the Shared Task S
 - **Brain Dump Sorter → Shared Task Store**: the "Do Now" bucket specifically lands in the
   same store as Task Breakdown's steps — they're the same kind of thing, just produced by
   different entry points.
-- **Just The Facts → Shared Task Store**: the extracted bullet list of "what they're
-  actually asking you to do" is also just tasks.
+- **Is This Mad? → Shared Task Store**: the "Asks" field's extracted bullet list of "what
+  they're actually asking you to do" is also just tasks.
 - **Side Quest Log → Shared Task Store**: triaging an entry to "do it" promotes it into
   the same store rather than the log being a dead end.
-- **Is This Mad? / Just The Facts → Reply Starter**: after getting a calm read on an
-  incoming message, a "draft a reply" button hands the original message straight to Reply
-  Starter instead of requiring a copy-paste round trip.
+- **Is This Mad? → Reply Starter**: after getting a calm read on an incoming message, a
+  "draft a reply" button hands the original message straight to Reply Starter instead of
+  requiring a copy-paste round trip.
 - ~~**Energy Check-In → Task Breakdown**~~ — done, and generalized to every AI tool rather
   than just this one (see "Spoons energy level" under Shipped).
 - **Spoons → Shared Task Store**: filter/sort the store by what fits the current energy

@@ -237,3 +237,15 @@ All notable changes to this project are documented here.
   tool-specific code. Grouped with the other "saying" tools on Home, directly after Tone
   Checker. Verified with a Playwright test that mocks the AppSync response end-to-end,
   plus unit tests for the message builder.
+
+### Changed
+
+- **Is This Mad? now also extracts "Asks"** — a fourth field alongside Tone / Most likely
+  meaning / Reassurance: a flat bullet list of the concrete asks in the message, with
+  emotional framing, guilt-tripping, and filler stripped out (or a single "Nothing — just
+  an update" bullet if there's genuinely nothing to act on). This was originally planned
+  as a separate **Just The Facts** tool, but building it revealed it was near-identical to
+  Is This Mad? in practice — both take a message from someone else and calm it down — so
+  rather than ship two very similar tools, the facts-extraction became a fourth field on
+  this one instead. Rendered as a nested list inside the existing `.tool-result-fields`
+  `<dl>` (new `.tool-result-fields-list` CSS rule) rather than a separate output area.
