@@ -252,17 +252,20 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
-- **High Spoons could break structured tool output.** The high-energy instruction told the
-  model it "can be more thorough and detailed than usual" — at 67+ spoons, this led the
-  model (confirmed by querying the live Lambda directly) to sometimes append a whole extra
-  unstructured paragraph after the requested fields, complete with markdown (`**bold**`,
-  `*italic*`) the app never renders. When the extra content didn't match any parsed field,
-  it silently vanished; when it also caused a required field's exact wording to drift, the
-  whole reply fell back to an unparsed raw-text dump, exposing the markdown directly.
-  Fixed at the shared level rather than per-tool: reworded the high-spoons instruction to
-  channel extra effort into depth *within* the existing fields rather than bonus sections,
-  and added a new `FORMAT_GUARD_INSTRUCTION` prepended to every tool's system prompt
-  (plain text only, no markdown, nothing beyond the requested format) so this can't recur
-  for this or any future structured-output tool. Verified by querying the deployed Lambda
-  directly via a raw AppSync request at low/medium/high spoons — clean output at all three
-  after the fix, where high spoons previously reproduced the bug consistently.
+- **Structured tool output (Is This Mad?, and by extension every dt/dl-rendered tool)
+  could break with unrendered markdown.** Confirmed live, by querying the deployed Lambda
+  directly and by reproducing against the live site: the model would occasionally wrap
+  field labels in markdown bold (`**Tone:**` instead of `Tone:`) or append a whole extra
+  unstructured paragraph after the requested fields. This is stochastic and happened
+  across low, medium, *and* high Spoons alike — not specific to high energy as first
+  suspected (a user report at spoons 9 reproduced it just as reliably as spoons 90 did in
+  earlier testing). Since the app's parser matches exact label prefixes and every tool
+  renders plain text only, a mislabeled field broke parsing entirely and dumped the raw
+  markdown straight to the screen — which is what one user experienced as the app
+  "crashing" after pasting a long real message. Fixed at the shared level: added a new
+  `FORMAT_GUARD_INSTRUCTION` (plain text only, no markdown, nothing beyond the requested
+  format) prepended to every tool's system prompt unconditionally — not gated on energy
+  level — plus a smaller wording tweak to the high-spoons instruction so "more thorough"
+  reads as more depth within fields, not license to add sections. Verified by querying
+  the deployed Lambda directly and repeating the exact user-reported input several times
+  after the fix.
