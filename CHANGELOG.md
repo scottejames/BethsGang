@@ -270,7 +270,7 @@ All notable changes to this project are documented here.
   the deployed Lambda directly and repeating the exact user-reported input several times
   after the fix.
 
-## Unreleased (branch: `feature/tone-checker-screenshot`)
+## 2026-07-07 (continued)
 
 ### Added
 
