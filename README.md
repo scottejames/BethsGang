@@ -119,6 +119,25 @@ frontend `JSON.stringify` a small payload into `input`, and register a parser fo
 prompt. See `src/tools/replyStarter/` and its entry in `USER_MESSAGE_BUILDERS` for the
 pattern. Tools that don't register a builder just get `input` passed straight through.
 
+Tools are normally mounted/unmounted as you navigate — fine for stateless tools, but wrong
+for anything that needs to keep running in the background (e.g. White Noise's audio
+shouldn't stop just because you switched to another tool). For that, put the actual state
+in a React context provider mounted once at the app root (`main.tsx`), not inside the tool
+component itself — see `src/context/WhiteNoiseContext.tsx` and how `WhiteNoiseProvider`
+wraps `<App />`. The tool's own page just becomes one consumer of that context; a
+persistent UI element outside the tool tree (see `src/components/NowPlayingBar.tsx`,
+rendered unconditionally in `App.tsx`) can be another.
+
 ## Roadmap
 
 Ideas for future tools, and what's up next, are tracked in [`TODO.md`](./TODO.md).
+
+## Assets
+
+- The tomato graphic (Pomodoro Timer) is from
+  [Twemoji](https://github.com/twitter/twemoji), licensed
+  [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- The ambient sound loops (White Noise — rain, sea, cafe) are redistributed from
+  [Moodist](https://github.com/remvze/moodist) (MIT-licensed), whose own audio is sourced
+  from the [Pixabay Content License](https://pixabay.com/service/license-summary/) and
+  [CC0](https://creativecommons.org/publicdomain/zero/1.0/) per Moodist's credits.

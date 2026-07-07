@@ -18,10 +18,6 @@ mechanics — most of these are just a new system prompt away.
       message/instruction from someone else; get back a flat, unemotional bullet list of
       what they're actually asking you to do. Complements Task Breakdown (which takes a
       task *you* already know about, this takes someone else's words and extracts the ask).
-- [ ] **White Noise Widget** — a small always-available widget that plays looping ambient/
-      white noise for focus or sensory regulation. No AI needed — client-side only (Web
-      Audio API or a looping audio file); should be usable alongside any other tool, not
-      just as its own page.
 
 ## Shipped
 
@@ -32,6 +28,10 @@ mechanics — most of these are just a new system prompt away.
       while running. Committed but not yet click-tested against a live sandbox.
 - [x] **Tone Checker context field** — optional "Context" box (who it's to / what's going
       on) to sharpen the read, phrased low-pressure and factual on purpose.
+- [x] **White Noise Widget** — Rain / Sea / Cafe loops, persistent across tool navigation
+      via a `WhiteNoiseProvider` at the app root + a global mini-player. One sound at a
+      time for v1; layering multiple sounds is a possible later enhancement. Not yet
+      click-tested against a live sandbox.
 
 ## Later / stretch ideas
 

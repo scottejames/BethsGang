@@ -47,7 +47,7 @@ body {
   max-width: 720px;
   margin: 0 auto;
   min-height: 100svh;
-  padding: 40px 24px 64px;
+  padding: 40px 24px 96px;
 }
 
 h1 {
@@ -354,4 +354,117 @@ textarea {
   background: var(--accent);
   color: var(--accent-text);
   border-color: var(--accent);
+}
+
+.white-noise-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.white-noise-controls label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.white-noise-controls button {
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-h);
+}
+
+.now-playing-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 10px 18px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  max-width: calc(100% - 32px);
+  z-index: 10;
+}
+
+.now-playing-icon {
+  font-size: 18px;
+}
+
+.now-playing-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+  white-space: nowrap;
+}
+
+.now-playing-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+}
+
+.now-playing-bars span {
+  width: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  animation: now-playing-bounce 0.9s ease-in-out infinite;
+}
+
+.now-playing-bars span:nth-child(1) {
+  height: 40%;
+  animation-delay: -0.6s;
+}
+
+.now-playing-bars span:nth-child(2) {
+  height: 100%;
+  animation-delay: -0.3s;
+}
+
+.now-playing-bars span:nth-child(3) {
+  height: 60%;
+  animation-delay: 0s;
+}
+
+@keyframes now-playing-bounce {
+  0%,
+  100% {
+    transform: scaleY(0.4);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.now-playing-bar input[type='range'] {
+  width: 80px;
+}
+
+.now-playing-bar button {
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text-h);
+}
+
+.now-playing-bar button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }

@@ -67,3 +67,28 @@ All notable changes to this project are documented here.
   introduced it, so the Amplify Hosting build failed with `Cannot find module
   './replyStarter'` (worked locally since the files existed on disk; only broke on a clean
   CI clone). Committed the missing files.
+
+## 2026-07-07
+
+### Added
+
+- **White Noise** tool — play Rain, Sea, or Cafe ambience in the background (`public/audio/`,
+  see README "Assets" for licensing). First tool that needs to keep running while you use
+  other tools, which required a real architecture addition rather than just a new tool
+  folder:
+  - `src/context/WhiteNoiseContext.tsx` — a `WhiteNoiseProvider` mounted once at the app
+    root (`main.tsx`, wrapping `<App />`) that owns a single persistent `<audio>` element.
+    Because it lives above the tool-mounting point in the tree, it survives navigating
+    between tools (which normally mount/unmount their own UI).
+  - `src/components/NowPlayingBar.tsx` — a small persistent player (icon, sound name, a
+    tiny animated "equalizer bars" indicator, volume slider, stop button) rendered
+    unconditionally in `App.tsx` so it's visible on Home and every tool, not just the
+    White Noise page itself.
+  - Only one sound plays at a time (picking a new one switches, doesn't layer) — kept
+    deliberately simple for v1; documented in the README as the pattern to follow for any
+    future tool that needs persistent background state.
+- Audio sourcing research: no public "white noise as a service" API exists for embedding
+  (checked Noisli, White Noises, Moodist, noises.online, A Soft Murmur, Rainy Mood — all
+  are destination web apps, none expose a documented third-party API). Self-hosting
+  verified, appropriately-licensed loops was the responsible choice over hotlinking
+  someone else's live site.
