@@ -47,7 +47,7 @@ const VERBOSITY_LABELS: Record<NonNullable<ReplyStarterInput['verbosity']>, stri
   long: 'Long — a short paragraph per draft',
 };
 
-function buildReplyStarterMessage(rawInput: string): string {
+export function buildReplyStarterMessage(rawInput: string): string {
   let parsed: Partial<ReplyStarterInput>;
   try {
     parsed = JSON.parse(rawInput);
@@ -75,7 +75,7 @@ interface ToneCheckerInput {
   context?: string;
 }
 
-function buildToneCheckerMessage(rawInput: string): string {
+export function buildToneCheckerMessage(rawInput: string): string {
   let parsed: Partial<ToneCheckerInput>;
   try {
     parsed = JSON.parse(rawInput);
@@ -108,7 +108,7 @@ interface RequestEnvelope {
   input: string;
 }
 
-function parseEnvelope(rawInput: string): RequestEnvelope {
+export function parseEnvelope(rawInput: string): RequestEnvelope {
   try {
     const parsed = JSON.parse(rawInput);
     if (parsed && typeof parsed === 'object' && typeof parsed.input === 'string') {
@@ -123,7 +123,7 @@ function parseEnvelope(rawInput: string): RequestEnvelope {
   return { input: rawInput };
 }
 
-function buildEnergyInstruction(spoons: number | undefined): string | undefined {
+export function buildEnergyInstruction(spoons: number | undefined): string | undefined {
   if (spoons === undefined) return undefined;
 
   if (spoons <= 33) {

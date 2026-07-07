@@ -3,6 +3,9 @@
 A single-page web app that helps people with ADHD get things done.  It's built as a small **plugin framework**: each tool is a self-contained module, so new ones can be added without touching the rest of
 the app.
 
+Day-to-day build/test/run commands are in [`OPERATE.md`](./OPERATE.md). This file covers
+architecture, dependencies, and deployment.
+
 ## Architecture
 
 ```
@@ -52,6 +55,8 @@ the app.
 | `aws-cdk-lib`, `constructs` | Required by `@aws-amplify/backend` under the hood |
 | `@anthropic-ai/sdk` | Calls the Claude API from the `ai-assist` Lambda |
 | `oxlint` | Linting |
+| `vitest` | Test runner (shares config with Vite via `vite.config.ts`'s `test` block) |
+| `@testing-library/react`, `@testing-library/jest-dom`, `jsdom` | Component tests (DOM environment for tests that render React components) |
 
 Node 20+ is recommended (matches current Amplify Gen2 Lambda runtimes).
 
@@ -80,10 +85,34 @@ backend changes, and keeps `amplify_outputs.json` up to date.
 Other scripts:
 
 ```bash
-npm run build    # tsc -b && vite build — production frontend build to dist/
-npm run preview  # serve the production build locally
-npm run lint     # oxlint
+npm run build              # tsc -b && vite build — production frontend build to dist/
+npm run preview            # serve the production build locally
+npm run lint                # oxlint
+npm test                    # vitest run — unit/component tests (see "Testing" below)
+npm run typecheck:amplify   # tsc -p amplify/tsconfig.json — typechecks the backend/Lambda code
+npm run verify              # lint + typecheck:amplify + build + test, in one command
 ```
+
+Run `npm run verify` before pushing — it's the same set of checks worth running as a group
+rather than remembering each one separately, and it's what would back a CI workflow if one
+gets added later.
+
+## Testing
+
+`npm test` runs [Vitest](https://vitest.dev/). Test files sit next to the code they test
+(`*.test.ts` / `*.test.tsx`), not in a separate `tests/` folder. Two examples to follow:
+
+- `amplify/functions/ai-assist/handler.test.ts` — pure-function unit tests (envelope
+  parsing, the energy-level bucketing, the per-tool message builders). These need
+  `// @vitest-environment node` at the top of the file: the project's default test
+  environment is `jsdom` (needed for React component tests elsewhere), but the Anthropic
+  SDK refuses to construct in a browser-like global scope, so backend/Lambda test files
+  must opt back into a plain Node environment.
+- `src/tools/pomodoroTimer/index.test.tsx` — a React component test (Testing Library +
+  Vitest's fake timers) that is a regression test for a real bug: the pop-sound-plays-twice
+  issue (see CHANGELOG.md) only reproduced under tight/rapid timer ticks, which fake timers
+  happen to trigger — a good example of a test earning its keep by finding something real,
+  not just exercising the happy path.
 
 ## Deploying to AWS Amplify Hosting
 

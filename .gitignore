@@ -23,8 +23,12 @@ amplify_outputs.json
 .vscode/*
 !.vscode/extensions.json
 .idea
-.claude/
 .DS_Store
+
+# Claude Code: local/personal settings only — skills/commands under .claude/skills
+# and .claude/commands are project infrastructure and should be committed
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
 *.suo
 *.ntvs*
 *.njsproj

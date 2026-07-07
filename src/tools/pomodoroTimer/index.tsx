@@ -32,23 +32,22 @@ function PomodoroTimer() {
     visualizeRef.current = visualize;
   }, [visualize]);
 
-  // Mirrors remainingSeconds so the interval can check "did we just hit zero?"
-  // without putting that check (and its side effects) inside the setState
-  // updater passed to setRemainingSeconds — React may invoke updater functions
-  // more than once per tick (e.g. StrictMode does, in development), so updaters
-  // must stay pure. Side effects belong in the interval callback body instead.
-  const remainingSecondsRef = useRef(remainingSeconds);
-  useEffect(() => {
-    remainingSecondsRef.current = remainingSeconds;
-  }, [remainingSeconds]);
-
   // startKey forces a fresh interval even when `status` was already 'running'
-  // (e.g. picking a new preset mid-countdown).
+  // (e.g. picking a new preset mid-countdown). `remainingSeconds` is captured
+  // once into a plain local variable when the effect (re)starts — i.e. exactly
+  // when a countdown starts or resumes — and counted down entirely inside the
+  // interval closure. This intentionally avoids syncing a ref from
+  // `remainingSeconds` via a separate effect: that sync only commits between
+  // renders, so under rapid/back-to-back ticks (verified with fake timers in
+  // index.test.tsx) the ref could lag and the zero-check would never fire.
   useEffect(() => {
     if (status !== 'running') return;
 
+    let ticksRemaining = remainingSeconds;
+
     const id = window.setInterval(() => {
-      if (remainingSecondsRef.current <= 1) {
+      ticksRemaining -= 1;
+      if (ticksRemaining <= 0) {
         setRemainingSeconds(0);
         setStatus('done');
         if (visualizeRef.current) {
@@ -56,10 +55,13 @@ function PomodoroTimer() {
         }
         return;
       }
-      setRemainingSeconds((current) => current - 1);
+      setRemainingSeconds(ticksRemaining);
     }, 1000);
 
     return () => window.clearInterval(id);
+    // remainingSeconds is intentionally read only at effect-setup time (see
+    // comment above) — adding it here would restart the interval every tick.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [status, startKey]);
 
   function startWith(minutes: PresetMinutes) {

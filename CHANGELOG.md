@@ -142,3 +142,40 @@ All notable changes to this project are documented here.
   test (Playwright's clock API to fast-forward the countdown, intercepting
   `HTMLMediaElement.play()` to count calls) that it now fires exactly once, and that it
   doesn't fire at all when the toggle is off.
+- Writing a committed test for the fix above (see "Added") surfaced a second, subtler bug
+  in the same area: the ref-sync approach from that fix only updates the ref inside a
+  `useEffect`, which commits *between* renders — under tight/rapid ticks the ref could lag
+  and the zero-check would never fire, leaving the countdown stuck at "0:00" without ever
+  reaching `done`. Rewrote the interval to count down a plain local variable captured once
+  when the countdown starts/resumes, entirely inside the interval closure, with no
+  dependency on React's render/effect timing for correctness.
+
+### Added
+
+- `npm run verify` — one command chaining lint, a typecheck of the Amplify backend
+  (`amplify/tsconfig.json`, a real committed config replacing the scratch one used while
+  developing this session), the frontend build, and the test suite below.
+- A test suite via [Vitest](https://vitest.dev/) (`npm test`), configured in
+  `vite.config.ts`. Two tests, both formalizing verification that had only been done ad hoc
+  earlier this session: `amplify/functions/ai-assist/handler.test.ts` (envelope
+  parsing/energy bucketing/message builders — pure functions, run in a plain Node
+  environment via a per-file `@vitest-environment node` override, since the Anthropic SDK
+  refuses to construct under the project's default jsdom environment) and
+  `src/tools/pomodoroTimer/index.test.tsx` (the pop-sound regression test above, using
+  Testing Library + fake timers — this is what surfaced the second bug it fixed).
+- `OPERATE.md` — day-to-day build/test/run commands (the `verify`/`test`/
+  `typecheck:amplify` scripts above, `runLocal.sh`, sandbox-vs-deployed isolation),
+  separated out from `README.md` so that file can stay focused on architecture and
+  deployment. Linked from the top of `README.md`.
+- `.claude/skills/update-project-artifacts/SKILL.md` — a project skill that triggers
+  after any significant feature/fix, walking through updating CHANGELOG.md, TODO.md,
+  README.md, and OPERATE.md, running `npm run verify`, and checking `git status` before
+  handing back to the user. Formalizes the checklist this file's own history motivated
+  (see the `npm ci`→`npm install` and missing-Reply-Starter-files entries above for why).
+
+### Fixed
+
+- `.gitignore` blanket-ignored all of `.claude/`, which would have silently excluded
+  `.claude/skills/` (and any future `.claude/commands/`) from the repo — the opposite of
+  what's needed for a project skill to actually be shared. Narrowed the ignore to the two
+  actual local/personal files (`settings.local.json`, `scheduled_tasks.lock`).

@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "typecheck:amplify": "tsc -p amplify/tsconfig.json",
     "lint": "oxlint",
+    "test": "vitest run",
+    "verify": "npm run lint && npm run typecheck:amplify && npm run build && npm run test",
     "preview": "vite preview",
     "sandbox": "ampx sandbox"
   },
@@ -19,6 +22,8 @@
   "devDependencies": {
     "@aws-amplify/backend": "^1.23.0",
     "@aws-amplify/backend-cli": "^1.8.3",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
@@ -26,8 +31,10 @@
     "aws-cdk-lib": "^2.261.0",
     "constructs": "^10.6.0",
     "esbuild": "^0.28.1",
+    "jsdom": "^29.1.1",
     "oxlint": "^1.71.0",
     "typescript": "~6.0.2",
-    "vite": "^8.1.1"
+    "vite": "^8.1.1",
+    "vitest": "^4.1.10"
   }
 }
