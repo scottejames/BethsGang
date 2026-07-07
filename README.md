@@ -138,6 +138,10 @@ gets added later.
    `amplify/functions/ai-assist/handler.ts` describing what the model should do.
 5. If the tool needs no AI at all, it can skip step 4 entirely and just do its own thing
    client-side.
+6. Add its id to one of the two groups in `src/components/Home.tsx` (`DOING_GROUP` /
+   `SAYING_GROUP`) if it belongs with an existing group. If you skip this, it still
+   shows up — `Home.tsx` renders anything not in either group in a fallback grid below
+   the two columns — but grouped is the better result if it fits one.
 
 No routing, no new Lambda, no new API endpoint required in the common case.
 

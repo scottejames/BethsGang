@@ -212,3 +212,13 @@ All notable changes to this project are documented here.
   pattern). Verified with Playwright screenshots (home tile, tool page, and the mini-player
   actually playing Pink Noise) rather than assuming the rename was complete because the
   build passed.
+- Home screen now groups tiles by feel instead of one flat `auto-fill` grid: Distract Me /
+  Pomodoro Timer / Task Breakdown ("doing" tools) in one column, Reply Starter / Tone
+  Checker / Call Script ("saying" tools) in the other. Implemented as two explicit
+  `.tool-column` flex columns rather than relying on array-index/grid-column math, since
+  the previous grid's column count depends on viewport width — an interleaved-array trick
+  would only land the grouping correctly at exactly one column count and silently scramble
+  it at any other. Verified with screenshots at both a desktop width (two columns, correct
+  grouping) and a narrow width (columns stack, grouping still holds top-3/bottom-3 rather
+  than interleaving). A tool not added to either group in `Home.tsx` still renders, in a
+  fallback grid below the two columns, rather than silently vanishing from Home.

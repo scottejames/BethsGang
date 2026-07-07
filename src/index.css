@@ -80,6 +80,21 @@ textarea:focus-visible {
   gap: 16px;
 }
 
+.tool-columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.tool-column {
+  flex: 1 1 220px;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .tool-card {
   display: flex;
   flex-direction: column;
