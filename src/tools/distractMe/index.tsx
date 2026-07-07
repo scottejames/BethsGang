@@ -1,9 +1,9 @@
-import { SOUNDS, useWhiteNoise } from '../../context/WhiteNoiseContext';
+import { SOUNDS, useDistractMe } from '../../context/DistractMeContext';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
 
-function WhiteNoise() {
-  const { activeSoundId, volume, play, stop, setVolume } = useWhiteNoise();
+function DistractMe() {
+  const { activeSoundId, volume, play, stop, setVolume } = useDistractMe();
 
   return (
     <div className="tool-panel">
@@ -27,11 +27,11 @@ function WhiteNoise() {
       </div>
 
       {activeSoundId && (
-        <div className="white-noise-controls">
-          <label htmlFor="white-noise-volume">
+        <div className="distract-me-controls">
+          <label htmlFor="distract-me-volume">
             Volume
             <input
-              id="white-noise-volume"
+              id="distract-me-volume"
               type="range"
               min={0}
               max={1}
@@ -49,7 +49,7 @@ function WhiteNoise() {
   );
 }
 
-export const whiteNoiseTool: ToolDefinition = {
+export const distractMeTool: ToolDefinition = {
   meta,
-  Component: WhiteNoise,
+  Component: DistractMe,
 };

@@ -23,23 +23,34 @@ Be reassuring and non-judgmental. Do not rewrite the whole message unless asked.
 You will be given the message to reply to, a desired tone, a desired length, and optionally a short note on the intent the reply should accomplish.
 Write exactly 3 draft replies matching the requested tone and length as closely as possible. If an intent is given, make sure the drafts clearly accomplish it; otherwise cover a few different reasonable angles (e.g. a quick yes, a polite decline or delay, a request for more info) where that fits the message.
 Format as a numbered list ("1. ...", "2. ...", "3. ..."), one draft per number. Do not add commentary, headers, or explanations — just the three drafts.`,
+
+  'call-script': `You help neurodivergent people prepare for a phone call that feels awkward, overwhelming, or anxiety-inducing to make — the goal is to hand them the standard social conventions of a call (how to open it, how to close it) so they don't have to improvise those in the moment, alongside the actual thing they need to say.
+You will be given what the call needs to accomplish, a desired tone, and optionally who the call is to.
+Write a short script in exactly this format, one section per line:
+Opening: <a natural greeting, who they are, and why they're calling — 1-2 sentences>
+Main point: <the actual message or question, stated plainly and directly — 1-3 sentences>
+If they ask more: <one or two brief, ready-to-say responses to the most likely follow-up question or pushback>
+Closing: <a natural, brief way to end the call — 1 sentence>
+Keep every line something a person would actually say out loud — short sentences, contractions, no jargon or corporate phrasing. Match the requested tone. Do not add commentary, extra sections, or explanations beyond the four listed.`,
 };
 
 // Tools whose frontend sends structured JSON (instead of a plain string) as `input`
 // register a builder here to turn that JSON into the actual text sent to Claude.
 // Tools not listed here just pass `input` straight through unchanged.
-interface ReplyStarterInput {
-  message: string;
-  tone?: 'formal' | 'neutral' | 'friendly';
-  verbosity?: 'short' | 'medium' | 'long';
-  intent?: string;
-}
+type Tone = 'formal' | 'neutral' | 'friendly';
 
-const TONE_LABELS: Record<NonNullable<ReplyStarterInput['tone']>, string> = {
+const TONE_LABELS: Record<Tone, string> = {
   formal: 'Formal — suitable for business communication',
   neutral: 'Neutral — suitable for someone you know but aren\'t close with',
   friendly: 'Friendly — suitable for a close friend',
 };
+
+interface ReplyStarterInput {
+  message: string;
+  tone?: Tone;
+  verbosity?: 'short' | 'medium' | 'long';
+  intent?: string;
+}
 
 const VERBOSITY_LABELS: Record<NonNullable<ReplyStarterInput['verbosity']>, string> = {
   short: 'Short — a sentence or less per draft',
@@ -94,9 +105,37 @@ export function buildToneCheckerMessage(rawInput: string): string {
     .join('\n\n');
 }
 
+interface CallScriptInput {
+  message: string;
+  tone?: Tone;
+  about?: string;
+}
+
+export function buildCallScriptMessage(rawInput: string): string {
+  let parsed: Partial<CallScriptInput>;
+  try {
+    parsed = JSON.parse(rawInput);
+  } catch {
+    parsed = { message: rawInput };
+  }
+
+  const message = parsed.message ?? rawInput;
+  const tone = parsed.tone && TONE_LABELS[parsed.tone] ? parsed.tone : 'neutral';
+  const about = parsed.about?.trim();
+
+  return [
+    `What the call needs to accomplish:\n"""\n${message}\n"""`,
+    `Desired tone: ${TONE_LABELS[tone]}`,
+    about ? `Who the call is to: ${about}` : undefined,
+  ]
+    .filter((line): line is string => Boolean(line))
+    .join('\n\n');
+}
+
 const USER_MESSAGE_BUILDERS: Record<string, (rawInput: string) => string> = {
   'reply-starter': buildReplyStarterMessage,
   'tone-checker': buildToneCheckerMessage,
+  'call-script': buildCallScriptMessage,
 };
 
 // Every AI tool request is wrapped by useAiTool.ts as {spoons, input} — spoons

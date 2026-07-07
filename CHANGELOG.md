@@ -179,3 +179,36 @@ All notable changes to this project are documented here.
   `.claude/skills/` (and any future `.claude/commands/`) from the repo — the opposite of
   what's needed for a project skill to actually be shared. Narrowed the ignore to the two
   actual local/personal files (`settings.local.json`, `scheduled_tasks.lock`).
+
+### Added
+
+- **Call Script** tool — describe what a phone call needs to accomplish, pick a tone, and
+  optionally say who it's to; get back a short script (Opening / Main point / If they ask
+  more / Closing) meant to be read from during the call itself. Targets phone calls
+  specifically because they're disproportionately avoided even by people who don't
+  otherwise procrastinate — the script hands over the standard social conventions (how to
+  open, how to close) so only the actual content of the call needs improvising. Reuses the
+  `Tone`/`TONE_LABELS` already built for Reply Starter (generalized out of that tool's own
+  input type rather than duplicated). Automatically respects the Spoons energy level with
+  zero tool-specific code, via the existing shared envelope mechanism. Result text is
+  rendered larger than the app's other tool outputs (`.call-script-fields`), since this
+  one is meant to be read aloud in the moment rather than skimmed.
+  - Verified with a Playwright test that mocks the AppSync response (rather than needing
+    a live sandbox) to confirm the four script sections parse and render correctly
+    end-to-end, plus 3 new unit tests for the message builder.
+
+### Changed
+
+- **White Noise renamed to Distract Me**, and a **Pink Noise** sound added alongside
+  Rain/Sea/Cafe (same source and licensing as the existing three — see README "Assets").
+  Renamed thoroughly rather than just the display label, so the codebase doesn't end up
+  with a "Distract Me" tool whose files are all still named `whiteNoise`:
+  `src/tools/whiteNoise/` → `src/tools/distractMe/` (via `git mv`, preserving history),
+  `WhiteNoiseContext.tsx` → `DistractMeContext.tsx` (`WhiteNoiseProvider`/`useWhiteNoise` →
+  `DistractMeProvider`/`useDistractMe`), tool id `white-noise` → `distract-me`, and the
+  `.white-noise-controls` CSS class → `.distract-me-controls`. Updated every
+  cross-reference (`main.tsx`, `NowPlayingBar.tsx`, `registry.ts`, and the two places in
+  README.md that used White Noise as the worked example for the persistent-Context
+  pattern). Verified with Playwright screenshots (home tile, tool page, and the mini-player
+  actually playing Pink Noise) rather than assuming the rename was complete because the
+  build passed.

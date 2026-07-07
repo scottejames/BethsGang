@@ -236,6 +236,31 @@ textarea {
   white-space: pre-wrap;
 }
 
+/* Meant to be read aloud during a live call — bigger and roomier than the
+   standard .tool-result-fields so it's easy to follow at a glance. */
+.call-script-fields {
+  margin: 24px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.call-script-fields dt {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.call-script-fields dd {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.5;
+  color: var(--text-h);
+}
+
 .reply-list {
   margin: 24px 0 0;
   padding: 0;
@@ -434,14 +459,14 @@ textarea {
   border-color: var(--accent);
 }
 
-.white-noise-controls {
+.distract-me-controls {
   display: flex;
   align-items: center;
   gap: 16px;
   margin-top: 24px;
 }
 
-.white-noise-controls label {
+.distract-me-controls label {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -450,7 +475,7 @@ textarea {
   color: var(--text-h);
 }
 
-.white-noise-controls button {
+.distract-me-controls button {
   border-radius: 10px;
   padding: 10px 20px;
   font-weight: 600;

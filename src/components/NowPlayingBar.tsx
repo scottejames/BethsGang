@@ -1,7 +1,7 @@
-import { SOUNDS, useWhiteNoise } from '../context/WhiteNoiseContext';
+import { SOUNDS, useDistractMe } from '../context/DistractMeContext';
 
 export function NowPlayingBar() {
-  const { activeSoundId, volume, stop, setVolume } = useWhiteNoise();
+  const { activeSoundId, volume, stop, setVolume } = useDistractMe();
 
   if (!activeSoundId) return null;
 

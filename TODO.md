@@ -27,25 +27,34 @@ mechanics — most of these are just a new system prompt away.
 - [x] **Pomodoro Timer** — 5/10/15 min presets, stop/resume, reset, pulsing tomato graphic
       while running. Now also has a "Visualise remaining time" toggle: tomato shrinks in
       proportion to time left instead of pulsing, then pops (sound + animation) at zero.
-      Not yet click-tested against a live sandbox.
+      No AI/sandbox dependency — fully client-side. Covered by
+      `src/tools/pomodoroTimer/index.test.tsx` (fake timers + mocked audio) and verified
+      with Playwright screenshots in both themes.
 - [x] **Tone Checker context field** — optional "Context" box (who it's to / what's going
       on) to sharpen the read, phrased low-pressure and factual on purpose.
-- [x] **White Noise Widget** — Rain / Sea / Cafe loops, persistent across tool navigation
-      via a `WhiteNoiseProvider` at the app root + a global mini-player. One sound at a
-      time for v1; layering multiple sounds is a possible later enhancement. Not yet
-      click-tested against a live sandbox.
+- [x] **Distract Me** (originally shipped as "White Noise Widget", renamed) — Rain / Sea /
+      Cafe / Pink Noise loops, persistent across tool navigation via a `DistractMeProvider`
+      at the app root + a global mini-player. One sound at a time for v1; layering multiple
+      sounds is a possible later enhancement. No AI/sandbox dependency — fully client-side
+      (static audio files).
 - [x] **Spoons energy level** (was the ⭐ "Energy Check-In" idea below, shipped with more
       scope than originally proposed) — a global 0-100 "spoons" picker (button + popup,
       not a tool tile), persisted to `localStorage`, visible on every screen via the same
-      always-mounted pattern as `WhiteNoiseProvider`/`NowPlayingBar`. Every AI tool's
+      always-mounted pattern as `DistractMeProvider`/`NowPlayingBar`. Every AI tool's
       request is automatically wrapped with the current spoon count in `useAiTool.ts`; the
       Lambda unwraps it once and prepends a single shared low/medium/high instruction
       before the tool-specific prompt — so response complexity/sophistication scales with
       energy for every AI tool (present and future) with zero per-tool code. Verified with
       Playwright screenshots (button, popup, live slider updates, persistence across
       navigation) and isolated unit tests of the envelope parsing / bucketing logic.
-      Non-AI tools (Pomodoro, White Noise) just show the level — there's no "response" for
+      Non-AI tools (Pomodoro, Distract Me) just show the level — there's no "response" for
       them to make more/less sophisticated.
+- [x] **Call Script** (was the "Script Writer" idea below) — describe what a phone call
+      needs to accomplish, pick a tone, optionally say who it's to; get back an
+      Opening/Main point/If they ask more/Closing script meant to be read aloud during the
+      call. Automatically respects the Spoons energy level via the existing shared
+      envelope — no tool-specific work needed. Verified with a Playwright test that mocks
+      the AppSync response end-to-end, plus unit tests for the message builder.
 
 ## Later / stretch ideas
 
@@ -87,11 +96,7 @@ worth building next marked ⭐. See "Sources" at the bottom of this section.
       recommendation with a one-line reason, not a pros/cons essay. Mirrors Goblin Tools'
       "Consultant." Targets choice paralysis / decision fatigue specifically, which shows
       up constantly for ADHD adults in small everyday choices, not just big ones.
-- [ ] **Script Writer** — describe an anxiety-inducing call or conversation you're
-      avoiding (calling the dentist, asking for a deadline extension, returning an item)
-      and get a short opening line + 2-3 talking points to say out loud. Targets task
-      initiation specifically for the "phone calls" category, which is disproportionately
-      avoided even by people who don't otherwise procrastinate.
+~~- [ ] **Script Writer**~~ — shipped as **Call Script**, see Shipped below.
 - [ ] **Explain It Simply** — paste a confusing instruction, form, or piece of jargon
       (insurance letter, tax form line, recipe step) and get it explained in plain,
       literal language. Mirrors Goblin Tools' "Professor."
@@ -190,7 +195,7 @@ Concrete connections worth wiring up as tools accumulate, once the Shared Task S
 ## Infrastructure
 
 - [ ] ⭐ **Shared Task Store (the "spine")** — a single canonical list of tasks/items,
-      exposed as a `TaskStoreContext` the same way `WhiteNoiseContext` exposes audio
+      exposed as a `TaskStoreContext` the same way `DistractMeContext` exposes audio
       state, backed by `localStorage` first and an Amplify `a.model('Task')` later once
       auth lands. This is what turns the app from "a grid of unrelated tools" into a
       system — see "Linking tools together" above for the specific connections it
@@ -198,7 +203,7 @@ Concrete connections worth wiring up as tools accumulate, once the Shared Task S
       Sorter or Side Quest Log), since retrofitting it after three tools have grown their
       own bespoke list UIs is more work than building it first.
 - [ ] **Global alert/notification layer** — a `NotificationContext` (same pattern as
-      `WhiteNoiseContext`) that owns timers/alarms so they keep firing even if the user
+      `DistractMeContext`) that owns timers/alarms so they keep firing even if the user
       has navigated away from the tool that started them. Needed by: Pomodoro (check
       whether its alarm currently survives navigating away — if not, this is why), any
       future Transition Warning tool, and any future medication/routine reminders.

@@ -1,7 +1,7 @@
 import { createContext, useContext, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 
-export type SoundId = 'rain' | 'sea' | 'cafe';
+export type SoundId = 'rain' | 'sea' | 'cafe' | 'pink';
 
 export interface SoundOption {
   id: SoundId;
@@ -15,9 +15,10 @@ export const SOUNDS: SoundOption[] = [
   { id: 'rain', label: 'Rain', icon: '🌧️', src: '/audio/rain.mp3' },
   { id: 'sea', label: 'Sea', icon: '🌊', src: '/audio/sea.mp3' },
   { id: 'cafe', label: 'Cafe', icon: '☕', src: '/audio/cafe.mp3' },
+  { id: 'pink', label: 'Pink Noise', icon: '🩷', src: '/audio/pink.mp3' },
 ];
 
-interface WhiteNoiseContextValue {
+interface DistractMeContextValue {
   activeSoundId: SoundId | null;
   volume: number;
   play: (soundId: SoundId) => void;
@@ -25,11 +26,11 @@ interface WhiteNoiseContextValue {
   setVolume: (volume: number) => void;
 }
 
-const WhiteNoiseContext = createContext<WhiteNoiseContextValue | null>(null);
+const DistractMeContext = createContext<DistractMeContextValue | null>(null);
 
 // Lives at the app root (see main.tsx) so the <audio> element — and playback —
 // survives navigating between tools, which just mount/unmount their own UI.
-export function WhiteNoiseProvider({ children }: { children: ReactNode }) {
+export function DistractMeProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [activeSoundId, setActiveSoundId] = useState<SoundId | null>(null);
   const [volume, setVolumeState] = useState(0.6);
@@ -74,16 +75,16 @@ export function WhiteNoiseProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <WhiteNoiseContext.Provider value={{ activeSoundId, volume, play, stop, setVolume }}>
+    <DistractMeContext.Provider value={{ activeSoundId, volume, play, stop, setVolume }}>
       {children}
-    </WhiteNoiseContext.Provider>
+    </DistractMeContext.Provider>
   );
 }
 
-export function useWhiteNoise(): WhiteNoiseContextValue {
-  const context = useContext(WhiteNoiseContext);
+export function useDistractMe(): DistractMeContextValue {
+  const context = useContext(DistractMeContext);
   if (!context) {
-    throw new Error('useWhiteNoise must be used within a WhiteNoiseProvider');
+    throw new Error('useDistractMe must be used within a DistractMeProvider');
   }
   return context;
 }

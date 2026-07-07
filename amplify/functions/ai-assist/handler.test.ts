@@ -11,6 +11,7 @@ process.env.ANTHROPIC_API_KEY = 'test-key-not-real';
 
 import { describe, expect, it } from 'vitest';
 import {
+  buildCallScriptMessage,
   buildEnergyInstruction,
   buildReplyStarterMessage,
   buildToneCheckerMessage,
@@ -111,5 +112,34 @@ describe('buildToneCheckerMessage', () => {
 
     expect(message).toContain('Sounds good, talk soon.');
     expect(message).not.toContain('Context for the situation');
+  });
+});
+
+describe('buildCallScriptMessage', () => {
+  it('includes the purpose, tone, and who the call is to when all are provided', () => {
+    const raw = JSON.stringify({
+      message: 'Reschedule my dentist appointment to a later date',
+      tone: 'friendly',
+      about: "my dentist's office",
+    });
+
+    const message = buildCallScriptMessage(raw);
+
+    expect(message).toContain('Reschedule my dentist appointment to a later date');
+    expect(message).toContain('Friendly');
+    expect(message).toContain("my dentist's office");
+  });
+
+  it('defaults tone to neutral and omits the "who" line when not provided', () => {
+    const raw = JSON.stringify({ message: 'Ask about my order status' });
+    const message = buildCallScriptMessage(raw);
+
+    expect(message).toContain('Neutral');
+    expect(message).not.toContain('Who the call is to');
+  });
+
+  it('falls back to treating a non-JSON string as the raw purpose', () => {
+    const message = buildCallScriptMessage('just a plain pasted purpose');
+    expect(message).toContain('just a plain pasted purpose');
   });
 });
