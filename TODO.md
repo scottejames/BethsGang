@@ -10,10 +10,7 @@ mechanics — most of these are just a new system prompt away.
       later to triage (do it / bin it / turn it into a real task). No AI needed — pure
       client-side tool backed by `localStorage`, first tool in the app that isn't
       AI-backed. Good proof that the framework isn't AI-only.
-- [ ] **Is This Mad?** — paste a message *someone else* sent *you*; get a calm, literal
-      read on their tone instead of the worst-case interpretation. Mirror image of the
-      existing Tone Checker (which checks messages *you're* about to send). Targets
-      rejection-sensitive spirals directly.
+~~- [ ] **Is This Mad?**~~ — shipped, see Shipped below.
 - [ ] **Just The Facts** — paste a rambling, emotionally loaded, or passive-aggressive
       message/instruction from someone else; get back a flat, unemotional bullet list of
       what they're actually asking you to do. Complements Task Breakdown (which takes a
@@ -55,6 +52,14 @@ mechanics — most of these are just a new system prompt away.
       call. Automatically respects the Spoons energy level via the existing shared
       envelope — no tool-specific work needed. Verified with a Playwright test that mocks
       the AppSync response end-to-end, plus unit tests for the message builder.
+- [x] **Is This Mad?** — mirror image of Tone Checker: paste a message *someone else* sent
+      *you* (plus optional context) and get a calm, literal read (Tone / Most likely
+      meaning / Reassurance) instead of the worst-case interpretation. Targets
+      rejection-sensitive spirals directly — the system prompt explicitly instructs the
+      model not to validate a catastrophizing reading even if the given context suggests
+      the user is anxious about it. Grouped with the other "saying" tools on Home, right
+      after Tone Checker. Verified with a Playwright test mocking the AppSync response,
+      plus unit tests for the message builder.
 
 ## Later / stretch ideas
 

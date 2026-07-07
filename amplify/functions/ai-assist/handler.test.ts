@@ -13,6 +13,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildCallScriptMessage,
   buildEnergyInstruction,
+  buildIsThisMadMessage,
   buildReplyStarterMessage,
   buildToneCheckerMessage,
   parseEnvelope,
@@ -141,5 +142,32 @@ describe('buildCallScriptMessage', () => {
   it('falls back to treating a non-JSON string as the raw purpose', () => {
     const message = buildCallScriptMessage('just a plain pasted purpose');
     expect(message).toContain('just a plain pasted purpose');
+  });
+});
+
+describe('buildIsThisMadMessage', () => {
+  it('includes context when provided', () => {
+    const raw = JSON.stringify({
+      message: 'Fine.',
+      context: 'reply from my manager after I asked to reschedule',
+    });
+
+    const message = buildIsThisMadMessage(raw);
+
+    expect(message).toContain('Fine.');
+    expect(message).toContain('reply from my manager after I asked to reschedule');
+  });
+
+  it('omits the context line entirely when context is empty', () => {
+    const raw = JSON.stringify({ message: 'Sounds good, talk soon.', context: '' });
+    const message = buildIsThisMadMessage(raw);
+
+    expect(message).toContain('Sounds good, talk soon.');
+    expect(message).not.toContain('Context for the situation');
+  });
+
+  it('falls back to treating a non-JSON string as the raw message', () => {
+    const message = buildIsThisMadMessage('just a plain pasted message');
+    expect(message).toContain('just a plain pasted message');
   });
 });

@@ -32,6 +32,14 @@ Main point: <the actual message or question, stated plainly and directly — 1-3
 If they ask more: <one or two brief, ready-to-say responses to the most likely follow-up question or pushback>
 Closing: <a natural, brief way to end the call — 1 sentence>
 Keep every line something a person would actually say out loud — short sentences, contractions, no jargon or corporate phrasing. Match the requested tone. Do not add commentary, extra sections, or explanations beyond the four listed.`,
+
+  'is-this-mad': `You help people with ADHD or rejection-sensitive dysphoria who receive a message from someone else and immediately spiral into worst-case interpretations of its tone — wondering if the sender is angry, disappointed, or upset with them.
+You will be given a message someone else sent, and optionally some context about the situation. Stay grounded in the actual words on the page — don't speculate about the sender's mood, feelings, or hidden intentions beyond what's written. Most messages are far more neutral than they feel in the moment; default to the least alarming reasonable reading unless the words genuinely support a stronger one.
+Respond in this exact format:
+Tone: <one or two words, e.g. "Neutral", "Busy", "Friendly">
+Most likely meaning: <one calm, literal sentence on what they're probably saying — not what they might be feeling>
+Reassurance: <one short, grounded reason not to spiral, tied to the actual words, e.g. "Short doesn't mean cold — busy people write short messages">
+Be warm but factual. Do not validate a catastrophizing reading even if the context suggests the user is anxious about it — stay grounded in the message itself.`,
 };
 
 // Tools whose frontend sends structured JSON (instead of a plain string) as `input`
@@ -132,10 +140,35 @@ export function buildCallScriptMessage(rawInput: string): string {
     .join('\n\n');
 }
 
+interface IsThisMadInput {
+  message: string;
+  context?: string;
+}
+
+export function buildIsThisMadMessage(rawInput: string): string {
+  let parsed: Partial<IsThisMadInput>;
+  try {
+    parsed = JSON.parse(rawInput);
+  } catch {
+    parsed = { message: rawInput };
+  }
+
+  const message = parsed.message ?? rawInput;
+  const context = parsed.context?.trim();
+
+  return [
+    `Message they sent:\n"""\n${message}\n"""`,
+    context ? `Context for the situation: ${context}` : undefined,
+  ]
+    .filter((line): line is string => Boolean(line))
+    .join('\n\n');
+}
+
 const USER_MESSAGE_BUILDERS: Record<string, (rawInput: string) => string> = {
   'reply-starter': buildReplyStarterMessage,
   'tone-checker': buildToneCheckerMessage,
   'call-script': buildCallScriptMessage,
+  'is-this-mad': buildIsThisMadMessage,
 };
 
 // Every AI tool request is wrapped by useAiTool.ts as {spoons, input} — spoons

@@ -222,3 +222,18 @@ All notable changes to this project are documented here.
   grouping) and a narrow width (columns stack, grouping still holds top-3/bottom-3 rather
   than interleaving). A tool not added to either group in `Home.tsx` still renders, in a
   fallback grid below the two columns, rather than silently vanishing from Home.
+
+### Added
+
+- **Is This Mad?** tool — the mirror image of Tone Checker: paste a message *someone else*
+  sent *you* (plus optional context) and get a calm, literal read (Tone / Most likely
+  meaning / Reassurance) instead of the worst-case interpretation. Targets
+  rejection-sensitive-dysphoria spirals directly — the system prompt explicitly instructs
+  the model to default to the least alarming reasonable reading and not validate a
+  catastrophizing interpretation even if the given context suggests the user is anxious
+  about it. Reuses the exact same architecture as Tone Checker (structured
+  message+context JSON input, `.tool-result-fields` output rendering) and automatically
+  respects the Spoons energy level via the existing shared envelope, with zero
+  tool-specific code. Grouped with the other "saying" tools on Home, directly after Tone
+  Checker. Verified with a Playwright test that mocks the AppSync response end-to-end,
+  plus unit tests for the message builder.
