@@ -4,11 +4,29 @@
   --bg: #faf9f7;
   --surface: #fff;
   --border: #e4e1e8;
-  --accent: #6d5bd0;
+  --accent: #1f7a8c;
   --accent-text: #fff;
-  --accent-bg: rgba(109, 91, 208, 0.08);
+  --accent-bg: rgba(31, 122, 140, 0.08);
+  --accent-2: #b8540f;
   --error: #b3261e;
   --error-bg: rgba(179, 38, 30, 0.08);
+
+  /* Rainbow accents, sampled from the logo's rainbow hammer handle — used for
+     decorative pop (tool card badges, dividers, the energy pill ring), never
+     for body text, so the lower contrast ratios against --surface are fine. */
+  --rb1: #e2574c;
+  --rb2: #f2994a;
+  --rb3: #e0b429;
+  --rb4: #2fa76a;
+  --rb5: #2f9bda;
+  --rb6: #8c6fe0;
+  --rb1-bg: rgba(226, 87, 76, 0.14);
+  --rb2-bg: rgba(242, 153, 74, 0.14);
+  --rb3-bg: rgba(224, 180, 41, 0.16);
+  --rb4-bg: rgba(47, 167, 106, 0.14);
+  --rb5-bg: rgba(47, 155, 218, 0.14);
+  --rb6-bg: rgba(140, 111, 224, 0.14);
+  --rainbow-gradient: linear-gradient(90deg, var(--rb1), var(--rb2), var(--rb3), var(--rb4), var(--rb5), var(--rb6));
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
 
@@ -27,11 +45,25 @@
     --bg: #1a1820;
     --surface: #232030;
     --border: #37333f;
-    --accent: #9d8cf2;
-    --accent-text: #14121b;
-    --accent-bg: rgba(157, 140, 242, 0.12);
+    --accent: #5fd0e8;
+    --accent-text: #10242b;
+    --accent-bg: rgba(95, 208, 232, 0.14);
+    --accent-2: #ffb26b;
     --error: #ff8a80;
     --error-bg: rgba(255, 138, 128, 0.12);
+
+    --rb1: #ff7a70;
+    --rb2: #ffab63;
+    --rb3: #f0cf5a;
+    --rb4: #4fd68f;
+    --rb5: #5cbdf5;
+    --rb6: #b09aff;
+    --rb1-bg: rgba(255, 122, 112, 0.16);
+    --rb2-bg: rgba(255, 171, 99, 0.16);
+    --rb3-bg: rgba(240, 207, 90, 0.18);
+    --rb4-bg: rgba(79, 214, 143, 0.16);
+    --rb5-bg: rgba(92, 189, 245, 0.16);
+    --rb6-bg: rgba(176, 154, 255, 0.16);
   }
 }
 
@@ -69,8 +101,35 @@ textarea:focus-visible {
 
 /* Home */
 
-.home-subtitle {
+.home-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 12px;
+}
+
+.home-heading {
+  margin: 0;
+}
+
+.home-logo {
+  display: block;
+  height: 119px;
+  width: auto;
+}
+
+.home-rainbow-bar {
+  display: block;
+  width: 120px;
+  height: 5px;
   margin: 0 0 32px;
+  border-radius: 999px;
+  background: var(--rainbow-gradient);
+}
+
+.home-subtitle {
+  margin: 0;
   font-size: 18px;
 }
 
@@ -96,6 +155,8 @@ textarea:focus-visible {
 }
 
 .tool-card {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -104,18 +165,68 @@ textarea:focus-visible {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 20px;
+  padding: 24px 20px 20px;
   cursor: pointer;
   transition: border-color 0.15s ease, transform 0.15s ease;
 }
 
+.tool-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: var(--card-color, var(--accent));
+}
+
 .tool-card:hover {
-  border-color: var(--accent);
+  border-color: var(--card-color, var(--accent));
   transform: translateY(-2px);
 }
 
+/* Cycle a rainbow color per card, independently in each column, so the grid
+   reads as varied at a glance instead of one flat accent everywhere. */
+.tool-column .tool-card:nth-child(6n + 1),
+.tool-grid .tool-card:nth-child(6n + 1) {
+  --card-color: var(--rb1);
+  --card-color-bg: var(--rb1-bg);
+}
+.tool-column .tool-card:nth-child(6n + 2),
+.tool-grid .tool-card:nth-child(6n + 2) {
+  --card-color: var(--rb2);
+  --card-color-bg: var(--rb2-bg);
+}
+.tool-column .tool-card:nth-child(6n + 3),
+.tool-grid .tool-card:nth-child(6n + 3) {
+  --card-color: var(--rb3);
+  --card-color-bg: var(--rb3-bg);
+}
+.tool-column .tool-card:nth-child(6n + 4),
+.tool-grid .tool-card:nth-child(6n + 4) {
+  --card-color: var(--rb4);
+  --card-color-bg: var(--rb4-bg);
+}
+.tool-column .tool-card:nth-child(6n + 5),
+.tool-grid .tool-card:nth-child(6n + 5) {
+  --card-color: var(--rb5);
+  --card-color-bg: var(--rb5-bg);
+}
+.tool-column .tool-card:nth-child(6n + 6),
+.tool-grid .tool-card:nth-child(6n + 6) {
+  --card-color: var(--rb6);
+  --card-color-bg: var(--rb6-bg);
+}
+
 .tool-card-icon {
-  font-size: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--card-color-bg, var(--accent-bg));
+  font-size: 22px;
   line-height: 1;
 }
 
@@ -284,7 +395,7 @@ textarea {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--accent);
+  color: var(--accent-2);
   margin-bottom: 4px;
 }
 
@@ -556,23 +667,25 @@ textarea {
 
 .now-playing-bars span {
   width: 3px;
-  background: var(--accent);
   border-radius: 2px;
   animation: now-playing-bounce 0.9s ease-in-out infinite;
 }
 
 .now-playing-bars span:nth-child(1) {
   height: 40%;
+  background: var(--rb5);
   animation-delay: -0.6s;
 }
 
 .now-playing-bars span:nth-child(2) {
   height: 100%;
+  background: var(--rb4);
   animation-delay: -0.3s;
 }
 
 .now-playing-bars span:nth-child(3) {
   height: 60%;
+  background: var(--rb2);
   animation-delay: 0s;
 }
 
@@ -614,10 +727,12 @@ textarea {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background-image: linear-gradient(var(--surface), var(--surface)), var(--rainbow-gradient);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  border: 2px solid transparent;
   border-radius: 999px;
-  padding: 8px 16px;
+  padding: 7px 16px;
   font: inherit;
   font-weight: 600;
   color: var(--text-h);
@@ -625,7 +740,7 @@ textarea {
 }
 
 .energy-button:hover {
-  border-color: var(--accent);
+  filter: saturate(1.3);
 }
 
 .modal-overlay {

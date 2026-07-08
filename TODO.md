@@ -63,6 +63,13 @@ mechanics — most of these are just a new system prompt away.
       field rather than built standalone. Grouped with the other "saying" tools on Home,
       right after Tone Checker. Verified with a Playwright test mocking the AppSync
       response, plus unit tests for the message builder.
+- [x] **Real logo + rainbow theme** — replaced the placeholder abstract favicon with the
+      user-supplied hand-drawn logo (Home header + favicon/apple-touch-icon), and reworked
+      the color theme around six rainbow accent colors sampled from the logo's hammer
+      handle (`--rb1`..`--rb6`), used decoratively across tool card badges, the energy
+      pill, the now-playing bars, and page-heading dividers. The single grounding action
+      color moved from purple to a teal sampled from the logo's wordmark. Verified with
+      Playwright screenshots in both themes.
 
 ## Later / stretch ideas
 

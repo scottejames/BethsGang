@@ -199,3 +199,7 @@ Ideas for future tools, and what's up next, are tracked in [`TODO.md`](./TODO.md
   [3 Pop Sounds](https://opengameart.org/content/3-pop-sounds) on OpenGameArt.org,
   by Arrall Austin, licensed [CC0](https://creativecommons.org/publicdomain/zero/1.0/)
   (converted from Ogg Vorbis to MP3 for Safari compatibility).
+- The "Beth's Gang" logo (`src/assets/logo.png`, `public/favicon.png`,
+  `public/apple-touch-icon.png`) was supplied directly by the project owner. Processed
+  from the original JPEG with a flood-fill script (background trimmed to transparency,
+  not just cropped) and palette-quantized to keep file size down.

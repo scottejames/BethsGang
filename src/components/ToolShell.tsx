@@ -16,6 +16,7 @@ export function ToolShell({ icon, name, onBack, children }: ToolShellProps) {
       <h1>
         <span aria-hidden="true">{icon}</span> {name}
       </h1>
+      <span className="home-rainbow-bar" aria-hidden="true" />
       {children}
     </div>
   );

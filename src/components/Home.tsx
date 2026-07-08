@@ -1,5 +1,6 @@
 import { tools, getTool } from '../tools/registry';
 import { ToolCard } from './ToolCard';
+import logo from '../assets/logo.png';
 import type { ToolDefinition } from '../tools/types';
 
 interface HomeProps {
@@ -28,8 +29,13 @@ export function Home({ onSelectTool }: HomeProps) {
 
   return (
     <div className="home">
-      <h1>Beth's Gang</h1>
-      <p className="home-subtitle">A small toolbox for getting unstuck.</p>
+      <div className="home-header">
+        <h1 className="home-heading">
+          <img src={logo} alt="Beth's Gang" className="home-logo" />
+        </h1>
+        <p className="home-subtitle">A small toolbox for getting unstuck.</p>
+      </div>
+      <span className="home-rainbow-bar" aria-hidden="true" />
       <div className="tool-columns">
         <div className="tool-column">
           {doingTools.map((tool) => (

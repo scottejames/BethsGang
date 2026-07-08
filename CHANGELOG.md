@@ -292,3 +292,34 @@ All notable changes to this project are documented here.
     (not just the mock) produces valid base64 JPEG and actually caps a 3000×2000 test
     image down to a small payload. Plus unit tests for `buildScreenshotToTextContent`
     (image-block construction, validation) and `findImageInClipboard`.
+
+## 2026-07-08
+
+### Added
+
+- **Real logo + a rainbow visual theme.** The hand-drawn "Beth's Gang" logo (supplied by
+  the user) now appears on the Home header and as the browser tab favicon/apple-touch
+  icon, replacing the old placeholder purple mark. Processed from the source artwork with
+  a flood-fill script (`background` trimmed to transparency, not just cropped) so it sits
+  cleanly on both light and dark backgrounds, and palette-quantized to keep the PNG small
+  despite the JPEG source's compression noise. Sized 10% larger than the first pass and
+  set on the same row as the "A small toolbox for getting unstuck" subtitle (new
+  `.home-header` flex row), per follow-up feedback that the logo felt small and the
+  subtitle isolated on its own line.
+
+### Changed
+
+- **Color theme reworked around the logo's rainbow hammer handle.** New CSS custom
+  properties `--rb1`..`--rb6` (light and dark variants) plus `--rainbow-gradient`, sampled
+  from the logo. Applied as decorative pop only, never for body text: a colored top bar
+  and matching tinted icon badge cycle across the six colors per tool card, a rainbow
+  gradient ring wraps the energy (spoons) pill, the now-playing equalizer bars each get a
+  different hue, and a short rainbow divider sits under every page heading. The single
+  grounding `--accent` action color (buttons, links, focus rings) moved from purple to a
+  teal sampled from the logo's wordmark, with a new `--accent-2` (burnt orange, from the
+  logo's tagline) used for Call Script's field labels. All new colors were checked for
+  WCAG AA contrast where used as text/button-label color (`--accent` ≈ 5:1 on its
+  background in both themes); the rainbow colors themselves are decorative-only so don't
+  need to clear that bar.
+  - Verified with Playwright screenshots of Home and a tool detail page in both
+    `light` and `dark` `prefers-color-scheme`, plus `npm run verify`.
