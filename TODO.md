@@ -104,6 +104,17 @@ mechanics — most of these are just a new system prompt away.
       five", "quarter to five" — some of which chrono-node silently got wrong until a
       small pre-processing step rewrote them into a form it already handles correctly.
       Example phrases are now shown directly on the tool screen.
+- [x] **Usage logging** — a dedicated `log-event` Lambda + `logEvent` mutation
+      (separate from `ai-assist`, no Anthropic SDK, own CloudWatch log group) records
+      which tools get opened and whether AI-backed calls succeed, wired in at exactly
+      two centralized points (`App.tsx`'s tool selection, `useAiTool.ts`'s `run()`) so
+      every tool is covered with zero per-tool code. Log detail keeps short field values
+      (tone/verbosity/repeat-kind choices) as-is but reduces longer string values to
+      just their length, to get real behavioral insight without logging the substance
+      of personal content (reminders, messages). See `OPERATE.md`'s "Viewing usage
+      logs" for how to actually read it. Non-AI tools (Distract Me, Pomodoro, Remind Me)
+      only get an `opened` event for now — see the "Later" section below for
+      action-level events on those.
 
 ## Later / stretch ideas
 
@@ -111,6 +122,12 @@ mechanics — most of these are just a new system prompt away.
       get a realistic time estimate plus a buffer.
 - [ ] **Brain Dump Sorter** — paste a messy stream-of-consciousness dump, get it split into
       Do Now / Someday / Reference / Not Actually Yours to worry about.
+- [ ] **Action-level usage events for non-AI tools** — the shipped usage logging (see
+      Shipped) only captures "opened" for Distract Me, Pomodoro Timer, and Remind Me,
+      since those aren't centralized through `useAiTool` the way AI-backed tools are.
+      Worth adding "sound played", "timer completed", "reminder created" events if
+      opened-only turns out to be too coarse — would need a small amount of per-tool
+      instrumentation rather than the current zero-touch approach.
 
 ## Research: new tool ideas (2026-07-07)
 

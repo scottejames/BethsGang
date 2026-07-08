@@ -150,6 +150,29 @@ Amplify Hosting's own build would hit are already covered — it won't catch Amp
 issues like a stale secret or IAM permissions, but it catches everything that's actually
 about the code.
 
+## Viewing usage logs
+
+Every tool-open and every AI-backed tool call is logged to CloudWatch via a dedicated
+`log-event` Lambda (see `amplify/functions/log-event/`) — kept separate from the
+`ai-assist` Lambda's own logs so usage tracking never gets mixed in with Claude API
+request/response logging. Each log line is a single JSON object (`{"type":"usage",
+"toolId":...,"event":"opened"|"ai_call",...}`), so it's easy to filter/query.
+
+Find the function's log group once, then tail it live:
+
+```bash
+# One-time: find the exact deployed function name (the suffix hash varies per deploy).
+aws lambda list-functions --query "Functions[?contains(FunctionName, 'logEvent')].FunctionName" --output text
+
+# Then tail it live while using the app:
+aws logs tail /aws/lambda/<the-name-from-above> --follow --format short
+```
+
+For anything beyond a live tail — e.g. "how many times was Tone Checker used this
+week" — reach for CloudWatch Logs Insights in the console instead of eyeballing a
+stream; the structured JSON shape means a simple `fields toolId, event | stats count()
+by toolId` query works directly.
+
 ## Keeping the project's artifacts current
 
 After shipping anything significant (a new tool, an architecture change, a real bug fix),

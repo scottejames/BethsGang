@@ -452,3 +452,35 @@ All notable changes to this project are documented here.
   - Verified with new unit tests for every phrasing above (including the hour-12 edge
     case and the "noon"/"midnight" message-leak fix) and a Playwright pass against the
     real dev server.
+- **Usage logging** — a new `log-event` Lambda + `logEvent` AppSync mutation
+  (`amplify/functions/log-event/`) record which tools get opened and whether AI-backed
+  calls succeed, so it's possible to answer "what are people actually doing with this
+  app" from CloudWatch. Deliberately a *separate* Lambda from `ai-assist` rather than
+  reusing it — no Anthropic SDK dependency, and its own CloudWatch log group keeps usage
+  tracking from getting mixed into Claude API request/response logs.
+  - Wired in at exactly two centralized points rather than touching every tool:
+    `App.tsx`'s tool-selection handler logs an `opened` event for any tool, and
+    `useAiTool.ts`'s `run()` logs an `ai_call` event (success or failure) after every
+    AI-backed call resolves — covering every current and future tool with zero
+    per-tool code. Non-AI tools (Distract Me, Pomodoro, Remind Me) only get the
+    `opened` event for now; action-level events for those would mean per-tool
+    instrumentation, tracked as a possible later enhancement in TODO.md rather than
+    built now.
+  - `src/lib/usageLog.ts`'s `summarizeInputForLogging` decides what "detail" a log line
+    carries: short string field values (≤24 chars) are kept as-is (this covers the
+    actual fixed vocabulary in this app — tone/verbosity/repeat-kind choices — so it's
+    possible to see which options people pick), but longer string values are reduced to
+    just `{ length: N }`. Several tools handle real personal content (reminders,
+    messages someone sent you, tone-check drafts) — this was a deliberate choice to get
+    real behavioral insight without logging the substance of what anyone typed.
+  - `sendUsageEvent` wraps its entire call (not just a `.catch` on the resulting
+    promise) in a try/catch: caught a real bug in testing where the deployed backend's
+    schema was briefly a step behind this code's TypeScript types (the usual case right
+    after a schema change lands but before that specific deploy finishes), and calling
+    a GraphQL mutation the generated client doesn't yet know about throws *synchronously*
+    — which broke tool navigation outright before this fix, since a `.catch` alone only
+    handles a rejected promise, not a synchronous throw.
+  - Verified with unit tests (the Lambda handler's structured logging and malformed-input
+    fallback; the summarization heuristic's short/long/non-string/non-JSON cases) and a
+    Playwright pass confirming normal navigation and AI-tool submission still work
+    exactly as before with logging wired in.

@@ -42,6 +42,13 @@ architecture, dependencies, and deployment.
 - **Secrets** — the Anthropic API key is stored as an Amplify secret and injected into the
   Lambda's environment at deploy time. It is never present in frontend code or bundled
   output.
+- **Usage logging** — a separate `logEvent` mutation and dedicated `log-event` Lambda
+  (no Anthropic SDK, its own CloudWatch log group) record which tools get opened and
+  whether AI-backed calls succeed, fire-and-forget from `src/lib/usageLog.ts`. It's
+  wired in at exactly two centralized points — `App.tsx`'s tool-selection handler and
+  `useAiTool.ts`'s `run()` — so every current and future tool is covered automatically,
+  no per-tool logging code required. See `OPERATE.md`'s "Viewing usage logs" for how to
+  actually read what it collects.
 
 ## Dependencies
 

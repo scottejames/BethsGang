@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { runAiTool } from '../lib/aiClient';
 import { useEnergy } from '../context/EnergyContext';
+import { sendUsageEvent, summarizeInputForLogging } from '../lib/usageLog';
 
 export function useAiTool(toolId: string) {
   const [output, setOutput] = useState<string | null>(null);
@@ -21,9 +22,21 @@ export function useAiTool(toolId: string) {
         const envelope = JSON.stringify({ spoons, input });
         const result = await runAiTool(toolId, envelope);
         setOutput(result);
+        sendUsageEvent({
+          toolId,
+          event: 'ai_call',
+          spoons,
+          detail: { ...summarizeInputForLogging(input), success: true },
+        });
         return result;
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+        sendUsageEvent({
+          toolId,
+          event: 'ai_call',
+          spoons,
+          detail: { ...summarizeInputForLogging(input), success: false },
+        });
         return undefined;
       } finally {
         setLoading(false);
