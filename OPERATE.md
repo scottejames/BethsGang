@@ -158,15 +158,27 @@ Every tool-open and every AI-backed tool call is logged to CloudWatch via a dedi
 request/response logging. Each log line is a single JSON object (`{"type":"usage",
 "toolId":...,"event":"opened"|"ai_call",...}`), so it's easy to filter/query.
 
-Find the function's log group once, then tail it live:
+Currently deployed function (`main` branch, app `dk3ifbty6lizq`) — confirmed working by
+triggering a real tool-open on the live site and watching the line land:
 
 ```bash
-# One-time: find the exact deployed function name (the suffix hash varies per deploy).
-aws lambda list-functions --query "Functions[?contains(FunctionName, 'logEvent')].FunctionName" --output text
-
-# Then tail it live while using the app:
-aws logs tail /aws/lambda/<the-name-from-above> --follow --format short
+aws logs tail "/aws/lambda/amplify-dk3ifbty6lizq-main--logeventlambda715157D2-HN3FkfHI0kR1" --follow --format short
 ```
+
+If that log group is ever gone (a fresh deploy replaces the hash suffix, or a new
+environment/branch), re-derive it:
+
+```bash
+# Note: the deployed name is lowercased ("logeventlambda"), not "logEvent" — a
+# case-sensitive `contains` filter on the literal defineFunction name won't match.
+aws lambda list-functions --query "Functions[?contains(FunctionName, 'logeventlambda')].FunctionName" --output text
+```
+
+**Lazy log group creation**: Lambda only creates a function's CloudWatch log group on
+its *first invocation* — right after a fresh deploy (or in a brand new environment),
+`describe-log-groups`/`aws logs tail` will find nothing until something actually opens a
+tool or makes an AI call. Trigger one yourself (open the app, click a tool) if you need
+the log group to exist before you can tail it.
 
 For anything beyond a live tail — e.g. "how many times was Tone Checker used this
 week" — reach for CloudWatch Logs Insights in the console instead of eyeballing a
