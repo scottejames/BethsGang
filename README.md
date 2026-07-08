@@ -54,6 +54,7 @@ architecture, dependencies, and deployment.
 | `@aws-amplify/backend`, `@aws-amplify/backend-cli` | Amplify Gen2 backend definition (`amplify/`) and the `ampx` CLI |
 | `aws-cdk-lib`, `constructs` | Required by `@aws-amplify/backend` under the hood |
 | `@anthropic-ai/sdk` | Calls the Claude API from the `ai-assist` Lambda |
+| `chrono-node` | Parses natural-language reminder text (Remind Me) into an actual date/time, entirely client-side |
 | `oxlint` | Linting |
 | `vitest` | Test runner (shares config with Vite via `vite.config.ts`'s `test` block) |
 | `@testing-library/react`, `@testing-library/jest-dom`, `jsdom` | Component tests (DOM environment for tests that render React components) |
@@ -160,6 +161,14 @@ component itself — see `src/context/DistractMeContext.tsx` and how `DistractMe
 wraps `<App />`. The tool's own page just becomes one consumer of that context; a
 persistent UI element outside the tool tree (see `src/components/NowPlayingBar.tsx`,
 rendered unconditionally in `App.tsx`) can be another.
+
+`src/context/RemindersContext.tsx` is a fuller example of the same pattern for something
+that must fire regardless of which tool is open: it owns a `setInterval`-driven check
+against reminders persisted in `localStorage`, and `src/components/ReminderBanner.tsx`
+(also rendered unconditionally in `App.tsx`) surfaces whatever just fired. If a future
+tool needs its own "keeps running / can interrupt from anywhere" behavior, this is the
+closer template to follow than Distract Me — it also shows the pattern for a provider
+whose state needs to survive a full page reload, not just navigation between tools.
 
 The same pattern extends to global settings that every tool should read, not just
 stateful widgets — see `src/context/EnergyContext.tsx` (the Spoons energy level) and its

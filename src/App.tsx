@@ -3,6 +3,7 @@ import { Home } from './components/Home';
 import { ToolShell } from './components/ToolShell';
 import { NowPlayingBar } from './components/NowPlayingBar';
 import { EnergyButton } from './components/EnergyButton';
+import { ReminderBanner } from './components/ReminderBanner';
 import { getTool } from './tools/registry';
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
   return (
     <>
       <EnergyButton />
+      <ReminderBanner />
       {activeTool ? (
         <ToolShell
           icon={activeTool.meta.icon}

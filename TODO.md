@@ -70,6 +70,40 @@ mechanics — most of these are just a new system prompt away.
       pill, the now-playing bars, and page-heading dividers. The single grounding action
       color moved from purple to a teal sampled from the logo's wordmark. Verified with
       Playwright screenshots in both themes.
+- [x] **Remind Me** — set reminders in plain English ("remind me in 20 mins to have
+      lunch", "remind me at 5:30 to go home, warn me 20 mins before"); one-shot or
+      repeating (daily / weekdays only / every N minutes or hours),
+      with an optional warning fired ahead of the actual reminder. Text entry is the only
+      input method — a plain form shipped alongside it initially, then was removed the
+      same day for looking visually noisy, since natural language already covers
+      everything the form did. Parsing is fully client-side (`src/lib/reminderParser.ts`,
+      using `chrono-node`)
+      rather than routed through the AI Lambda — deliberately, since this session already
+      hit real bugs from LLMs not reliably following an exact output format, and a
+      reminder firing at the wrong time is worse than a tool's text looking odd; parsing
+      is also fully deterministic and unit-testable this way. Reminders persist across
+      navigation *and* full page reloads (`RemindersContext`, `localStorage`-backed) and
+      fire regardless of which tool is open, surfaced by `ReminderBanner` mounted
+      unconditionally in `App.tsx` — this is the "global alert/notification layer" from
+      Infrastructure below, now shipped. Also tries the browser's system Notification API
+      best-effort (permission requested on first use) on top of the always-on in-app
+      banner. A reminder that was already overdue when the tab was closed fires once as a
+      "catch-up" the next time the app opens, rather than being silently lost. Verified
+      with unit tests (parser phrase variations, fake-timer tests of warning/due/repeat
+      scheduling and the catch-up path) and Playwright driving the real app end-to-end,
+      including confirming a reminder fires while a *different* tool is open. The Home
+      tile also shows a live active-reminder count badge (`ToolCard`'s new optional
+      `badgeCount` prop) so the count is visible without opening the tool. Reminders
+      more than an hour away get a 15-minute warning by default unless the user asks for
+      a different one; a reminder or requested warning that would land in the past is
+      rejected with a specific error instead of silently accepted, and the text stays
+      editable so the user can fix and resubmit. The Active Reminders list shows the
+      reminder time and (if set) the warning time as two clearly labeled lines rather
+      than a vague relative offset. Accepts noticeably more flexible phrasing —
+      "in an hour and a half", "in two and a half hours", "a quarter hour", "half past
+      five", "quarter to five" — some of which chrono-node silently got wrong until a
+      small pre-processing step rewrote them into a form it already handles correctly.
+      Example phrases are now shown directly on the tool screen.
 
 ## Later / stretch ideas
 
@@ -141,10 +175,11 @@ worth building next marked ⭐. See "Sources" at the bottom of this section.
       shrinking-time visual into its own shared component so future timer-ish tools
       (Transition Warning, a body-double focus session) can reuse it instead of
       reimplementing.
-- [ ] **Transition Warning** — set a "heads up" alarm some number of minutes before a hard
-      stop (leaving for an appointment, end of a work block) so a transition doesn't
-      arrive with zero warning. Needs the global alert layer (below) to fire reliably even
-      if you've navigated away from the tool that set it.
+- ~~**Transition Warning**~~ — largely covered by **Remind Me**'s shipped warn-before
+      feature (see Shipped): a one-shot reminder with a "warn me N minutes before" offset
+      *is* a heads-up alarm before a hard stop, firing reliably regardless of which tool
+      is open via the global alert layer. A dedicated tile isn't needed unless a more
+      specific UX (e.g. a "before I leave" preset) turns out to be worth it later.
 - [ ] **Streak-free habit tracker** — a small number of user-defined daily habits with a
       simple check-off and a running streak count. Deliberately *not* full RPG
       gamification (points/pets/loot) — that's a specific design choice worth revisiting
@@ -217,13 +252,15 @@ Concrete connections worth wiring up as tools accumulate, once the Shared Task S
       unlocks. Worth building as soon as a second list-producing tool ships (Brain Dump
       Sorter or Side Quest Log), since retrofitting it after three tools have grown their
       own bespoke list UIs is more work than building it first.
-- [ ] **Global alert/notification layer** — a `NotificationContext` (same pattern as
-      `DistractMeContext`) that owns timers/alarms so they keep firing even if the user
-      has navigated away from the tool that started them. Needed by: Pomodoro (check
-      whether its alarm currently survives navigating away — if not, this is why), any
-      future Transition Warning tool, and any future medication/routine reminders.
-      Without this, every timer-based tool has to solve "what if the user left the page"
-      from scratch.
+- ~~**Global alert/notification layer**~~ — shipped as part of **Remind Me** (see
+      Shipped): `RemindersContext` (same pattern as `DistractMeContext`) owns the
+      timers/alarms and keeps them firing regardless of which tool is open, surfaced via
+      `ReminderBanner` mounted unconditionally in `App.tsx`. Any future timer-based tool
+      (e.g. a body-double focus session) can reuse `useReminders()` instead of solving
+      "what if the user left the page" from scratch. Pomodoro's own countdown still
+      doesn't survive navigating away — it wasn't migrated onto this layer, since its
+      short, actively-watched countdown is a different use case from a fire-and-forget
+      reminder; revisit only if that turns out to matter in practice.
 - [ ] **User accounts (Amplify Auth) + persistent Data model** — lets tools that need to
       remember state (Side Quest Log entries, Pomodoro settings/streaks, saved messages,
       the Shared Task Store above, etc.) store it in a real database per signed-in user

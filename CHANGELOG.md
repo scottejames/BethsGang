@@ -323,3 +323,132 @@ All notable changes to this project are documented here.
   need to clear that bar.
   - Verified with Playwright screenshots of Home and a tool detail page in both
     `light` and `dark` `prefers-color-scheme`, plus `npm run verify`.
+
+### Added
+
+- **Remind Me** — set reminders in plain English ("remind me in 20 mins to have lunch",
+  "warn me at 5:30 that I should go home, give me a warning 20 mins before hand");
+  one-shot or repeating (daily / weekdays only / every N minutes or hours), with an
+  optional warning fired ahead of the actual due time. Shipped with a plain form
+  alongside the text entry as a structured fallback, then the form was removed the same
+  day per feedback that it looked visually noisy next to the text box — natural language
+  already covers the warning and repeat cases the form existed for, so text entry is now
+  the only input method. Two new pieces of infrastructure ship alongside the tool itself:
+  - `src/lib/reminderParser.ts` turns natural language into a message + time + optional
+    warning + repeat rule, using the `chrono-node` library entirely client-side rather
+    than the AI Lambda — deliberately, since a reminder firing at the wrong time is a
+    worse failure than a tool's text looking odd, and this session already hit real bugs
+    from LLMs not reliably following an exact output format (see the "Structured tool
+    output... could break with unrendered markdown" entry above). chrono-node itself
+    defaults an ambiguous clock time (no am/pm given) to AM and pushes to the next day
+    once that's passed, which would turn "at 5:30" asked at 2pm into 5:30am tomorrow
+    instead of 5:30pm today — patched with a small resolver that picks whichever of the
+    two 12-hour readings is soonest, but only when there's no explicit date/weekday/am-pm
+    in the phrase (an explicit "tomorrow at 9" or "next Tuesday at 5:30" is left as
+    chrono resolves it, since that's a much less ambiguous case).
+  - `src/context/RemindersContext.tsx` is a new global provider (same pattern as
+    `DistractMeContext`) that persists reminders to `localStorage` and keeps them firing
+    on a 15-second check regardless of which tool is open, surfaced via a new
+    `ReminderBanner` mounted unconditionally in `App.tsx` — this is the "global
+    alert/notification layer" tracked in TODO.md's Infrastructure section, now shipped.
+    A reminder that was already overdue when the tab was closed fires once as a
+    "catch-up" the next time the app opens, instead of being silently lost. Also
+    requests the browser's Notification permission on first use and fires a real system
+    notification best-effort, on top of (never instead of) the in-app banner, which is
+    the guaranteed fallback if permission is denied or the API is unsupported.
+  - Verified with unit tests for the parser (the user's exact example phrases plus
+    several variations and failure cases) and for the provider (fake-timer tests of the
+    warning/due/repeat-rescheduling flow and the catch-up-on-mount path), plus a
+    Playwright pass driving the real dev server end-to-end — including confirming a
+    reminder fires while a completely different tool is open, and that it survives a
+    full page reload.
+  - **Home screen shows an active-reminder count badge** on the Remind Me tile (a small
+    `--accent`-colored circle, top-right corner of the card) so the number of active
+    reminders is visible without opening the tool. `ToolCard` gained an optional
+    `badgeCount` prop for this rather than a Remind Me-specific component, in case a
+    future tool needs the same treatment — `Home.tsx` is the only place that decides
+    which tool currently gets one. Includes screen-reader-only text alongside the visual
+    badge, since the badge itself is `aria-hidden`.
+
+### Fixed
+
+- **Remind Me's natural-language grammar was inconsistent and confusing.** The original
+  shape supported two different leading verbs — "remind me ..." and "warn me AT &lt;time&gt;
+  ... give me a warning N mins before hand" — where the second form's "warn me AT" read
+  as if the *warning* fired at the stated time, when actually the *reminder* did (the
+  warning fired N minutes earlier). Simplified to one consistent grammar: "remind me
+  (at/in/before) &lt;time&gt; [to &lt;message&gt;][, warn me N minutes before]" — "remind me" is
+  always the leading verb, and "warn me ... before" only ever appears as a trailing
+  clause. Also fixed a real bug this surfaced: chrono-node absorbs "at"/"in" into its own
+  matched time phrase but not "before" used the same way, so "remind me before 5:30 to go
+  home" left a dangling "before" stuck in the parsed message ("before to go home") —
+  fixed by stripping a leading "before"/"by" preposition when found immediately before
+  the matched time phrase. The Remind Me tool's help text, placeholder, and all tests
+  were updated to the new canonical phrasing.
+
+### Added
+
+- **Remind Me defaults to a 15-minute warning for reminders more than an hour away**,
+  unless the user explicitly requested a different warning (or none, though there's
+  currently no phrasing for "explicitly no warning" — a bare "remind me" without a
+  trailing "warn me" clause just gets the default when it qualifies). A reminder due
+  within the next hour gets no automatic warning, on the theory that it's soon enough
+  to not need one. Implemented in `parseReminderText` itself (not the UI layer) so the
+  live preview always reflects exactly what will be created.
+- **Reminders that resolve to the past — the reminder itself, or a requested warning —
+  are now rejected with a clear, specific error** instead of being silently accepted.
+  Two distinct cases: the reminder's own time has already passed (e.g. an explicit past
+  date like "remind me on January 1 2020 at 9am to celebrate" — chrono-node's
+  `forwardDate` option only resolves *ambiguous* times into the future, it doesn't
+  override an unambiguous past one), or the reminder is valid but the requested warning
+  offset would itself land in the past (e.g. "remind me in 1 min to have lunch, warn me
+  5 mins before"). Both surface through the same `{ ok: false, reason }` failure path
+  the parser already used for "couldn't understand this" errors, so the existing
+  UI handles them for free: the reason is shown inline, "Set reminder" is disabled, and
+  — importantly — the original text stays in the field exactly as typed, so the user can
+  edit it and resubmit rather than starting over.
+- **The Active Reminders list now shows the reminder time and the warning time as two
+  separately labeled lines** ("Reminder: 8 Jul 2026, 21:00" / "Warning: 8 Jul 2026,
+  20:45", the latter in an amber accent), replacing a single line with a vague relative
+  "warns 20 min before" — the actual clock time of the warning wasn't visible before.
+  The live preview text was updated to match ("...— with a warning at ...").
+  - Verified with new unit tests (short-fuse reminder + warning both still valid,
+    warning-in-the-past rejected, reminder-in-the-past rejected, the auto-warn default
+    applying and not applying at the one-hour boundary) and component tests, plus a
+    Playwright pass confirming the preview, the error states, and the two-line list
+    display against the real dev server.
+- **Remind Me accepts noticeably more flexible phrasing**, per a direct request that "in
+  an hour and a half" should work. chrono-node handles a lot of casual phrasing natively
+  ("in a couple of hours", "in a few minutes", "half an hour", "noon") but a few common
+  ones either silently gave the wrong answer or weren't recognised at all — confirmed by
+  testing each directly against chrono before writing any fix, rather than guessing:
+  - **"&lt;number&gt; and a half hours" was silently wrong** — chrono matched only the
+    trailing "half hours" and dropped the number entirely, so "two and a half hours" and
+    "one and a half hours" both resolved to exactly 30 minutes. Now rewritten to "N.5
+    hours" (which chrono already parses correctly) before chrono ever sees it, for both
+    the idiomatic "an hour and a half" (1.5) and "&lt;number&gt; and a half hours" with a
+    digit or a spelled-out number (one through twelve).
+  - **"quarter of an hour" / "a quarter hour" / "quarter hour"** matched only "an hour"
+    (giving 60 minutes instead of 15) or, worse, "a quarter" as a quarter of a *year*.
+    Now rewritten to "15 minutes".
+  - **"half past five" / "quarter past five" / "quarter to five"** weren't recognised by
+    chrono at all (empty result, rejected as unparseable). Now rewritten to plain
+    "H:MM" (e.g. "5:30"), which then flows through the same ambiguous-hour resolution as
+    any other bare clock time.
+  - Fixed two bugs this surfaced in the existing ambiguous-hour resolver while adding the
+    above: the hour-12 case (e.g. "quarter to one" → "12:45") wasn't covered by the
+    existing 1-11 range check, so it defaulted to 12pm-and-push-to-tomorrow instead of
+    the soonest occurrence (extended the resolver to treat 12 as ambiguous between 00:xx
+    and 12:xx, careful not to touch "noon"/"midnight" — those chrono keywords report the
+    same "uncertain meridiem" internally but the *words* are never actually ambiguous).
+    And "at noon"/"at midnight"/"at midday" left a dangling "at" in the parsed message,
+    since chrono's match for those keywords (unlike numeric times) doesn't include the
+    leading "at" — added to the same leading-preposition stripping "before"/"by" already
+    used.
+  - All rewrites are confined to the exact matched substring, so they can't shift the
+    meaning of the surrounding message text.
+  - Added example phrases directly on the Remind Me tool screen, above the text box, so
+    the range of accepted phrasing is discoverable without trial and error.
+  - Verified with new unit tests for every phrasing above (including the hour-12 edge
+    case and the "noon"/"midnight" message-leak fix) and a Playwright pass against the
+    real dev server.

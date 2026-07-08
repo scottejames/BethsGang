@@ -5,12 +5,15 @@ import './index.css'
 import App from './App.tsx'
 import { DistractMeProvider } from './context/DistractMeContext'
 import { EnergyProvider } from './context/EnergyContext'
+import { RemindersProvider } from './context/RemindersContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <EnergyProvider>
       <DistractMeProvider>
-        <App />
+        <RemindersProvider>
+          <App />
+        </RemindersProvider>
       </DistractMeProvider>
     </EnergyProvider>
   </StrictMode>,

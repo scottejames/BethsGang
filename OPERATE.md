@@ -118,6 +118,10 @@ Test files sit next to the code they test — `*.test.ts` / `*.test.tsx`, not a 
   (envelope parsing, energy-level bucketing, per-tool message builders).
 - `src/tools/pomodoroTimer/index.test.tsx` — a component test using fake timers and a
   mocked `HTMLMediaElement.play` to verify the pop sound fires exactly once on completion.
+- `src/context/RemindersContext.test.tsx` — tests a context provider (not a component)
+  directly via `renderHook(() => useReminders(), { wrapper: RemindersProvider })` from
+  `@testing-library/react`, combined with fake timers to exercise the warning/due/repeat
+  scheduling and the catch-up-on-mount path without waiting on real wall-clock time.
 
 **When adding a backend/Lambda test:** the project's default test environment is `jsdom`
 (needed for component tests). The Anthropic SDK refuses to construct under a browser-like
