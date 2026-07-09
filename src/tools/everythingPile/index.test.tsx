@@ -1,6 +1,9 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
+import * as amplifyAuth from 'aws-amplify/auth';
+import { Hub } from 'aws-amplify/utils';
+import { AuthProvider } from '../../context/AuthContext';
 import { TaskStoreProvider } from '../../context/TaskStoreContext';
 import { ToolNavigationProvider, useToolNavigation } from '../../context/ToolNavigationContext';
 import { everythingPileTool } from './index';
@@ -11,13 +14,27 @@ vi.mock('../../hooks/useUsageLog', () => ({
   useUsageLog: () => vi.fn(),
 }));
 
+// TaskStoreContext now reads sign-in state (see its own test file for signed-in
+// backend behavior) — every test in this file runs signed out, so it's exercising the
+// same localStorage-backed path as before that change.
+vi.mock('aws-amplify/auth', () => ({
+  getCurrentUser: vi.fn(),
+  signOut: vi.fn(),
+}));
+
+vi.mock('aws-amplify/utils', () => ({
+  Hub: { listen: vi.fn(() => vi.fn()) },
+}));
+
 const Component = everythingPileTool.Component;
 
 function wrapper({ children }: { children: ReactNode }) {
   return (
-    <TaskStoreProvider>
-      <ToolNavigationProvider>{children}</ToolNavigationProvider>
-    </TaskStoreProvider>
+    <AuthProvider>
+      <TaskStoreProvider>
+        <ToolNavigationProvider>{children}</ToolNavigationProvider>
+      </TaskStoreProvider>
+    </AuthProvider>
   );
 }
 
@@ -93,6 +110,9 @@ describe('EverythingPile', () => {
   beforeEach(() => {
     window.localStorage.removeItem('beths-gang:projects');
     window.localStorage.removeItem('beths-gang:tasks');
+    vi.mocked(amplifyAuth.getCurrentUser).mockReset().mockRejectedValue(new Error('not signed in'));
+    vi.mocked(amplifyAuth.signOut).mockReset();
+    vi.mocked(Hub.listen).mockReset().mockReturnValue(vi.fn());
   });
 
   afterEach(() => {

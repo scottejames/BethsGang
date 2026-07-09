@@ -168,9 +168,11 @@ mechanics — most of these are just a new system prompt away.
       existing tool (see below for that changing). A project can be deleted without
       losing its tasks — they're detached (project-less) rather than destroyed.
       Completed tasks stay visible (struck through, sunk to the bottom) rather than
-      disappearing. `localStorage`-backed only, no backend model this pass. Covered by
-      unit tests (`TaskStoreContext.test.tsx`, `everythingPile/index.test.tsx`) and
-      verified with Playwright against the real running app.
+      disappearing. `localStorage`-backed only at first, no backend model that pass;
+      now persists per signed-in user too — see "User accounts, Phase 3" under
+      Infrastructure below. Covered by unit tests (`TaskStoreContext.test.tsx`,
+      `everythingPile/index.test.tsx`) and verified with Playwright against the real
+      running app.
       - **UI rewritten as a project/task tree** shortly after first shipping, on direct
         feedback that the original filter-chip layout didn't tie projects to tasks
         closely enough. Each project (plus a synthetic "Unfiled" bucket for standalone
@@ -505,14 +507,15 @@ with the three most worth building next marked ⭐. Sources at the bottom.
 
 - [x] ⭐ **Shared Task Store (the "spine")** (see Shipped — **Everything Pile**) — a
       single canonical list of tasks, exposed as `TaskStoreContext` the same way
-      `DistractMeContext` exposes audio state, `localStorage`-backed for now (an Amplify
-      `a.model('Task')` once signed in is a natural later phase, same path
-      Reminders/Spoons already took — not done yet). Shipped with Projects as a grouping
-      layer on top (not originally scoped here) and its first consumer,
-      **Everything Pile**. Two of "Linking tools together" above now shipped too (Task
-      Breakdown's bidirectional wiring, and Side Quest Log's "Make it a task" — see
-      Shipped above for both) — the rest is still unstarted, but the store and the
-      navigation mechanism it needed are no longer the blocker.
+      `DistractMeContext` exposes audio state. `localStorage`-backed when signed out;
+      now also persists per signed-in user via owner-scoped `Project`/`Task`
+      `a.model()`s, the same path Reminders/Spoons already took — see "User accounts,
+      Phase 3" below. Shipped with Projects as a grouping layer on top (not originally
+      scoped here) and its first consumer, **Everything Pile**. Two of "Linking tools
+      together" above now shipped too (Task Breakdown's bidirectional wiring, and Side
+      Quest Log's "Make it a task" — see Shipped above for both) — the rest is still
+      unstarted, but the store and the navigation mechanism it needed are no longer
+      the blocker.
 - ~~**Global alert/notification layer**~~ — shipped as part of **Remind Me** (see
       Shipped): `RemindersContext` (same pattern as `DistractMeContext`) owns the
       timers/alarms and keeps them firing regardless of which tool is open, surfaced via
@@ -524,16 +527,24 @@ with the three most worth building next marked ⭐. Sources at the bottom.
       reminder; revisit only if that turns out to matter in practice.
 - [x] **User accounts, Phase 1: auth only** (see Shipped) — `amplify/auth/resource.ts`
       (email/password Cognito auth) + a themed Amplify UI `<Authenticator>` behind a new
-      `AccountButton`, sign-up/sign-in/sign-out/password-reset all working. Built and
-      verified on the `feature/user-accounts` branch, not yet merged to `main`.
-      Deliberately stops here — no data model changes yet, nothing gated behind
-      sign-in — see below for what's still open.
+      `AccountButton`, sign-up/sign-in/sign-out/password-reset all working. Deliberately
+      stops here — no data model changes yet, nothing gated behind sign-in — see below
+      for what's still open.
 - [x] **User accounts, Phase 2: a persistent Data model** (see Shipped above) —
       `Reminder` and `UserPreferences` (Spoons) now persist per signed-in user via
       owner-scoped `a.model()`s, reworking `RemindersContext`/`EnergyContext` from
       synchronous `localStorage` reads/writes to `observeQuery()`-driven backend state
       when signed in. Auth remains opt-in, not a login wall — `localStorage` stays the
-      default for anyone not signed in. Everything else that could still move to a
-      per-user model (the Shared Task Store's `Task`/`Project` data below, Pomodoro
-      settings/streaks, saved messages, Distract Me's last sound/volume) is
-      unstarted — see "Phase 3+" in `designs/user-personalization.md`.
+      default for anyone not signed in.
+- [x] **User accounts, Phase 3: the Shared Task Store** — `Project`/`Task` now persist
+      per signed-in user too, following the exact same signed-in/signed-out shape as
+      Phase 2 (`TaskStoreContext` reworked from synchronous `localStorage` to
+      `observeQuery()`-driven backend state, same silent first-sign-in migration, same
+      never-write-to-localStorage-while-signed-in sign-out fix). Covered by unit tests
+      (`TaskStoreContext.test.tsx`'s "(signed out)"/"(signed in)" split, mirroring
+      `RemindersContext.test.tsx`) and against a live sandbox (an already-running
+      personal sandbox for this repo, reused rather than starting a new one; confirmed
+      directly in DynamoDB, not just the UI). Full design:
+      `designs/user-personalization.md`'s "What Phase 3 built". Everything else that
+      could still move to a per-user model (Pomodoro settings/streaks, saved messages,
+      Distract Me's last sound/volume) is unstarted — see "Phase 4+" in the same doc.

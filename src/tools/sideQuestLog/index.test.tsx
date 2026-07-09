@@ -1,14 +1,32 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
+import * as amplifyAuth from 'aws-amplify/auth';
+import { Hub } from 'aws-amplify/utils';
+import { AuthProvider } from '../../context/AuthContext';
 import { TaskStoreProvider, useTaskStore } from '../../context/TaskStoreContext';
 import { sideQuestLogTool } from './index';
+
+// TaskStoreContext now reads sign-in state — every test in this file runs signed
+// out, exercising the same localStorage-backed path as before that change.
+vi.mock('aws-amplify/auth', () => ({
+  getCurrentUser: vi.fn(),
+  signOut: vi.fn(),
+}));
+
+vi.mock('aws-amplify/utils', () => ({
+  Hub: { listen: vi.fn(() => vi.fn()) },
+}));
 
 const Component = sideQuestLogTool.Component;
 const STORAGE_KEY = 'beths-gang:sidequest-log';
 
 function wrapper({ children }: { children: ReactNode }) {
-  return <TaskStoreProvider>{children}</TaskStoreProvider>;
+  return (
+    <AuthProvider>
+      <TaskStoreProvider>{children}</TaskStoreProvider>
+    </AuthProvider>
+  );
 }
 
 // Exposes TaskStoreContext state so "did promoting an entry actually create a task"
@@ -46,6 +64,9 @@ describe('SideQuestLog', () => {
     window.localStorage.removeItem(STORAGE_KEY);
     window.localStorage.removeItem('beths-gang:projects');
     window.localStorage.removeItem('beths-gang:tasks');
+    vi.mocked(amplifyAuth.getCurrentUser).mockReset().mockRejectedValue(new Error('not signed in'));
+    vi.mocked(amplifyAuth.signOut).mockReset();
+    vi.mocked(Hub.listen).mockReset().mockReturnValue(vi.fn());
   });
 
   afterEach(() => {

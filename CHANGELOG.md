@@ -1172,3 +1172,58 @@ All notable changes to this project are documented here.
     AppSync call intercepted (same approach as prior AI-tool verification): sorted a
     real brain dump, deselected one task, edited another, sent the rest, and confirmed
     they landed in Everything Pile with the edited text and the right size/category.
+
+### Added
+
+- **User accounts, Phase 3: the Shared Task Store now persists per signed-in user** —
+  requested directly: `Project`/`Task` should follow the same DynamoDB-backed,
+  owner-scoped model already built for Reminders/Spoons, rather than staying
+  `localStorage`-only indefinitely. Full design and rationale:
+  `designs/user-personalization.md`'s "What Phase 3 built".
+  - Two new owner-scoped `a.model()`s in `amplify/data/resource.ts`: `Project`
+    (`name`, `createdAt`) and `Task` (`title`, `projectId`, `size`, `category`,
+    `done`, `createdAt`). `size`/`category` are plain strings, not GraphQL
+    `a.enum()`s — `'not-your-problem'` has a hyphen, which a GraphQL enum value
+    can't. No `belongsTo`/`hasMany` relation between them; `projectId` stays a plain
+    optional string so the existing "detach, don't cascade-delete" behavior on
+    project deletion keeps working without a relation-specific on-delete policy.
+  - `TaskStoreContext` reworked to the exact same signed-in/signed-out shape as
+    `RemindersContext`: `localStorage` untouched while signed out; two
+    `observeQuery()` subscriptions (`Project`, `Task`) drive state when signed in;
+    every mutator updates optimistically first, then fires the matching backend
+    call; local projects and tasks migrate to the backend together, silently, once
+    per device on first sign-in; account data is never written to `localStorage`
+    while signed in, and reverts to the device's own local state on sign-out (same
+    fix Reminders needed, applied here from the start rather than found the hard
+    way twice).
+  - `undefined` (this app's "no project" convention) translates to an explicit
+    `null` at the backend boundary — AppSync only clears a nullable field when a
+    mutation sends `null`; omitting the key leaves the existing value alone. Applied
+    in both the create path and `updateTask`'s patch, only when `projectId` is
+    actually part of what's being changed.
+  - `addProject` keeps returning the created `Project` synchronously (Task
+    Breakdown's handoff flow depends on this) — free with the optimistic,
+    client-generated-id approach, no `await` needed.
+  - Verified with unit tests: `TaskStoreContext.test.tsx` extended with the same
+    "(signed out)"/"(signed in)" split `RemindersContext.test.tsx` already used —
+    migration, the `null`-vs-omitted `projectId` translation, `deleteProject`'s
+    backend fan-out to every task it detaches, and the sign-out data-leak check.
+    `everythingPile/index.test.tsx` and `sideQuestLog/index.test.tsx` needed
+    `AuthProvider` added to their test wrappers once `TaskStoreProvider` started
+    calling `useAuth()` internally (`taskBreakdown/index.test.tsx` already had it).
+  - Verified against a live sandbox (an already-running personal sandbox for this
+    repo, which had auto-deployed the new `Project`/`Task` stacks the moment the
+    schema change landed, confirming the schema itself deploys cleanly — reused
+    rather than starting a new one): an admin-created disposable test user drove the
+    real running app via Playwright while watching the actual GraphQL responses and
+    scanning DynamoDB directly with `--consistent-read` (an early scan without it came
+    back empty right after a write — a false alarm from eventual consistency, not a
+    real bug). Confirmed `createProject`/`createTask` land in their tables with the
+    right owner; confirmed a second, fresh, never-signed-in-before browser session
+    correctly lists both via `listProjects` (the cross-device case); confirmed
+    deleting a project with a task in it fires both `deleteProject` and the detaching
+    `updateTask` (`projectId: null`) server-side, not just locally; and confirmed
+    signing out hides the account's data from the UI while a direct table scan shows
+    it's still there, untouched. Disposable test data and the test user were deleted
+    afterward; the sandbox itself was left running, since it wasn't started for this
+    task and isn't this task's to tear down.

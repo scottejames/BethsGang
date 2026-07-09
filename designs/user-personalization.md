@@ -1,7 +1,8 @@
 # User Personalization — Design Document
 
-**Status:** Phase 1 (auth) and Phase 2 (Reminders + Spoons persistence) built and
-verified on branch `feature/user-accounts`, not merged to `main`. Phase 3+ not started.
+**Status:** Phase 1 (auth), Phase 2 (Reminders + Spoons persistence), and Phase 3
+(Task Store persistence) built, verified (unit tests and a live sandbox pass), and
+merged to `main`. Phase 4+ not started.
 
 ## Goal
 
@@ -314,7 +315,96 @@ starting — nothing else persists anything) with real per-user storage.
   and confirmed a second device with a pre-existing local reminder migrates and merges
   it on sign-in without duplicating anything already in the account.
 
-## What's still to do (Phase 3+, not designed yet, just noted)
+## What Phase 3 built (done, unit-tested, and verified against a live sandbox)
+
+Requested directly: the Shared Task Store (`Project`/`Task`, backing Everything Pile,
+Task Breakdown's handoff, and Side Quest Log's "Make it a task") should follow the
+exact same signed-in/signed-out model as Reminders, rather than staying
+`localStorage`-only indefinitely.
+
+- **Data model**: `Project` (`name`, `createdAt`) and `Task` (`title`, `projectId`,
+  `size`, `category`, `done`, `createdAt`), both `.authorization((allow) =>
+  [allow.owner()])`, added right alongside `Reminder`/`UserPreferences` in
+  `amplify/data/resource.ts`. `size`/`category` are plain `a.string()` fields rather
+  than GraphQL `a.enum()` — `'not-your-problem'` (the actual `TaskCategory` value) has
+  a hyphen, which isn't a legal GraphQL enum value, and a plain string keeps the
+  schema-evolution flexibility already used for `Reminder.repeat` rather than fighting
+  the wire format. No `belongsTo`/`hasMany` relation between `Task` and `Project` —
+  `projectId` stays a plain optional string, matching the existing "detach the tasks,
+  don't cascade-delete them" behavior on `deleteProject`, which a real relation would
+  need its own on-delete policy to express instead of getting for free from the
+  existing client-side logic.
+- **`TaskStoreContext` rework**: same shape as `RemindersContext` — signed-out
+  behavior untouched (`localStorage`, unconditionally); signed-in state driven by
+  `client.models.Project.observeQuery()` and `client.models.Task.observeQuery()`
+  (two separate subscriptions, since they're two separate models); every mutator
+  (`addProject`, `updateProject`, `deleteProject`, `addTask`, `updateTask`,
+  `deleteTask`) updates local state optimistically first, then fires the matching
+  `create()`/`update()`/`delete()` when signed in, same instant feel as before this
+  context talked to a backend. `addProject` keeps returning the created `Project`
+  synchronously (Task Breakdown's handoff flow depends on this) — the optimistic,
+  client-generated-id approach makes that free, no `await` needed.
+  - **`deleteProject`'s backend fan-out**: detaching a project's tasks locally (set
+    `projectId` to `undefined`) needed a matching `update()` call per affected task
+    when signed in, so the detachment actually sticks server-side too — computed from
+    the *current* `tasks` state before the optimistic update runs, not the (already
+    stale) `next` state.
+  - **`projectId: undefined` vs `null`**: the client-side `Task` type uses `undefined`
+    for "no project" (an optional field, matching every other client-side model in
+    this app), but AppSync only clears a nullable field when a mutation explicitly
+    sends `null` — omitting the key leaves the existing value untouched. Both
+    `toBackendTaskInput` (used by `create()`/migration) and `updateTask`'s patch
+    translate `undefined` → `null` at the boundary, only when `projectId` is actually
+    part of the patch (so an update that doesn't touch `projectId` at all doesn't
+    accidentally send `projectId: null` and clear it).
+  - **Migration**: same silent, first-sign-in-only, existing-id upload as Reminders —
+    both local `Project`s and `Task`s are uploaded together in one `Promise.all`
+    (there's no real foreign-key constraint requiring projects before tasks, since
+    `projectId` is a plain string, not a relation), then the flag is set.
+  - **Sign-out data-leak prevention**: the same single-combined-effect fix Reminders
+    needed (see "What Phase 2 built" above for the two-separate-effects race it
+    avoids), just handling two arrays (`projects` and `tasks`) instead of one.
+- Tests: `TaskStoreContext.test.tsx` extended with the same "(signed out)" / "(signed
+  in)" split as `RemindersContext.test.tsx` — migration, the `null`-vs-omitted
+  `projectId` translation, `deleteProject`'s backend fan-out to affected tasks, and the
+  sign-out data-leak check. `everythingPile/index.test.tsx` and
+  `sideQuestLog/index.test.tsx` needed `AuthProvider` added to their test wrappers
+  (with `aws-amplify/auth`/`aws-amplify/utils` mocked) once `TaskStoreProvider` started
+  calling `useAuth()` internally — `taskBreakdown/index.test.tsx` already had it from
+  an earlier pass. No changes needed in `main.tsx` — `TaskStoreProvider` was already
+  mounted inside `AuthProvider` there, for no reason related to this phase at the time.
+- **Real verification against a live sandbox** — an existing personal sandbox was
+  already running against this repo (auto-deployed the new `Project`/`Task` stacks the
+  moment the schema change landed, confirming the schema itself synthesizes and
+  deploys cleanly), so this reused it rather than starting a new one. Admin-created a
+  disposable Cognito test user via the CLI, then drove the real running app with
+  Playwright while watching the actual GraphQL requests and scanning DynamoDB directly
+  (`--consistent-read`, not the default eventually-consistent scan — an early scan
+  right after a write came back empty purely from that, not a real bug, and would have
+  been a false alarm without checking twice):
+  - `createProject`/`createTask` each returned a real `200` with the expected fields,
+    confirmed moments later sitting in the `Project`/`Task` tables with the signed-in
+    user's `owner` sub attached.
+  - A **second, fresh browser session** (fresh sign-in, no prior local state) correctly
+    listed both projects via `listProjects` and rendered them — the cross-device "added
+    on phone, appears on laptop" case Phase 2 also confirmed, now working for the Task
+    Store too. The very first attempt at this looked like zero projects were showing;
+    that was the loading-state gap noted in "What's still to do" below (the UI reflects
+    empty/local state until the first `observeQuery` emission lands), caught by
+    rendering the screenshot before a fixed wait rather than a real persistence bug —
+    waiting an extra couple of seconds before checking showed both projects correctly.
+  - Deleting a project with a task in it fired both `deleteProject` and the
+    detaching `updateTask` (confirmed `projectId: null` in the response and, moments
+    later, in a direct table scan) — the backend fan-out actually reaches the server,
+    not just local state.
+  - Signed out: the account's project/task disappeared from the UI immediately, while
+    a direct DynamoDB scan straight after confirmed both rows were still there,
+    untouched — hidden from view, not deleted, matching Reminders' Phase 2 behavior.
+  - Test data (the disposable rows and the Cognito user) deleted afterward via the CLI;
+    the sandbox itself was left running, since it wasn't started for this task and
+    isn't this task's to tear down.
+
+## What's still to do (Phase 4+, not designed yet, just noted)
 
 - Expand personalization to other state, now that `UserPreferences` exists as a home for
   it: Distract Me's last sound/volume is the next obvious candidate, though it isn't

@@ -52,6 +52,31 @@ const schema = a.schema({
       spoons: a.integer().required(),
     })
     .authorization((allow) => [allow.owner()]),
+
+  // User accounts, Phase 3: the Shared Task Store (see src/context/TaskStoreContext.tsx)
+  // follows Reminder's model above — owner-scoped, client-generated ids, plain fields
+  // rather than a JSON blob (unlike Reminder.repeat, `size`/`category` are simple fixed
+  // string unions already, with no nested structure to evolve). No `belongsTo`/`hasMany`
+  // relation between Task and Project on purpose: a task's `projectId` is a plain
+  // optional string, matching the existing "detach, don't cascade-delete" behavior when
+  // a project is deleted (a relation would need its own on-delete policy to get that).
+  Project: a
+    .model({
+      name: a.string().required(),
+      createdAt: a.datetime().required(),
+    })
+    .authorization((allow) => [allow.owner()]),
+
+  Task: a
+    .model({
+      title: a.string().required(),
+      projectId: a.string(),
+      size: a.string().required(),
+      category: a.string().required(),
+      done: a.boolean().required().default(false),
+      createdAt: a.datetime().required(),
+    })
+    .authorization((allow) => [allow.owner()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;

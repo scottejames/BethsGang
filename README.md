@@ -71,26 +71,30 @@ architecture, dependencies, and deployment.
   each needed the more specific `--amplify-components-*` tokens, not the general
   `--amplify-colors-*` ones, to actually follow dark mode (see
   `designs/user-personalization.md` for the full explanation of why).
-- **Per-user persistence** (same branch) — `Reminder` and `UserPreferences` are two
-  owner-scoped `a.model()`s in `amplify/data/resource.ts` (`allow.owner()`, distinct
-  from `runAiTool`/`logEvent`'s public API key auth). `RemindersContext`/
-  `EnergyContext` use them via `client.models.*.observeQuery()` (see
-  `src/lib/dataClient.ts`) when signed in, and fall back to exactly their prior
-  `localStorage`-only behavior when signed out. Reminders migrate from `localStorage`
-  to the account silently on first sign-in per device; see
-  `designs/user-personalization.md`'s "What Phase 2 built" for the migration-UX
-  decision and a real bug worth knowing about for any future owner-scoped model: the
-  Data client's default authMode follows the *schema's* `defaultAuthorizationMode`, not
-  a specific model's own authorization rule, so it has to be set explicitly per client
-  (or per call) — the failure otherwise is a silent, UI-looks-fine "Not Authorized" on
-  every write.
+- **Per-user persistence** (same branch) — `Reminder`, `UserPreferences`, `Project`,
+  and `Task` are owner-scoped `a.model()`s in `amplify/data/resource.ts`
+  (`allow.owner()`, distinct from `runAiTool`/`logEvent`'s public API key auth).
+  `RemindersContext`/`EnergyContext`/`TaskStoreContext` use them via
+  `client.models.*.observeQuery()` (see `src/lib/dataClient.ts`) when signed in, and
+  fall back to exactly their prior `localStorage`-only behavior when signed out.
+  Reminders and the Task Store both migrate from `localStorage` to the account
+  silently on first sign-in per device; see `designs/user-personalization.md`'s "What
+  Phase 2 built" for the migration-UX decision and a real bug worth knowing about for
+  any future owner-scoped model: the Data client's default authMode follows the
+  *schema's* `defaultAuthorizationMode`, not a specific model's own authorization
+  rule, so it has to be set explicitly per client (or per call) — the failure
+  otherwise is a silent, UI-looks-fine "Not Authorized" on every write.
 - **Shared Task Store** (`src/context/TaskStoreContext.tsx`) — `Project`/`Task`, the
   same Context+Provider+hook shape as every other persistent provider, mounted at the
   app root so any tool can read/write it without navigating into whichever tool has it
-  open. `localStorage`-backed only for now (no backend model yet, unlike
-  Reminder/UserPreferences above). Consumed by **Everything Pile** and, since it's
-  the first tool-to-tool link (see below), **Task Breakdown** too. See `TODO.md`'s
-  "Linking tools together" for what else this unlocks, still unstarted.
+  open. Follows Reminder's exact signed-in/signed-out shape (see "Per-user
+  persistence" above and `designs/user-personalization.md`'s "Phase 3") — `localStorage`
+  remains the full default for anyone not signed in. `Task.projectId` is a plain
+  optional string, not an Amplify `belongsTo`/`hasMany` relation — deleting a project
+  detaches (not cascade-deletes) its tasks, which a real relation would need its own
+  policy to express. Consumed by **Everything Pile** and, since it's the first
+  tool-to-tool link (see below), **Task Breakdown** and **Side Quest Log** too. See
+  `TODO.md`'s "Linking tools together" for what else this unlocks, still unstarted.
 - **Tool-to-tool navigation** (`src/context/ToolNavigationContext.tsx`) — owns
   `activeToolId` (previously local state in `App.tsx`) plus `navigateToTool`/`goHome`,
   so any tool can send the user to another tool, not just `Home`. Also where the
