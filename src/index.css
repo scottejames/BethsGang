@@ -76,10 +76,22 @@ body {
 }
 
 #root {
-  max-width: 720px;
-  margin: 0 auto;
   min-height: 100svh;
   padding: 40px 24px 96px;
+}
+
+/* Tool screens (forms, text areas, AI output) keep the narrower reading width — long
+   line lengths hurt readability there. Home's card grid has no such concern and
+   deliberately gets more room on wide screens instead of being stuck at whatever
+   column count 720px allows, however wide the actual browser window is. */
+.tool-shell {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.home {
+  max-width: 1100px;
+  margin: 0 auto;
 }
 
 h1 {
@@ -135,22 +147,12 @@ textarea:focus-visible {
 
 .tool-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
-}
-
-.tool-columns {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.tool-column {
-  flex: 1 1 220px;
-  min-width: 220px;
-  display: flex;
-  flex-direction: column;
+  /* auto-fit (not auto-fill): with a fixed, smallish number of tools, this lets the
+     existing cards stretch to fill a row instead of leaving empty reserved column
+     tracks (and dead space) when the count doesn't divide evenly into however many
+     220px-or-wider columns the viewport fits — reflows naturally at every width with
+     no media queries needed. */
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
 }
 
@@ -185,34 +187,28 @@ textarea:focus-visible {
   transform: translateY(-2px);
 }
 
-/* Cycle a rainbow color per card, independently in each column, so the grid
-   reads as varied at a glance instead of one flat accent everywhere. */
-.tool-column .tool-card:nth-child(6n + 1),
+/* Cycle a rainbow color per card so the grid reads as varied at a glance instead of
+   one flat accent everywhere. */
 .tool-grid .tool-card:nth-child(6n + 1) {
   --card-color: var(--rb1);
   --card-color-bg: var(--rb1-bg);
 }
-.tool-column .tool-card:nth-child(6n + 2),
 .tool-grid .tool-card:nth-child(6n + 2) {
   --card-color: var(--rb2);
   --card-color-bg: var(--rb2-bg);
 }
-.tool-column .tool-card:nth-child(6n + 3),
 .tool-grid .tool-card:nth-child(6n + 3) {
   --card-color: var(--rb3);
   --card-color-bg: var(--rb3-bg);
 }
-.tool-column .tool-card:nth-child(6n + 4),
 .tool-grid .tool-card:nth-child(6n + 4) {
   --card-color: var(--rb4);
   --card-color-bg: var(--rb4-bg);
 }
-.tool-column .tool-card:nth-child(6n + 5),
 .tool-grid .tool-card:nth-child(6n + 5) {
   --card-color: var(--rb5);
   --card-color-bg: var(--rb5-bg);
 }
-.tool-column .tool-card:nth-child(6n + 6),
 .tool-grid .tool-card:nth-child(6n + 6) {
   --card-color: var(--rb6);
   --card-color-bg: var(--rb6-bg);

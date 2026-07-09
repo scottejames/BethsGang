@@ -30,6 +30,14 @@ architecture, dependencies, and deployment.
 - **Tool framework** — every tool lives in `src/tools/<tool-id>/` and exports a
   `ToolDefinition` (`meta` + `Component`). `src/tools/registry.ts` is the single list the
   UI reads from. Adding a tool never requires touching `App.tsx`, `Home.tsx`, or routing.
+- **Home screen layout** — `Home.tsx` renders `registry.ts`'s tools directly, in
+  registry order, into one `.tool-grid` (`grid-template-columns: repeat(auto-fit,
+  minmax(220px, 1fr))`) — no manual grouping/ordering step. Reflows from 1 column on
+  mobile up to 4 on desktop with no media queries. Tool screens (`ToolShell`) keep a
+  narrower 720px reading-width cap for forms/text/AI output; only `.home` gets the
+  wider (1100px) cap, since a card grid doesn't have the same long-line-length
+  readability concern — see `#root`/`.tool-shell`/`.home` in `src/index.css` for how
+  that width constraint is split between the two.
 - **AI backend** — tools that need Claude call a single GraphQL query,
   `runAiTool(toolId, input)`, defined in `amplify/data/resource.ts`. It's resolved by one
   Lambda (`amplify/functions/ai-assist/handler.ts`) that looks up a system prompt for the
@@ -182,10 +190,10 @@ gets added later.
    `amplify/functions/ai-assist/handler.ts` describing what the model should do.
 5. If the tool needs no AI at all, it can skip step 4 entirely and just do its own thing
    client-side.
-6. Add its id to one of the two groups in `src/components/Home.tsx` (`DOING_GROUP` /
-   `SAYING_GROUP`) if it belongs with an existing group. If you skip this, it still
-   shows up — `Home.tsx` renders anything not in either group in a fallback grid below
-   the two columns — but grouped is the better result if it fits one.
+
+That's it — `Home.tsx` renders every tool in `registry.ts`'s order directly into a
+single responsive grid (see "Home screen layout" below); there's no separate grouping
+step to remember.
 
 No routing, no new Lambda, no new API endpoint required in the common case.
 

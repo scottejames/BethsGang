@@ -922,3 +922,37 @@ All notable changes to this project are documented here.
     renders before every project, regardless of how many exist.
   - Verified against the real running app: with two projects present, Parking Lot
     renders first in the tree, both before and after adding projects.
+
+### Changed
+
+- **Home screen: removed the DOING/SAYING tool grouping, made the grid genuinely
+  responsive** — reported directly as "looking a bit LONG" and not using space
+  efficiently. Two separate problems, both fixed:
+  - `Home.tsx`'s `DOING_GROUP`/`SAYING_GROUP` id lists (explicit "which tools feel
+    similar" curation, requiring a manual step whenever a tool was added) removed
+    entirely, per direct instruction — tools now render straight from
+    `registry.ts` in registry order, into a single grid, with no grouping/ordering
+    logic left in `Home.tsx` at all.
+  - The real reason the page felt long even after that: `#root`'s `max-width: 720px`
+    (a deliberate reading-width cap for tool content — forms, text areas, AI output)
+    was applying to *everything* under it, including Home's card grid, capping it at 2
+    columns regardless of how wide the actual browser window was. Moved that
+    constraint down to `.tool-shell` specifically (tool screens keep the exact same
+    720px behavior, unchanged) and gave `.home` its own wider 1100px cap instead,
+    since a card grid doesn't have the long-line-length readability concern that
+    justified 720px for text content in the first place.
+  - `.tool-grid` switched from `auto-fill` to `auto-fit` in
+    `grid-template-columns: repeat(_, minmax(220px, 1fr))` so existing cards stretch
+    to fill a row instead of leaving reserved-but-empty column tracks when the tool
+    count doesn't divide evenly — verified this was actually the better choice by
+    comparing both against the real card count (9) rather than assuming.
+  - The old two-column-only layout is gone along with the two-column-specific rainbow
+    nth-child color-cycling selectors (`.tool-column .tool-card:nth-child(...)`,
+    `.tool-grid .tool-card:nth-child(...)`) — now a single set of `.tool-grid
+    .tool-card:nth-child(...)` rules.
+  - Verified with Playwright across four viewport widths against the real running
+    app (no media queries needed — CSS Grid's `auto-fit` handles all of it): 1 column
+    at 375px, 3 at 768px, 4 at 1024px and 1600px (capped by `.home`'s own max-width on
+    very wide screens, so cards don't spread out absurdly thin on an ultrawide
+    monitor). Confirmed in both themes, and confirmed `ToolShell`'s width is
+    unaffected (still exactly 720px at a 1600px viewport).
