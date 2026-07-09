@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Authenticator } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 import { useAuth } from '../context/AuthContext';
@@ -7,6 +7,18 @@ import { Modal } from './Modal';
 export function AccountButton() {
   const { user, isSignedIn, loading, signOut } = useAuth();
   const [open, setOpen] = useState(false);
+  const wasSignedIn = useRef(isSignedIn);
+
+  // Close the modal the moment sign-in completes, rather than leaving a "Signed in as
+  // X" panel sitting open with nothing to do but Sign out or click away — the account
+  // button itself already updates to show the signed-in email, which is confirmation
+  // enough on its own.
+  useEffect(() => {
+    if (!wasSignedIn.current && isSignedIn) {
+      setOpen(false);
+    }
+    wasSignedIn.current = isSignedIn;
+  }, [isSignedIn]);
 
   // Avoid a flash of "Sign in" before the initial session check (Amplify's own
   // persisted-token lookup) resolves.

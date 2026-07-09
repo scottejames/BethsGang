@@ -272,6 +272,17 @@ actually pointed at your one sandbox — re-check `amplify_outputs.json`'s curre
 drifted; it's more likely a second sandbox got created by accident (see above) than the
 same one changing IDs on its own.
 
+**If sign-out/sign-in behavior looks wrong in one browser but not another** (e.g. a
+browser you've used across several different sandbox pools this session vs. a fresh
+incognito window), suspect stale `localStorage` before suspecting a code bug — check in
+an incognito/private window first. If that's clean, clear site data for `localhost` in
+the affected browser (DevTools → Application → Storage → "Clear site data", or
+`localStorage.clear()` in the console) rather than just reloading — a normal refresh or
+new tab doesn't touch `localStorage`, and restarting the browser itself doesn't either
+(it's written to disk). This is exactly what happened during this feature's own
+development: switching between sandbox pools left stale data in one browser profile
+that looked identical to a real sign-out bug until isolated to that one profile.
+
 ## Managing signed-up users (`utils/user-admin/`)
 
 A small standalone CLI for the four things you'd actually need to do to a real user

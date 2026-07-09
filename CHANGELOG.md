@@ -712,3 +712,38 @@ All notable changes to this project are documented here.
     them — confirmed via direct `AdminGetUser`/`GetItem` calls afterward that the
     Cognito account and both rows were gone, while the real account's own data was
     completely unaffected throughout.
+
+### Investigated
+
+- **The sign-out data-leak fix (see 2026-07-08's Fixed entry) appeared to only work in
+  some browsers** — reported directly: reminders correctly disappeared on sign-out in
+  a Firefox-based browser, but stayed visible in Chrome, surviving a hard refresh and a
+  new tab. Not a code bug: an incognito window in the same browser showed the correct
+  behavior immediately, which pointed straight at persistent `localStorage` rather than
+  React/app state (every automated Playwright test already passes because it always
+  runs in a fresh, empty browser context — effectively incognito by construction, so it
+  could never have caught a bug that only exists in stale profile state). Root cause:
+  this feature's own development churned through several different Cognito sandbox
+  pools (see 2026-07-08's "duplicative Cognito instances" cleanup), and the affected
+  browser profile had been used across all of that, leaving stale `localStorage`
+  content that looked identical to the original leak bug. Resolved by clearing site
+  data for the dev origin in that browser (not fixed by restarting the browser itself —
+  `localStorage` is written to disk and survives a full restart). Documented in
+  `OPERATE.md` as a "check incognito first" troubleshooting step for any future
+  browser-specific-looking bug report during local dev.
+
+### Fixed
+
+- **The account modal stayed open after a successful sign-in**, landing on a bare
+  "Signed in as X" panel with only a Sign out button and no obvious way to dismiss it
+  (Escape or click-outside worked, but neither is discoverable) — reported directly as
+  "seems dumb." `AccountButton.tsx` never closed its own modal once the Authenticator
+  completed sign-in; `open` state just stayed `true` through the transition. Fixed by
+  closing the modal automatically the moment `isSignedIn` flips true — the account
+  button itself already updates to show the signed-in email, which is confirmation
+  enough without an extra dialog sitting there. Clicking the button again still opens
+  the signed-in panel (with Sign out) on demand, unchanged.
+  - Verified against the real sandbox with a disposable test user: modal closes
+    immediately after sign-in (screenshot confirms the app is fully visible, account
+    button shows the email, no dialog left open), and reopening it still shows the
+    Sign out panel correctly.
