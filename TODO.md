@@ -115,6 +115,55 @@ mechanics — most of these are just a new system prompt away.
       logs" for how to actually read it. Non-AI tools (Distract Me, Pomodoro, Remind Me)
       only get an `opened` event for now — see the "Later" section below for
       action-level events on those.
+- [x] **User accounts, Phase 1: auth only** — `defineAuth({ loginWith: { email: true }
+      })` (Cognito, email+password) behind a new `AccountButton` (top-left, mirrors
+      `EnergyButton`), using Amplify UI's `<Authenticator>` retheme to match this app's
+      colors rather than hand-built forms. Deliberately auth-only in this pass — no data
+      model, nothing gated behind sign-in; `runAiTool`/`logEvent` stay on the public API
+      key exactly as before. See "User accounts, Phase 2" below (now also shipped) for
+      the real per-user data model. Built and verified on the `feature/user-accounts`
+      branch — not yet merged to `main`.
+      - Two real Authenticator quirks found while wiring up the theme: the email field's
+        `name` attribute is `"username"` on the Sign In tab but `"email"` on the Create
+        Account tab (inconsistent between tabs); and the card/tabs background ignores
+        the general `--amplify-colors-background-primary` token, needing the more
+        specific `--amplify-components-authenticator-router-background-color` (and the
+        matching `tabs-*` tokens) to actually follow dark mode.
+      - Verified end-to-end against a real personal sandbox (`ampx sandbox --identifier
+        authtest`): admin-created a confirmed Cognito test user (`aws cognito-idp
+        admin-create-user` + `admin-set-user-password`) to verify sign-in → session
+        persists across a reload → sign-out with Playwright, since that doesn't need a
+        real inbox; separately drove the real sign-up and forgot-password forms far
+        enough to confirm each one successfully reaches Cognito and transitions to its
+        "enter the code we emailed you" step (confirmed by the exact heading Cognito
+        returns) — completing those two specific steps needs a real email inbox, which
+        wasn't available in this pass.
+- [x] **User accounts, Phase 2: persist Reminders + Spoons** — gives sign-in an actual
+      purpose (previously a no-op). Two owner-scoped `a.model()`s (`Reminder`,
+      `UserPreferences`) in `amplify/data/resource.ts`; `RemindersContext`/
+      `EnergyContext` reworked to use `observeQuery()` when signed in and stay
+      completely unchanged when signed out. Reminders migrate from `localStorage`
+      silently on first sign-in (no confirmation prompt, by explicit choice); Spoons
+      does the reverse merge (a returning user's backend value wins over a device's
+      local one). Built and verified on `feature/user-accounts`, not yet merged to
+      `main`. Full writeup: `designs/user-personalization.md`'s "What Phase 2 built".
+      - Real bug caught only by checking DynamoDB directly, not the UI: the Data
+        client needs an explicit `authMode: 'userPool'` for these owner-scoped models
+        (the schema's `defaultAuthorizationMode` is `'apiKey'`, for `runAiTool`/
+        `logEvent`) — without it, every write was silently rejected server-side while
+        the UI looked completely normal (optimistic state + the `localStorage` mirror
+        both masked it). Fixed in `src/lib/dataClient.ts`.
+      - Verified end-to-end against the real sandbox: reminder + Spoons changes
+        confirmed via direct DynamoDB scans, surviving a real page reload, and a second
+        "device" with a pre-existing local reminder merging on sign-in without
+        duplicating anything.
+      - Second real bug, this one caught by the user's own manual testing rather than
+        anything automated: a reminder created while signed in was still fully visible
+        after signing out. Account data was leaking into the signed-out `localStorage`
+        view. Fixed by never writing to `localStorage` while signed in and reverting to
+        pre-sign-in local state on sign-out — see `designs/user-personalization.md` for
+        the full story, including a first attempted fix that reintroduced the same bug
+        via a race between two effects.
 
 ## Later / stretch ideas
 
@@ -278,15 +327,18 @@ Concrete connections worth wiring up as tools accumulate, once the Shared Task S
       doesn't survive navigating away — it wasn't migrated onto this layer, since its
       short, actively-watched countdown is a different use case from a fire-and-forget
       reminder; revisit only if that turns out to matter in practice.
-- [ ] **User accounts (Amplify Auth) + persistent Data model** — lets tools that need to
-      remember state (Side Quest Log entries, Pomodoro settings/streaks, saved messages,
-      the Shared Task Store above, etc.) store it in a real database per signed-in user
-      instead of `localStorage`, syncing across devices. Needs: `amplify/auth/resource.ts`
-      (Amplify Auth — email/password to start), one or more `a.model(...)` entries in
-      `amplify/data/resource.ts` scoped to the owner, and a sign-in gate in the frontend
-      (Amplify's `Authenticator` component is the fast path). Bigger lift than a normal
-      tool — touches auth, data modeling, and the app shell, not just a new tool folder.
-      Worth doing once there's more than one tool that wants persistent state, not before
-      — the Shared Task Store above and the shipped Spoons energy level can both stay
-      (or start) `localStorage`-only and migrate onto this later without changing their
-      calling API.
+- [x] **User accounts, Phase 1: auth only** (see Shipped) — `amplify/auth/resource.ts`
+      (email/password Cognito auth) + a themed Amplify UI `<Authenticator>` behind a new
+      `AccountButton`, sign-up/sign-in/sign-out/password-reset all working. Built and
+      verified on the `feature/user-accounts` branch, not yet merged to `main`.
+      Deliberately stops here — no data model changes yet, nothing gated behind
+      sign-in — see below for what's still open.
+- [x] **User accounts, Phase 2: a persistent Data model** (see Shipped above) —
+      `Reminder` and `UserPreferences` (Spoons) now persist per signed-in user via
+      owner-scoped `a.model()`s, reworking `RemindersContext`/`EnergyContext` from
+      synchronous `localStorage` reads/writes to `observeQuery()`-driven backend state
+      when signed in. Auth remains opt-in, not a login wall — `localStorage` stays the
+      default for anyone not signed in. Everything else that could still move to a
+      per-user model (Side Quest Log entries, Pomodoro settings/streaks, saved
+      messages, the Shared Task Store above, Distract Me's last sound/volume) is
+      unstarted — see "Phase 3+" in `designs/user-personalization.md`.

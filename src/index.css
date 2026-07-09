@@ -773,6 +773,122 @@ textarea {
   filter: saturate(1.3);
 }
 
+.account-button {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.account-button:hover {
+  border-color: var(--accent);
+}
+
+.account-button-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Amplify UI's <Authenticator> reads its look from these --amplify-* custom
+   properties. Referencing this app's own tokens (rather than hardcoding colors) means
+   this automatically follows light/dark mode the same way everything else already
+   does, with no separate dark-mode block needed. */
+.amplify-auth-theme {
+  --amplify-colors-font-primary: var(--text-h);
+  --amplify-colors-font-secondary: var(--text);
+  --amplify-colors-font-interactive: var(--accent);
+  --amplify-colors-background-primary: var(--surface);
+  --amplify-colors-background-secondary: var(--bg);
+  --amplify-colors-border-primary: var(--border);
+  --amplify-colors-border-secondary: var(--border);
+  --amplify-colors-brand-primary-10: var(--accent-bg);
+  --amplify-colors-brand-primary-20: var(--accent-bg);
+  --amplify-colors-brand-primary-40: var(--accent);
+  --amplify-colors-brand-primary-60: var(--accent);
+  --amplify-colors-brand-primary-80: var(--accent);
+  --amplify-colors-brand-primary-90: var(--accent);
+  --amplify-colors-brand-primary-100: var(--accent);
+  --amplify-fonts-default-static: var(--sans);
+  --amplify-fonts-default-variable: var(--sans);
+  --amplify-radii-small: 8px;
+  --amplify-radii-medium: 10px;
+
+  /* Amplify UI's own stylesheet defines every --amplify-components-*-color token as
+     `var(--amplify-colors-*)` — but that var() reference is resolved once, at :root,
+     using *Amplify's own* default value of --amplify-colors-* there (this app's
+     override below only exists on this class, a descendant of :root). The resolved
+     result then inherits down as an already-fixed value, so it never picks up this
+     app's colors even though the reference "points at" an overridden variable.
+     Net effect: overriding only the general --amplify-colors-* tokens above silently
+     does nothing for anything Amplify itself styles via a --amplify-components-*
+     token — which is most of the Authenticator. Every one of those has to be set
+     directly, here, instead. Found by screenshotting dark mode and seeing the typed
+     input text render as near-black-on-near-black (illegible) despite
+     --amplify-colors-font-primary being "correctly" overridden above.
+     See designs/user-personalization.md for this as a known Amplify UI theming gotcha. */
+  --amplify-components-authenticator-router-background-color: var(--surface);
+  --amplify-components-authenticator-router-border-color: var(--border);
+  --amplify-components-authenticator-state-inactive-background-color: var(--bg);
+  --amplify-components-authenticator-or-container-color: var(--text);
+  --amplify-components-tabs-background-color: var(--surface);
+  --amplify-components-tabs-item-background-color: var(--surface);
+  --amplify-components-tabs-item-color: var(--text);
+  --amplify-components-tabs-item-active-background-color: var(--surface);
+  --amplify-components-tabs-item-active-color: var(--accent);
+  --amplify-components-fieldcontrol-color: var(--text-h);
+  --amplify-components-fieldcontrol-border-color: var(--border);
+  --amplify-components-fieldcontrol-focus-border-color: var(--accent);
+  /* fieldcontrol-color gets re-pointed at a more specific token multiple times on the
+     way down to the actual input element — .amplify-textfield/.amplify-passwordfield
+     each redeclare it to their own variant token, and .amplify-input itself (the
+     innermost, actually-rendered element) redeclares it again to input-color. Each of
+     those is a direct assignment on that element, so it wins over whatever was
+     inherited from higher up — every layer has to be overridden here, not just the
+     top-level fieldcontrol-color, or the color silently reverts a few elements down. */
+  --amplify-components-textfield-color: var(--text-h);
+  --amplify-components-passwordfield-color: var(--text-h);
+  --amplify-components-input-color: var(--text-h);
+  --amplify-components-fieldcontrol-error-color: var(--error);
+  --amplify-components-field-label-color: var(--text-h);
+  --amplify-components-heading-color: var(--text-h);
+  --amplify-components-text-color: var(--text);
+  --amplify-components-button-color: var(--text-h);
+  --amplify-components-button-primary-color: var(--accent-text);
+  --amplify-components-button-link-color: var(--accent);
+  /* Same gotcha, two more instances found via the show/hide-password screenshot:
+     .amplify-passwordfield re-points --amplify-components-button-color (already set
+     above) at its own -passwordfield-button-color token, so the eye icon needs that
+     token set directly too, or it falls back to Amplify's own dark default. And the
+     field validation message text ("Password must have...") isn't controlled by
+     -fieldcontrol-error-color at all (that's the input border/outline) — it's a
+     completely separate token, -fieldmessages-error-color, defined in Amplify's own
+     fieldMessages.css. */
+  --amplify-components-passwordfield-button-color: var(--text-h);
+  --amplify-components-passwordfield-button-active-color: var(--accent);
+  --amplify-components-passwordfield-button-hover-color: var(--accent);
+  --amplify-components-passwordfield-button-focus-color: var(--accent);
+  --amplify-components-passwordfield-button-error-color: var(--error);
+  --amplify-components-fieldmessages-error-color: var(--error);
+  --amplify-components-fieldmessages-description-color: var(--text);
+  /* A third, unrelated error-color token: the password-requirements checklist
+     ("Password must have special characters") isn't a field message at all — it's a
+     plain <p class="amplify-text amplify-text--error">, styled via -text-error-color. */
+  --amplify-components-text-error-color: var(--error);
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;

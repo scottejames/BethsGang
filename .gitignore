@@ -19,6 +19,11 @@ tmp/
 .amplify
 amplify_outputs.json
 
+# utils/user-admin: environment IDs (Cognito pool, table names, region) — not secrets,
+# but identifying info about this developer's setup that shouldn't be pushed. The tool
+# creates this with blank fields on first run if it's missing.
+utils/user-admin/config.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -23,6 +23,35 @@ const schema = a.schema({
     .returns(a.string())
     .authorization((allow) => [allow.publicApiKey()])
     .handler(a.handler.function(logEventFunction)),
+
+  // User accounts, Phase 2: per-user persistence for signed-in users. Owner-scoped
+  // (Cognito user pool auth, distinct from the two operations above which stay on the
+  // public API key) — see designs/user-personalization.md for why these two models
+  // specifically (they're the only client state that currently persists at all) and
+  // src/context/RemindersContext.tsx / EnergyContext.tsx for the signed-in/signed-out
+  // branching that reads and writes them.
+  Reminder: a
+    .model({
+      message: a.string().required(),
+      fireAt: a.datetime().required(),
+      warnBeforeMinutes: a.integer(),
+      warnedForCurrentFireAt: a.boolean().required().default(false),
+      // JSON-stringified RepeatRule (src/lib/reminderParser.ts) — a single evolving
+      // field rather than separate columns, same pattern already used for every
+      // AI tool's structured input (see designs/user-personalization.md's schema
+      // evolution strategy).
+      repeat: a.string().required(),
+    })
+    .authorization((allow) => [allow.owner()]),
+
+  // One row per signed-in user (id is set client-side to their Cognito username — see
+  // EnergyContext.tsx), a home for any future per-user scalar preference without a new
+  // model each time. Only `spoons` (the energy level) exists today.
+  UserPreferences: a
+    .model({
+      spoons: a.integer().required(),
+    })
+    .authorization((allow) => [allow.owner()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
