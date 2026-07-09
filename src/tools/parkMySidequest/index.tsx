@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTaskStore } from '../../context/TaskStoreContext';
 import type { Project, Task, TaskCategory, TaskSize } from '../../context/TaskStoreContext';
+import { useToolNavigation } from '../../context/ToolNavigationContext';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
 
@@ -120,6 +121,7 @@ interface TaskEditDraft {
 
 function ParkMySidequest() {
   const { projects, tasks, addProject, updateProject, deleteProject, updateTask, deleteTask } = useTaskStore();
+  const { requestTaskBreakdown, navigateToTool } = useToolNavigation();
 
   const [newProjectName, setNewProjectName] = useState('');
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(new Set());
@@ -174,6 +176,14 @@ function ParkMySidequest() {
     if (!trimmed || !editingTaskId) return;
     updateTask(editingTaskId, { title: trimmed, size: taskDraft.size, projectId: taskDraft.projectId });
     setEditingTaskId(null);
+  }
+
+  // Hands the project off to Task Breakdown — see ToolNavigationContext.tsx. Task
+  // Breakdown remembers this project id, so sending the resulting steps back lands in
+  // this same project rather than creating a new one.
+  function handleBreakdown(project: Project) {
+    requestTaskBreakdown({ projectId: project.id, projectName: project.name, prefillText: project.name });
+    navigateToTool('task-breakdown');
   }
 
   const groups: TaskGroup[] = [
@@ -254,6 +264,15 @@ function ParkMySidequest() {
                     </button>
                     {group.project && (
                       <>
+                        <button
+                          type="button"
+                          className="task-group-edit"
+                          aria-label={`Break down project ${group.name}`}
+                          title="Break down with Task Breakdown"
+                          onClick={() => handleBreakdown(group.project!)}
+                        >
+                          🧩
+                        </button>
                         <button
                           type="button"
                           className="task-group-edit"

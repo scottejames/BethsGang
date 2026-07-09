@@ -956,3 +956,57 @@ All notable changes to this project are documented here.
     very wide screens, so cards don't spread out absurdly thin on an ultrawide
     monitor). Confirmed in both themes, and confirmed `ToolShell`'s width is
     unaffected (still exactly 720px at a 1600px viewport).
+
+### Added
+
+- **Park My Sidequest ↔ Task Breakdown, wired together** — the first concrete link
+  from `TODO.md`'s "Linking tools together" list, previously deferred by explicit
+  choice when Park My Sidequest first shipped. A project can be sent to Task Breakdown
+  to get broken into steps, and the steps can be sent back — smart about *where*: into
+  the *same* project if that's where the session started, or a new project if Task
+  Breakdown was opened standalone. This was the actual ask: "differentiate between
+  tasks that are initiated in [Task] Breakdown (creates a new project) and projects
+  that come FROM sidequest ... the breakdown should be within the existing project."
+  - `src/context/ToolNavigationContext.tsx` (new): promotes `activeToolId` out of
+    `App.tsx`'s local `useState` into a proper Context (`navigateToTool`/`goHome`),
+    since nothing previously let one *tool* send the user to another — only `Home`
+    could. This is the actual prerequisite this feature needed, and it's reusable for
+    every other link in `TODO.md`'s list, not something built one-off for this pair.
+    Also where the "opened" usage-log event fires now (moved out of `App.tsx`), so
+    tool-to-tool navigation is logged exactly like Home-click navigation, with no
+    separate path to forget.
+  - The same context carries one small, specifically-typed handoff —
+    `pendingBreakdownRequest` (`projectId`, `projectName`, `prefillText`) — set by
+    Sidequest right before navigating, read and cleared by Task Breakdown in a
+    mount-only effect. Deliberately not a generic "any payload for any tool" system;
+    narrow and named, easy to extend with another slot like it if a second link needs
+    one.
+  - `TaskStoreContext.addProject` now returns the created `Project` instead of `void`
+    (existing call sites unaffected — they already ignored the return value) — what
+    lets Task Breakdown create a new project and immediately use its id in the same
+    call, without waiting on a re-render.
+  - Park My Sidequest: a 🧩 button in each project's header (real projects only, same
+    as rename/delete — Parking Lot doesn't get one) hands the project off and
+    navigates. Task Breakdown: the textarea pre-fills with the project name; once
+    there are steps, a button appears labeled `Add to "<project>"` (handoff-originated)
+    or `Send to Sidequest` (standalone) — same underlying action either way, just a
+    different target project id. Every pushed task is `size: 'small'`,
+    `category: 'now'`, matching Task Breakdown's own framing ("small, concrete,
+    startable steps" you just asked to start on). Step titles reuse the exact same
+    `^\d+\.\s*` numbering-strip already applied when rendering each step, so the
+    stored title and the displayed text can't drift apart.
+  - Tests: `ToolNavigationContext.test.tsx` (new) covers navigate/goHome/usage-logging
+    and the handoff round-trip. `TaskStoreContext.test.tsx` extended to assert
+    `addProject`'s return value. `parkMySidequest/index.test.tsx` extended (now needs
+    `ToolNavigationProvider`, same as it needed `AuthProvider` when Reminders/Energy
+    gained a new dependency) with a test asserting the 🧩 button's handoff. New
+    `taskBreakdown/index.test.tsx` (this tool had no committed test before) mocks
+    `runAiTool` directly and covers both branches — standalone send creates a new
+    project, handoff-originated send adds to the existing one with no duplicate.
+  - Verified against the real running app with the AppSync GraphQL call intercepted
+    (`page.route`, returning a canned breakdown) rather than needing a live sandbox —
+    same approach already used for other AI-tool verification in this project: sent a
+    real Sidequest project through the full round trip (🧩 → pre-filled → break down →
+    add back) and confirmed exactly one "Kitchen reno" group with the new tasks, no
+    duplicate; separately, a standalone Task Breakdown session confirmed a brand-new
+    project gets created and named after the task text.

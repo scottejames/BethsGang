@@ -377,6 +377,28 @@ textarea {
   gap: 10px;
 }
 
+/* A primary-style action after a tool's AI result — same look as .tool-form's own
+   primary button, just usable outside a <form> (e.g. Task Breakdown's "send to
+   Sidequest", and any future tool-to-tool link that follows the same shape). */
+.tool-result-actions {
+  margin-top: 16px;
+}
+
+.tool-result-actions button {
+  font: inherit;
+  font-weight: 600;
+  background: var(--accent);
+  color: var(--accent-text);
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  cursor: pointer;
+}
+
+.tool-result-actions button:hover {
+  opacity: 0.9;
+}
+
 .tool-result-fields {
   margin: 24px 0 0;
   display: grid;

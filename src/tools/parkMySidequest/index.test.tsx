@@ -1,17 +1,51 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { TaskStoreProvider } from '../../context/TaskStoreContext';
+import { ToolNavigationProvider, useToolNavigation } from '../../context/ToolNavigationContext';
 import { parkMySidequestTool } from './index';
+
+// ToolNavigationProvider logs usage via useUsageLog, which needs EnergyContext —
+// mocked out here since this file is only testing Sidequest's own behavior.
+vi.mock('../../hooks/useUsageLog', () => ({
+  useUsageLog: () => vi.fn(),
+}));
 
 const Component = parkMySidequestTool.Component;
 
 function wrapper({ children }: { children: ReactNode }) {
-  return <TaskStoreProvider>{children}</TaskStoreProvider>;
+  return (
+    <TaskStoreProvider>
+      <ToolNavigationProvider>{children}</ToolNavigationProvider>
+    </TaskStoreProvider>
+  );
+}
+
+// Sidequest's "Break down" button acts entirely through ToolNavigationContext (sets
+// pendingBreakdownRequest, then navigates) — this app has no router, so there's no
+// visible change within Sidequest's own render to assert on. This spy, mounted
+// alongside the tool inside the same provider, makes those context side effects
+// observable without needing to render the whole App.
+function NavigationSpy() {
+  const { activeToolId, pendingBreakdownRequest } = useToolNavigation();
+  return (
+    <div data-testid="nav-spy">
+      <span data-testid="active-tool-id">{activeToolId ?? ''}</span>
+      <span data-testid="pending-breakdown">
+        {pendingBreakdownRequest ? JSON.stringify(pendingBreakdownRequest) : ''}
+      </span>
+    </div>
+  );
 }
 
 function renderTool() {
-  return render(<Component />, { wrapper });
+  return render(
+    <>
+      <Component />
+      <NavigationSpy />
+    </>,
+    { wrapper },
+  );
 }
 
 function group(name: string): HTMLElement {
@@ -221,5 +255,23 @@ describe('ParkMySidequest', () => {
 
     expect(within(group('Parking Lot')).getByText('water the plants')).toBeInTheDocument();
     expect(within(group('Parking Lot')).queryByText('something else entirely')).not.toBeInTheDocument();
+  });
+
+  it('the Break down button hands the project off to Task Breakdown and navigates there', () => {
+    renderTool();
+    addProject('Kitchen reno');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Break down project Kitchen reno' }));
+
+    expect(screen.getByTestId('active-tool-id')).toHaveTextContent('task-breakdown');
+    const pending = JSON.parse(screen.getByTestId('pending-breakdown').textContent || '{}');
+    expect(pending.projectName).toBe('Kitchen reno');
+    expect(pending.prefillText).toBe('Kitchen reno');
+    expect(typeof pending.projectId).toBe('string');
+  });
+
+  it('Parking Lot does not get a Break down button (not a real project)', () => {
+    renderTool();
+    expect(screen.queryByRole('button', { name: 'Break down project Parking Lot' })).not.toBeInTheDocument();
   });
 });

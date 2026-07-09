@@ -167,13 +167,13 @@ mechanics — most of these are just a new system prompt away.
 - [x] **Park My Sidequest** — a simple task manager: Projects (optional grouping) and
       Tasks (title, a Small/Large size, and a Now / Later / Not Your Problem category),
       built on top of a new shared `TaskStoreContext` — see "Shared Task Store" under
-      Infrastructure below, this is its first consumer. Deliberately not wired into any
-      existing tool yet. A project can be deleted without losing its tasks — they're
-      detached (project-less) rather than destroyed. Completed tasks stay visible
-      (struck through, sunk to the bottom) rather than disappearing. `localStorage`-
-      backed only, no backend model this pass. Covered by unit tests
-      (`TaskStoreContext.test.tsx`, `parkMySidequest/index.test.tsx`) and verified with
-      Playwright against the real running app.
+      Infrastructure below, this is its first consumer. Initially shipped wired into no
+      existing tool (see below for that changing). A project can be deleted without
+      losing its tasks — they're detached (project-less) rather than destroyed.
+      Completed tasks stay visible (struck through, sunk to the bottom) rather than
+      disappearing. `localStorage`-backed only, no backend model this pass. Covered by
+      unit tests (`TaskStoreContext.test.tsx`, `parkMySidequest/index.test.tsx`) and
+      verified with Playwright against the real running app.
       - **UI rewritten as a project/task tree** shortly after first shipping, on direct
         feedback that the original filter-chip layout didn't tie projects to tasks
         closely enough. Each project (plus a synthetic "Unfiled" bucket for standalone
@@ -187,6 +187,15 @@ mechanics — most of these are just a new system prompt away.
         one thing asked for. Category and done-status were already editable at any
         time; title/size/project were frozen at creation until this pass. See
         `CHANGELOG.md`'s "Added" entry for the full story.
+      - **Wired to Task Breakdown, bidirectionally** — a 🧩 button on any project sends
+        it to Task Breakdown (pre-filled with the project name); Task Breakdown gets a
+        matching "send back" button that's smart about where the steps land: back into
+        the *same* project if that's where the session started, or a brand-new project
+        (named after the task) if Task Breakdown was opened standalone. Required a new
+        `ToolNavigationContext` (promoting `activeToolId` out of `App.tsx`'s local state
+        into a proper Context) so one tool can navigate to another at all — the actual
+        prerequisite for every other link in "Linking tools together" below, not just
+        this one. See `CHANGELOG.md`'s "Added" entry for the full design.
 
 ## Later / stretch ideas
 
@@ -293,8 +302,9 @@ Concrete connections worth wiring up as tools accumulate. The Shared Task Store 
 now exists, shipped via Park My Sidequest — none of the connections below are wired up
 yet, by explicit choice, but the store itself is no longer the blocker:
 
-- **Task Breakdown → Shared Task Store**: each generated step gets a one-click "Send to
-  Tasks" instead of living only in the tool's own output pane.
+- ~~**Task Breakdown ↔ Shared Task Store**~~ — done, and bidirectional (see Shipped):
+  a project can be sent to Task Breakdown and its steps sent back, either into that
+  same project or a new one depending on where the session started.
 - **Brain Dump Sorter → Shared Task Store**: the "Do Now" bucket specifically lands in the
   same store as Task Breakdown's steps — they're the same kind of thing, just produced by
   different entry points.
@@ -332,6 +342,110 @@ yet, by explicit choice, but the store itself is no longer the blocker:
 - ADDitude Magazine — [punctuality & time blindness](https://www.additudemag.com/punctuality-time-blindness-adhd-apps-tips/).
 - Neurodivergent Insights — [rejection sensitive dysphoria](https://neurodivergentinsights.com/rejection-sensitive-dysphoria/).
 
+## Research: broadening beyond ADHD (2026-07-09)
+
+The app's own README still describes it as "for people with ADHD," and every shipped tool so
+far targets ADHD-specific friction (initiation paralysis, time blindness, RSD, decision
+fatigue). Researched what autistic, dyslexic/dyspraxic, PDA, and alexithymic adults
+specifically struggle with that ADHD-focused tools don't cover, to widen who "neurodiverse"
+means in this app's own framing. Grouped the same way as the 2026-07-07 research above,
+with the three most worth building next marked ⭐. Sources at the bottom.
+
+### ⭐ Top 3 for consideration
+
+1. ⭐ **Low-Demand Mode** (infrastructure/global setting, mirrors Spoons) — a single toggle
+   that rewrites every AI tool's phrasing from imperative to declarative/optional language
+   ("the dishes are still in the sink" vs. "do the dishes"; "here's an option" vs. "you
+   should"), plus softens the app's own copy ("Add a task" → "there's a task here if you
+   want it"). Grounded in PDA (Pathological Demand Avoidance) research: demands — even
+   self-imposed ones from a to-do app — can trigger a genuine anxiety/avoidance response,
+   and the standard advice is declarative language and framing tasks as choices, not
+   commands. This app's existing tools (Park My Sidequest, Remind Me, Call Script) are all
+   phrased as commands and due dates by default, which is exactly the pattern PDA guidance
+   says to avoid. Same shape as Spoons: one context, one `parseEnvelope`-style instruction
+   prepended in the Lambda, zero per-tool code, and it would improve the app for anyone who
+   finds command-toned software stressful, not only diagnosed PDA users.
+2. ⭐ **Reading Accessibility Mode** (infrastructure/global setting, no AI) — a
+   dyslexia/dyspraxia-friendly display toggle: dyslexia-friendly font (e.g. OpenDyslexic or
+   a similar licensed alternative), wider line/letter spacing, and a "read this aloud"
+   button on any tool's output using the browser's built-in `SpeechSynthesis` API — no new
+   dependency needed. Every dyslexia-tool source surveyed converges on the same two
+   primitives (text-to-speech + a dyslexia-friendly font/spacing option) as the highest-
+   value, lowest-effort accommodation. Same infra shape as Spoons/Energy — a context +
+   button rendered once at the app root, and every existing and future tool's text output
+   benefits for free, with zero per-tool work.
+3. ⭐ **In-the-Moment Phrase Board** — a grid of short, user-editable phrases ("I need a
+   break," "too loud in here," "give me a minute," "I can't talk right now," "can you write
+   it down instead?") that speak aloud (`SpeechSynthesis`) or display large on tap. Distinct
+   from Reply Starter/Call Script, which are for async written replies you have time to
+   draft — this is for real-time, in-person moments (shutdown, situational mutism, sensory
+   overload) where typing a prompt into an AI tool isn't an option. No AI needed; same
+   editable-list-plus-`localStorage` shape as the already-planned Dopamine Menu, so it's
+   cheap to build once that pattern exists.
+
+### AI-backed ideas (new `SYSTEM_PROMPTS` entry, same pattern as existing tools)
+
+- [ ] **Accommodation Request Drafter** — describe the situation informally ("open-plan
+      office is too loud and I can't concentrate") and get back a short, professional
+      email/script requesting the accommodation, in the register HR/a manager expects.
+      Same shape as Call Script; sources below have concrete phrasing conventions (state
+      the need, cite a specific ask, offer to discuss) worth encoding in the system prompt.
+      Automatically respects Spoons and (if built) Low-Demand Mode.
+- [ ] **Subtext Decoder** — generalizes *Is This Mad?* beyond anger/anxiety specifically:
+      paste an indirect or high-context message ("the trash is getting pretty full") and get
+      back the literal content plus what's actually being asked, for anyone whose default
+      reading is literal rather than inferential. Grounded in the "double empathy problem"
+      research: autistic/neurotypical miscommunication is framed as a translation gap
+      between a low-context and a high-context communication style, not a one-sided deficit
+      — this tool is the low-context→literal direction; Reply Starter/Call Script already
+      cover the reverse (literal intent → socially-expected phrasing).
+- [ ] **Feelings Finder** — describe physical sensations ("tight chest, jaw clenched, can't
+      sit still") instead of an emotion name, and get back a short list of candidate
+      emotion words plus a validating, non-diagnostic note. Targets alexithymia (present in
+      an estimated 40-65% of autistic adults, and under-researched but present in ADHD too)
+      — the mechanism is that interoceptive signals arrive without a clear emotion label
+      attached, so naming the sensation instead of the feeling is the accessible entry
+      point. Explicitly not a diagnostic or therapy tool, same framing discipline as
+      Meltdown/Shutdown Debrief.
+
+### Client-side ideas (no AI, `localStorage`-backed)
+
+- [ ] **Sensory Environment Log** — extends the already-planned Meltdown/Shutdown Debrief
+      with an optional structured field for *where* and *what sensory conditions* (noise,
+      light, crowd, smell) preceded an overwhelm episode, building a personal "places/
+      situations that reliably overwhelm me" list over time — a private, personal version
+      of what crowdsourced noise-level apps (SoundPrint) do publicly per-venue.
+- [ ] **Visual Day Plan** — an icon-based timeline of the day (not just a countdown), built
+      on the existing Shared Task Store + Reminders infrastructure rather than a new data
+      model. Addresses predictability/transition needs, which show up in autism research as
+      a distinct driver from ADHD's time-blindness (the same visual-timeline tools like
+      Tiimo already cited in the 2026-07-07 research serve both audiences, but for a
+      different underlying reason) — worth being explicit that this isn't just "another
+      ADHD timer."
+
+### Deliberately not building (noted so it isn't re-researched later)
+
+- **Real-time AAC (augmentative/alternative communication) replacement** — full picture-
+  based/eye-gaze communication devices for nonverbal or minimally-verbal users are a
+  regulated assistive-technology category with real safety stakes if a translation is
+  wrong; In-the-Moment Phrase Board above is a lightweight, low-stakes cousin (a personal
+  phrase shortcut list), not a substitute for a real AAC device.
+- **Crowdsourced venue noise/sensory database (SoundPrint-style)** — needs a critical mass
+  of other users submitting data to be useful at all, a different problem shape than every
+  other tool in this app, which works for a single user on day one. Sensory Environment Log
+  above is the personal-only version of the same idea.
+
+### Sources
+
+- [Tonen](https://usetonen.com/blog/best-apps-for-autistic-adults-2026) / [SpecialBridge](https://www.specialbridge.com/apps-for-autistic-adults/) — surveys of current autistic-adult apps (social script rehearsal, grounding/calm kits, SoundPrint, Daylio, Wysa).
+- [Tiimo — autistic masking and unmasking](https://www.tiimoapp.com/resource-hub/why-autistic-people-mask).
+- [PDA North America](https://pdanorthamerica.org/) and [Defining & Supporting PDA (PDF)](https://pdanorthamerica.org/wp-content/uploads/2025/01/Defining-and-supporting-PDA.pdf) — demand-avoidance mechanism and recovery strategies (reduce pressure, increase autonomy, low-demand environments).
+- [Gentle Ally — declarative language examples](https://www.gentleally.com/blog/declarative-language-examples.html) and [Neurodivergent Insights — low-demand parenting](https://neurodivergentinsights.com/low-demand-parenting/) — concrete declarative/low-demand phrasing patterns.
+- [Wikipedia — double empathy problem](https://en.wikipedia.org/wiki/Double_empathy_problem) and [Neurodivergent Insights — the double empathy problem](https://neurodivergentinsights.com/the-double-empathy-problem/).
+- [Sagebrush Counseling — what is alexithymia](https://www.sagebrushcounseling.com/blog/what-is-alexithymia) and [Autism & ADHD Advocates — interoception & alexithymia](https://www.autismadhdadvocates.org/blogs/interoception-and-interoception-and-alexithymia) — prevalence and the sensation-before-label mechanism.
+- [Everway/Texthelp — Read&Write for Work](https://www.everway.com/products/read-and-write-workplace/) and [Helperbird](https://www.helperbird.com/) — text-to-speech + dyslexia-friendly font/spacing as the core accommodation pattern.
+- [sensoryoverload.info — workplace accommodation scripts](https://sensoryoverload.info/autism/how-to-request-workplace-accommodations-for-autism-email-templates-meeting-script/) and [Resilient Mind Counseling — neurodiversity workplace accommodations](https://resilientmindcounseling.com/neurodiversity-workplace-accommodations/) — concrete accommodation-request phrasing.
+
 ## Infrastructure
 
 - [x] ⭐ **Shared Task Store (the "spine")** (see Shipped — **Park My Sidequest**) — a
@@ -340,9 +454,9 @@ yet, by explicit choice, but the store itself is no longer the blocker:
       `a.model('Task')` once signed in is a natural later phase, same path
       Reminders/Spoons already took — not done yet). Shipped with Projects as a grouping
       layer on top (not originally scoped here) and its first consumer, **Park My
-      Sidequest**. Deliberately **not** wired into any existing tool yet — no "Send to
-      Tasks" buttons anywhere — see "Linking tools together" above for what's still
-      unstarted.
+      Sidequest**. First tool-to-tool wiring now shipped too (Task Breakdown, see
+      Shipped above) — the rest of "Linking tools together" above is still unstarted,
+      but the store and the navigation mechanism it needed are no longer the blocker.
 - ~~**Global alert/notification layer**~~ — shipped as part of **Remind Me** (see
       Shipped): `RemindersContext` (same pattern as `DistractMeContext`) owns the
       timers/alarms and keeps them firing regardless of which tool is open, surfaced via

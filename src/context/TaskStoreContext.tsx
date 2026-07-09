@@ -47,7 +47,10 @@ export interface AddTaskInput {
 interface TaskStoreContextValue {
   projects: Project[];
   tasks: Task[];
-  addProject: (name: string) => void;
+  // Returns the created Project so a caller (e.g. Task Breakdown creating a new
+  // project to send steps into) has its id immediately, without waiting on a
+  // re-render — the object already exists before setProjects is called below.
+  addProject: (name: string) => Project;
   updateProject: (id: string, patch: Partial<Pick<Project, 'name'>>) => void;
   // Detaches (not deletes) that project's tasks — they become project-less rather
   // than being silently destroyed along with the project.
@@ -78,13 +81,14 @@ export function TaskStoreProvider({ children }: { children: ReactNode }) {
     window.localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasks));
   }, [tasks]);
 
-  function addProject(name: string) {
+  function addProject(name: string): Project {
     const project: Project = {
       id: crypto.randomUUID(),
       name,
       createdAt: new Date().toISOString(),
     };
     setProjects((current) => [...current, project]);
+    return project;
   }
 
   function updateProject(id: string, patch: Partial<Pick<Project, 'name'>>) {

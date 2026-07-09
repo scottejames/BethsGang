@@ -27,13 +27,17 @@ describe('TaskStoreContext', () => {
     expect(result.current.tasks).toEqual([]);
   });
 
-  it('addProject adds a project and persists it', () => {
+  it('addProject adds a project, persists it, and returns the created Project', () => {
     const { result } = renderHook(() => useTaskStore(), { wrapper });
 
-    act(() => result.current.addProject('Kitchen reno'));
+    let created: ReturnType<typeof result.current.addProject> | undefined;
+    act(() => {
+      created = result.current.addProject('Kitchen reno');
+    });
 
     expect(result.current.projects).toHaveLength(1);
     expect(result.current.projects[0].name).toBe('Kitchen reno');
+    expect(created).toEqual(result.current.projects[0]);
     const stored = JSON.parse(window.localStorage.getItem(PROJECTS_KEY) ?? '[]');
     expect(stored).toHaveLength(1);
     expect(stored[0].name).toBe('Kitchen reno');

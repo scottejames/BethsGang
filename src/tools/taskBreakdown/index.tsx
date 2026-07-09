@@ -1,11 +1,40 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAiTool } from '../../hooks/useAiTool';
+import { useTaskStore } from '../../context/TaskStoreContext';
+import { useToolNavigation } from '../../context/ToolNavigationContext';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
+
+function cleanStep(step: string): string {
+  return step.replace(/^\d+\.\s*/, '');
+}
+
+interface Origin {
+  projectId: string;
+  projectName: string;
+}
 
 function TaskBreakdown() {
   const [task, setTask] = useState('');
   const { output, loading, error, run } = useAiTool(meta.id);
+  const { pendingBreakdownRequest, clearBreakdownRequest, navigateToTool } = useToolNavigation();
+  const { addProject, addTask } = useTaskStore();
+  const [origin, setOrigin] = useState<Origin | null>(null);
+
+  // One-shot pickup of a handoff from Park My Sidequest's "Break down" button (see
+  // ToolNavigationContext.tsx) — pre-fills the task text and remembers which project
+  // to send the resulting steps back into, so that trip is a round trip into the same
+  // project rather than creating a duplicate. Runs once on mount, not reactively:
+  // there's no router, so navigating here is always a fresh mount, and a stale
+  // pendingBreakdownRequest from some earlier session should never resurface.
+  useEffect(() => {
+    if (pendingBreakdownRequest) {
+      setTask(pendingBreakdownRequest.prefillText);
+      setOrigin({ projectId: pendingBreakdownRequest.projectId, projectName: pendingBreakdownRequest.projectName });
+      clearBreakdownRequest();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -19,7 +48,20 @@ function TaskBreakdown() {
         .split('\n')
         .map((line) => line.trim())
         .filter(Boolean)
+        .map(cleanStep)
     : [];
+
+  // Sends this session's steps to Park My Sidequest: into the project this session
+  // started from (if any — see the mount effect above), or a new project named after
+  // the task otherwise. Small and "now" by default, matching Task Breakdown's own
+  // framing — these are "small, concrete, startable steps" you just asked for.
+  function handleSendToSidequest() {
+    const targetProjectId = origin ? origin.projectId : addProject(task.trim()).id;
+    steps.forEach((step) => {
+      addTask({ title: step, projectId: targetProjectId, size: 'small', category: 'now' });
+    });
+    navigateToTool('park-my-sidequest');
+  }
 
   return (
     <div className="tool-panel">
@@ -43,11 +85,18 @@ function TaskBreakdown() {
       {error && <p className="tool-error">{error}</p>}
 
       {steps.length > 0 && (
-        <ol className="tool-result-list">
-          {steps.map((step, index) => (
-            <li key={index}>{step.replace(/^\d+\.\s*/, '')}</li>
-          ))}
-        </ol>
+        <>
+          <ol className="tool-result-list">
+            {steps.map((step, index) => (
+              <li key={index}>{step}</li>
+            ))}
+          </ol>
+          <div className="tool-result-actions">
+            <button type="button" onClick={handleSendToSidequest}>
+              {origin ? `Add to "${origin.projectName}"` : 'Send to Sidequest'}
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
