@@ -43,6 +43,7 @@ function DopamineMenu() {
   const [items, setItems] = useState<DopamineItem[]>(loadItems);
   const [newText, setNewText] = useState('');
   const [revealedId, setRevealedId] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
@@ -81,19 +82,34 @@ function DopamineMenu() {
   }
 
   const revealedItem = items.find((item) => item.id === revealedId) ?? null;
+  // Nothing to hide when the list is empty — force the editor open so there's
+  // always a visible way to add the very first item.
+  const showEditor = editing || items.length === 0;
 
   return (
     <div className="tool-panel">
       <p className="tool-intro">
         Quick, easy things that reliably feel good — for when deciding what to do is the
-        only thing in your way. Add your own below, then hit Surprise me whenever you want
-        a shortcut straight to something rewarding instead of a decision.
+        only thing in your way. Hit Surprise me for a shortcut straight to something
+        rewarding, or edit the list to add, reorder, or remove items.
       </p>
 
-      <div className="tool-result-actions">
-        <button type="button" onClick={handleSurprise} disabled={items.length === 0}>
-          🎲 Surprise me
-        </button>
+      <div className="dopamine-top-row">
+        <div className="tool-result-actions">
+          <button type="button" onClick={handleSurprise} disabled={items.length === 0}>
+            🎲 Surprise me
+          </button>
+        </div>
+        {items.length > 0 && (
+          <button
+            type="button"
+            className="copy-button"
+            aria-expanded={showEditor}
+            onClick={() => setEditing((current) => !current)}
+          >
+            {editing ? 'Done editing' : '✎ Edit list'}
+          </button>
+        )}
       </div>
 
       {revealedItem && (
@@ -102,57 +118,61 @@ function DopamineMenu() {
         </div>
       )}
 
-      <form onSubmit={handleAdd} className="add-task-row">
-        <input
-          type="text"
-          value={newText}
-          onChange={(event) => setNewText(event.target.value)}
-          placeholder="Add something that feels good"
-          aria-label="New menu item"
-        />
-        <button type="submit" disabled={!newText.trim()}>
-          Add
-        </button>
-      </form>
+      {showEditor && (
+        <>
+          <form onSubmit={handleAdd} className="add-task-row">
+            <input
+              type="text"
+              value={newText}
+              onChange={(event) => setNewText(event.target.value)}
+              placeholder="Add something that feels good"
+              aria-label="New menu item"
+            />
+            <button type="submit" disabled={!newText.trim()}>
+              Add
+            </button>
+          </form>
 
-      {items.length === 0 ? (
-        <p className="task-empty">Nothing on the menu yet — add something above.</p>
-      ) : (
-        <ul className="dopamine-list">
-          {items.map((item, index) => (
-            <li key={item.id} className="dopamine-item">
-              <p className="dopamine-item-text">{item.text}</p>
-              <div className="dopamine-item-controls">
-                <button
-                  type="button"
-                  className="copy-button"
-                  aria-label={`Move "${item.text}" up`}
-                  disabled={index === 0}
-                  onClick={() => handleMove(item.id, -1)}
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  className="copy-button"
-                  aria-label={`Move "${item.text}" down`}
-                  disabled={index === items.length - 1}
-                  onClick={() => handleMove(item.id, 1)}
-                >
-                  ↓
-                </button>
-                <button
-                  type="button"
-                  className="copy-button"
-                  aria-label={`Delete "${item.text}"`}
-                  onClick={() => handleRemove(item.id)}
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+          {items.length === 0 ? (
+            <p className="task-empty">Nothing on the menu yet — add something above.</p>
+          ) : (
+            <ul className="dopamine-list">
+              {items.map((item, index) => (
+                <li key={item.id} className="dopamine-item">
+                  <p className="dopamine-item-text">{item.text}</p>
+                  <div className="dopamine-item-controls">
+                    <button
+                      type="button"
+                      className="copy-button"
+                      aria-label={`Move "${item.text}" up`}
+                      disabled={index === 0}
+                      onClick={() => handleMove(item.id, -1)}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      className="copy-button"
+                      aria-label={`Move "${item.text}" down`}
+                      disabled={index === items.length - 1}
+                      onClick={() => handleMove(item.id, 1)}
+                    >
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      className="copy-button"
+                      aria-label={`Delete "${item.text}"`}
+                      onClick={() => handleRemove(item.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </div>
   );

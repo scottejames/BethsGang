@@ -1499,6 +1499,17 @@ textarea {
   padding: 0 0 16px;
 }
 
+.dopamine-top-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dopamine-top-row .tool-result-actions {
+  margin-top: 0;
+}
+
 .dopamine-reveal {
   margin: 20px 0;
   padding: 20px 22px;

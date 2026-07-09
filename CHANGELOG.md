@@ -1031,3 +1031,28 @@ All notable changes to this project are documented here.
     and the "deliberately emptied list stays empty" case) and by driving the real
     running app with Playwright in both light and dark theme (add an item, surprise
     me, confirm no console errors).
+
+### Fixed
+
+- **Remind Me's Home-screen tagline still described a "simple form"** that was built
+  and removed the same day it shipped (see this file's 2026-07-07 entry and
+  `designs/remind-me.md`'s "The plain form was built, then removed the same day" note)
+  — the tool itself was already correct (its in-tool intro only ever mentions the
+  plain-English input), but `meta.tagline` never got updated, so the stale claim sat on
+  every Home-screen tool card. Found by an explicit audit of every tool's tagline,
+  in-tool intro text, and field labels against actual current behavior — the only stale
+  one out of 10 tools. Now reads "Set a reminder in plain English — no fields to fill
+  in."
+
+### Changed
+
+- **Dopamine Menu's list is now hidden by default** — reported directly: the full
+  editable list shouldn't be the first thing shown. Surprise me and a small "✎ Edit
+  list" toggle are now the only things visible until the user deliberately asks to see
+  or edit the list (button then reads "Done editing"); Surprise me's reveal works
+  either way, independent of whether the list is open. The one exception: if the list
+  is empty there's nothing to hide, so the add form opens automatically rather than
+  leaving no visible way to add the very first item (and the toggle button itself is
+  hidden in that case, since there's nothing to toggle). Verified with unit tests
+  (hidden by default, opens/closes on toggle, forced open when empty) and by driving
+  the real running app with Playwright.

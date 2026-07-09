@@ -158,11 +158,12 @@ Every tool-open and every AI-backed tool call is logged to CloudWatch via a dedi
 request/response logging. Each log line is a single JSON object (`{"type":"usage",
 "toolId":...,"event":"opened"|"ai_call",...}`), so it's easy to filter/query.
 
-Currently deployed function (`main` branch, app `dk3ifbty6lizq`) — confirmed working by
+Currently deployed function (`main` branch, app `<amplify-app-id>` — find yours via `npx
+ampx generate config` output or the Amplify Console URL) — confirmed working by
 triggering a real tool-open on the live site and watching the line land:
 
 ```bash
-aws logs tail "/aws/lambda/amplify-dk3ifbty6lizq-main--logeventlambda715157D2-HN3FkfHI0kR1" --follow --format short
+aws logs tail "/aws/lambda/amplify-<amplify-app-id>-main--logeventlambda<hash>" --follow --format short
 ```
 
 If that log group is ever gone (a fresh deploy replaces the hash suffix, or a new

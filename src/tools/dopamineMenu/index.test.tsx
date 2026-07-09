@@ -5,6 +5,10 @@ import { dopamineMenuTool } from './index';
 const Component = dopamineMenuTool.Component;
 const STORAGE_KEY = 'beths-gang:dopamine-items';
 
+function openEditor() {
+  fireEvent.click(screen.getByRole('button', { name: /edit list/i }));
+}
+
 describe('DopamineMenu', () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -14,14 +18,32 @@ describe('DopamineMenu', () => {
     cleanup();
   });
 
-  it('seeds default items on first load', () => {
+  it('hides the list by default and shows Surprise me + an Edit list toggle', () => {
     render(<Component />);
+    expect(screen.queryByText('Stretch for 2 minutes')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /surprise me/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /edit list/i })).toBeInTheDocument();
+  });
+
+  it('reveals the seeded default items once Edit list is clicked', () => {
+    render(<Component />);
+    openEditor();
     expect(screen.getByText('Stretch for 2 minutes')).toBeInTheDocument();
     expect(screen.getByText('Make a hot drink')).toBeInTheDocument();
   });
 
+  it('hides the list again when Done editing is clicked', () => {
+    render(<Component />);
+    openEditor();
+    expect(screen.getByText('Stretch for 2 minutes')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /done editing/i }));
+    expect(screen.queryByText('Stretch for 2 minutes')).not.toBeInTheDocument();
+  });
+
   it('adds a new item and persists it to localStorage', () => {
     render(<Component />);
+    openEditor();
 
     fireEvent.change(screen.getByLabelText('New menu item'), { target: { value: 'Feed the cat' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
@@ -33,18 +55,22 @@ describe('DopamineMenu', () => {
 
   it('deletes an item', () => {
     render(<Component />);
+    openEditor();
     fireEvent.click(screen.getByLabelText('Delete "Make a hot drink"'));
     expect(screen.queryByText('Make a hot drink')).not.toBeInTheDocument();
   });
 
-  it('respects a deliberately emptied list rather than reseeding defaults', () => {
+  it('respects a deliberately emptied list rather than reseeding defaults, and forces the editor open', () => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
     render(<Component />);
+    // No items to hide, so the add form shows without needing to click Edit list —
+    // and there's nothing to toggle either, since an empty list has no editor to hide.
+    expect(screen.queryByRole('button', { name: /edit list/i })).not.toBeInTheDocument();
     expect(screen.queryByText('Stretch for 2 minutes')).not.toBeInTheDocument();
     expect(screen.getByText(/nothing on the menu yet/i)).toBeInTheDocument();
   });
 
-  it('reveals an item from the list when Surprise me is clicked', () => {
+  it('reveals an item from the list when Surprise me is clicked, independent of the editor', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     render(<Component />);
 
@@ -71,6 +97,7 @@ describe('DopamineMenu', () => {
 
   it('moves an item up and down in the list', () => {
     render(<Component />);
+    openEditor();
     const items = screen.getAllByRole('listitem');
     const firstItemText = items[0].querySelector('.dopamine-item-text')?.textContent ?? '';
     const secondItemText = items[1].querySelector('.dopamine-item-text')?.textContent ?? '';

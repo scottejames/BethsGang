@@ -208,6 +208,11 @@ mechanics — most of these are just a new system prompt away.
       no-repeat reveal logic) and verified against the real running app with
       Playwright in both themes. `TODO.md`'s "Dopamine Menu ↔ Pomodoro" link (below)
       is still unstarted.
+      - **List hidden by default**, shortly after first shipping, on direct feedback
+        that the full editable list shouldn't be the first thing shown. Only Surprise
+        me and a small "✎ Edit list" toggle show up front; the add/reorder/delete list
+        only appears once the user opens it (or automatically, if the list is empty
+        and there's nothing to hide).
 
 ## Later / stretch ideas
 
