@@ -1,6 +1,6 @@
 ---
 name: update-project-artifacts
-description: Use this immediately after completing a significant feature, tool addition, architecture change, or notable bug fix in this project (Beth's Gang) — before telling the user the work is done. Also invocable directly as /update-project-artifacts. Walks through updating CHANGELOG.md, TODO.md, README.md, and OPERATE.md, verifying the change with npm run verify, and confirming new files are actually tracked by git, so no project artifact silently falls out of sync with what was actually built. Skip for genuinely trivial edits (typo fixes, comment-only changes, formatting) — this is for anything you would otherwise describe to the user as "I added/changed/fixed X."
+description: Use this immediately after completing a significant feature, tool addition, architecture change, or notable bug fix in this project (Beth's Gang) — before telling the user the work is done. Also invocable directly as /update-project-artifacts. Walks through updating CHANGELOG.md, TODO.md, README.md, OPERATE.md, and the designs/ folder, verifying the change with npm run verify, and confirming new files are actually tracked by git, so no project artifact silently falls out of sync with what was actually built. Skip for genuinely trivial edits (typo fixes, comment-only changes, formatting) — this is for anything you would otherwise describe to the user as "I added/changed/fixed X."
 ---
 
 # Keep project artifacts current
@@ -65,7 +65,25 @@ as part of finishing the task, not an optional extra pass at the end.
       here. CHANGELOG.md records that a script now exists; OPERATE.md is where someone
       actually goes to run it — both need to be right, but they're not the same job.
 
-## 6. Confirm git actually has everything
+## 6. Update the designs/ folder — only if this changed something design-worthy
+
+`designs/README.md` indexes the set; `designs/design-principles.md` holds the standing
+principles. Neither should drift from what was actually built — a stale design doc
+actively misleads instead of just being silent.
+
+- [ ] Did this introduce a new architectural decision, reject a real alternative, get
+      shaped by a bug, or ship a meaningfully new feature/service? Add or update the
+      relevant document in `designs/` — most changes extend an existing document (check
+      `designs/README.md`'s table for the closest match) rather than needing a new one.
+- [ ] Does this confirm, refine, or contradict an existing entry in
+      `design-principles.md`? Update that entry (with what actually happened, not just
+      the abstract principle) rather than leaving it to only live in this conversation.
+- [ ] If this is a genuinely new document, add a row to `designs/README.md`'s index table
+      so it's discoverable.
+- [ ] Skip this step for changes that don't reflect a design decision worth remembering
+      later — same "genuinely trivial" bar as the rest of this skill.
+
+## 7. Confirm git actually has everything
 
 - [ ] Run `git status --short` and read it — don't assume. New files show as `??` until
       staged; a commit that references a file which was never added will build locally
@@ -74,7 +92,7 @@ as part of finishing the task, not an optional extra pass at the end.
 - [ ] Scan the diff for anything that shouldn't be committed before handing back — a
       quick `git diff --cached | grep -iE "api[_-]?key|secret|token"` costs nothing.
 
-## 7. Hand back to the user
+## 8. Hand back to the user
 
 - [ ] Don't commit or push unless asked — this project's user runs git themselves. End
       by summarizing what changed and asking whether they want it committed/pushed.

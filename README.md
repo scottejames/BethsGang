@@ -49,6 +49,34 @@ architecture, dependencies, and deployment.
   `useAiTool.ts`'s `run()` — so every current and future tool is covered automatically,
   no per-tool logging code required. See `OPERATE.md`'s "Viewing usage logs" for how to
   actually read what it collects.
+- **Auth** (`feature/user-accounts` branch, not yet on `main`) — `amplify/auth/resource.ts`
+  defines Cognito email/password auth via `defineAuth`. `src/context/AuthContext.tsx`
+  reflects Amplify's own persisted session into React (same Context+Provider+hook shape
+  as `EnergyContext`/`RemindersContext`), and `src/components/AccountButton.tsx` is the
+  only UI that opens the sign-in flow — a fixed top-left button opening a themed Amplify
+  UI `<Authenticator>` in the existing `Modal.tsx`. This is deliberately opt-in, not a
+  login gate — `localStorage` remains the full default experience for anyone not signed
+  in, and `runAiTool`/`logEvent` stay on the public API key regardless of sign-in state.
+  See `src/index.css`'s `.amplify-auth-theme` block for how the Authenticator's
+  `--amplify-*` tokens are mapped onto this app's own colors so it doesn't look like a
+  bolted-on third-party widget — the card/tabs, field text, and validation-error text
+  each needed the more specific `--amplify-components-*` tokens, not the general
+  `--amplify-colors-*` ones, to actually follow dark mode (see
+  `designs/user-personalization.md` for the full explanation of why).
+- **Per-user persistence** (same branch) — `Reminder` and `UserPreferences` are two
+  owner-scoped `a.model()`s in `amplify/data/resource.ts` (`allow.owner()`, distinct
+  from `runAiTool`/`logEvent`'s public API key auth). `RemindersContext`/
+  `EnergyContext` use them via `client.models.*.observeQuery()` (see
+  `src/lib/dataClient.ts`) when signed in, and fall back to exactly their prior
+  `localStorage`-only behavior when signed out — these are the only two things in the
+  app that persist anything at all. Reminders migrate from `localStorage` to the
+  account silently on first sign-in per device; see
+  `designs/user-personalization.md`'s "What Phase 2 built" for the migration-UX
+  decision and a real bug worth knowing about for any future owner-scoped model: the
+  Data client's default authMode follows the *schema's* `defaultAuthorizationMode`, not
+  a specific model's own authorization rule, so it has to be set explicitly per client
+  (or per call) — the failure otherwise is a silent, UI-looks-fine "Not Authorized" on
+  every write.
 
 ## Dependencies
 
@@ -58,6 +86,7 @@ architecture, dependencies, and deployment.
 | `vite`, `@vitejs/plugin-react` | Dev server & build |
 | `typescript` | Type checking |
 | `aws-amplify` | Frontend client for calling the Amplify Data API |
+| `@aws-amplify/ui-react` | The `<Authenticator>` component behind `AccountButton.tsx` |
 | `@aws-amplify/backend`, `@aws-amplify/backend-cli` | Amplify Gen2 backend definition (`amplify/`) and the `ampx` CLI |
 | `aws-cdk-lib`, `constructs` | Required by `@aws-amplify/backend` under the hood |
 | `@anthropic-ai/sdk` | Calls the Claude API from the `ai-assist` Lambda |
@@ -65,6 +94,7 @@ architecture, dependencies, and deployment.
 | `oxlint` | Linting |
 | `vitest` | Test runner (shares config with Vite via `vite.config.ts`'s `test` block) |
 | `@testing-library/react`, `@testing-library/jest-dom`, `jsdom` | Component tests (DOM environment for tests that render React components) |
+| `@aws-sdk/client-cognito-identity-provider`, `@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb` | `utils/user-admin/`'s admin CLI only — not used by the app itself |
 
 Node 20+ is recommended (matches current Amplify Gen2 Lambda runtimes).
 

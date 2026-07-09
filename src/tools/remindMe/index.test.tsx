@@ -1,13 +1,29 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
+import * as amplifyAuth from 'aws-amplify/auth';
+import { Hub } from 'aws-amplify/utils';
 import { RemindersProvider } from '../../context/RemindersContext';
+import { AuthProvider } from '../../context/AuthContext';
 import { remindMeTool } from './index';
+
+vi.mock('aws-amplify/auth', () => ({
+  getCurrentUser: vi.fn(),
+  signOut: vi.fn(),
+}));
+
+vi.mock('aws-amplify/utils', () => ({
+  Hub: { listen: vi.fn(() => vi.fn()) },
+}));
 
 const Component = remindMeTool.Component;
 
 function wrapper({ children }: { children: ReactNode }) {
-  return <RemindersProvider>{children}</RemindersProvider>;
+  return (
+    <AuthProvider>
+      <RemindersProvider>{children}</RemindersProvider>
+    </AuthProvider>
+  );
 }
 
 function renderTool() {
@@ -19,6 +35,9 @@ describe('RemindMe', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-07-08T14:00:00'));
     window.localStorage.removeItem('beths-gang:reminders');
+    vi.mocked(amplifyAuth.getCurrentUser).mockReset().mockRejectedValue(new Error('not signed in'));
+    vi.mocked(amplifyAuth.signOut).mockReset();
+    vi.mocked(Hub.listen).mockReset().mockReturnValue(vi.fn());
   });
 
   afterEach(() => {

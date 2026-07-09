@@ -484,3 +484,231 @@ All notable changes to this project are documented here.
     fallback; the summarization heuristic's short/long/non-string/non-JSON cases) and a
     Playwright pass confirming normal navigation and AI-tool submission still work
     exactly as before with logging wired in.
+- **User accounts, Phase 1: auth only** — built on `feature/user-accounts`, not merged to
+  `main`, per explicit request to keep this easily discardable: auth is the first time
+  this app touches a new AWS service (Cognito) and a real security surface, worth landing
+  in isolation before anything depends on it. `amplify/auth/resource.ts` adds
+  `defineAuth({ loginWith: { email: true } })` — Cognito email/password, registered
+  alongside the existing `data`/`aiAssistFunction`/`logEventFunction` in
+  `amplify/backend.ts`. Nothing else changes: `defaultAuthorizationMode` stays `apiKey`,
+  and `runAiTool`/`logEvent` remain unauthenticated exactly as before — auth exists for
+  identity/session only in this phase, nothing is gated behind it yet.
+  - `src/context/AuthContext.tsx` (new) reflects Amplify's own persisted session into
+    React — same Context+Provider+hook shape as `EnergyContext`/`RemindersContext` — by
+    calling `getCurrentUser()` on mount and subscribing to `Hub.listen('auth', ...)` for
+    `signedIn`/`signedOut` events. `src/components/AccountButton.tsx` (new, mirrors
+    `EnergyButton.tsx`'s fixed-pill-button pattern, placed top-left — the one open
+    corner) is the only UI that reads it: shows "Sign in" or the signed-in email, opens
+    a `Modal` containing Amplify UI's `<Authenticator>` (signed out) or an account
+    summary + Sign Out button (signed in). Not a login gate anywhere in the app.
+  - New dependency `@aws-amplify/ui-react` for the `<Authenticator>`. Themed via a new
+    `.amplify-auth-theme` CSS block (`src/index.css`) mapping Amplify UI's `--amplify-*`
+    tokens onto this app's existing colors, so it follows both light and dark mode
+    automatically without a separate dark-mode block (the underlying app tokens already
+    flip; the Authenticator just references them). Needed the more *specific*
+    `--amplify-components-authenticator-router-background-color` and matching
+    `tabs-*` tokens, not just the general `--amplify-colors-background-primary` — the
+    card/tabs ignored the general token entirely and stayed white in dark mode until
+    this was found by actually screenshotting both themes, not assumed from the docs.
+  - Verified against a real personal sandbox (`ampx sandbox --identifier authtest`) —
+    not something a unit test can cover, since it needs a real Cognito user pool.
+    `src/context/AuthContext.test.tsx` still covers the React-state-reflection logic
+    with mocked `aws-amplify/auth`/`Hub`. For the parts that need a real backend:
+    admin-created a confirmed test user (`aws cognito-idp admin-create-user` +
+    `admin-set-user-password`, bypassing email verification) to drive a full real
+    sign-in → session-persists-across-reload → sign-out round trip with Playwright; separately
+    drove the actual sign-up and forgot-password forms far enough to confirm each
+    reaches Cognito and lands on its "enter the code we emailed you" screen (matched by
+    the exact heading Cognito returns) — completing those two specific flows needs a
+    real inbox, not available in this pass. Found and fixed a real Playwright gotcha
+    along the way: the Authenticator's email field is `name="username"` on the Sign In
+    tab but `name="email"` on the Create Account tab.
+  - `TODO.md`'s existing "User accounts (Amplify Auth) + persistent Data model"
+    Infrastructure entry is now split: this Phase 1 (auth) is done; Phase 2 (a real
+    per-user data model, starting with Reminders, and reworking `RemindersContext` to
+    use it) is unstarted and deliberately out of scope for this branch.
+
+### Fixed
+
+- **The Authenticator's typed input text and field labels were nearly invisible in dark
+  mode** — reported directly, with a screenshot: typed text in the email field rendered
+  as dark navy on a dark navy background. Root cause was a real Amplify UI theming
+  gotcha, not a typo in the CSS: every `--amplify-components-*-color` token is defined
+  by Amplify's own stylesheet as `var(--amplify-colors-font-primary)` (or similar), but
+  that `var()` reference is resolved once, at `:root` — using *Amplify's own default*
+  value there, since this app's override only exists on the `.amplify-auth-theme`
+  wrapper, a descendant of `:root`. Overriding only the general `--amplify-colors-*`
+  tokens (as the original theming pass did) silently does nothing for anything Amplify
+  styles via a component-specific token — which turned out to be almost everything
+  visible. Worse, the actual input text color goes through *three* layers of this same
+  pattern before reaching the rendered element (`fieldcontrol-color` →
+  `textfield-color`/`passwordfield-color` on the field wrapper → `input-color` on the
+  actual `.amplify-input` element), each one a fresh direct redeclaration that has to be
+  overridden individually — found by walking the live DOM's computed
+  `--amplify-components-fieldcontrol-color` value element-by-element up the ancestor
+  chain in a real dark-mode render, not by reading Amplify's docs. Fixed by directly
+  setting every component-specific color token actually in play (field text, field
+  labels, headings, body text, validation error text, button/link text) in
+  `.amplify-auth-theme`, rather than relying on the general tokens to cascade down. See
+  `designs/user-personalization.md` for the full technical explanation, kept there since
+  it's a reusable lesson for any future Amplify UI theming, not just this one bug.
+  - Verified by reading the actual computed CSS custom property values in a live dark-mode
+    render (not just eyeballing a screenshot) to find each redeclaration layer, then
+    re-verified visually with Playwright screenshots of both the Sign In and Create
+    Account tabs, in both themes, with real typed text — including confirming the
+    validation error messages ("Password must have upper case letters" etc.), which had
+    the identical contrast bug and got fixed by the same change.
+- **Two more instances of the same theming gotcha, reported with a second screenshot**:
+  the show/hide-password eye icon was rendering in Amplify's own dark default color
+  (near-invisible on the dark card), and the live password-requirements checklist text
+  ("Password must have special characters", "Your passwords must match") was a dim,
+  low-contrast red rather than the app's `--error` red. Root cause was, again, the
+  `:root`-resolution gotcha, but surfacing through two *different* token families that
+  hadn't been touched by the previous fix: the eye icon's color is re-pointed by
+  `.amplify-passwordfield` from the general `button-color` token to its own
+  `passwordfield-button-color` (and a further `passwordfield-button-error-color` variant
+  specifically when the field is invalid); the requirements-checklist text isn't a field
+  message at all — it's a plain `<p class="amplify-text amplify-text--error">` styled via
+  a wholly separate `text-error-color` token, distinct from both
+  `fieldcontrol-error-color` (the input border, already fixed) and
+  `fieldmessages-error-color` (a third, still-different token for actual field
+  validation messages, also newly added here). Confirms the practical rule from the
+  first fix: every visually distinct thing Amplify UI renders has its own
+  component-specific token, and each has to be found and overridden individually — there
+  is no shortcut via the general `--amplify-colors-*` tokens.
+  - Found by walking the live DOM ancestor chain of the actual rendered error `<p>` via
+    `getComputedStyle` to identify `text-error-color` as the acting token (grepping
+    Amplify UI's own `text.css`/`passwordField.css`/`fieldMessages.css` source in
+    `node_modules` to confirm the exact default chain), then verified with Playwright
+    screenshots in dark mode showing the eye icon and both validation messages clearly
+    legible, plus a light-mode screenshot confirming no regression there.
+
+### Added
+
+- **User accounts, Phase 2: persist Reminders + Spoons for signed-in users** — still on
+  `feature/user-accounts`, not merged to `main`. Sign-in was previously a no-op (nothing
+  read or wrote differently based on who was signed in); this gives it an actual
+  purpose. Grepped the codebase first to confirm scope: Reminders and the Spoons energy
+  level are the *only* two things that persist anything at all today — everything else
+  (Task Breakdown, Tone Checker, Reply Starter, Call Script, Is This Mad?, Pomodoro
+  Timer, Distract Me) is stateless and untouched by this change.
+  - `amplify/data/resource.ts`: two new owner-scoped `a.model()`s — `Reminder` (mirrors
+    the client-side `Reminder` shape, `repeat` kept as a single JSON string field per
+    this project's existing schema-evolution approach for structured tool inputs) and
+    `UserPreferences` (one row per user, keyed by their Cognito username as a singleton;
+    only `spoons` today, named for future per-user preferences without a new model
+    each time).
+  - `src/lib/dataClient.ts` (new): `generateClient<Schema>({ authMode: 'userPool' })`,
+    separate from `aiClient.ts`/`usageLog.ts`'s own clients (those hit `runAiTool`/
+    `logEvent`, which stay on the public API key). This authMode override turned out to
+    be load-bearing, not stylistic — see "Fixed" below.
+  - `RemindersContext`/`EnergyContext`: signed-out behavior is completely unchanged.
+    Signed-in state is driven by `client.models.*.observeQuery()` (emits current items
+    immediately, then live updates — no manual refetch/polling needed for "added on
+    phone, appears on laptop"). Reminders migrate from `localStorage` to the account
+    silently on first sign-in per device (no confirmation prompt — chosen explicitly
+    over asking first, to match this app's no-interruption philosophy), using each
+    reminder's existing id so a second run can't double-upload. Spoons does the
+    opposite merge on first sign-in: an existing backend value (a returning user) wins
+    over the local device's value, while a brand-new account seeds the backend from
+    whatever's currently on the device. Both contexts write optimistically to local
+    state first (same instant feel as before either talked to a backend) and reconcile
+    against the next `observeQuery` emission.
+  - Tests: `RemindersContext.test.tsx` and new `EnergyContext.test.tsx` mock
+    `aws-amplify/data`'s `generateClient` plus `useAuth` to cover signed-in/signed-out
+    branches, migration and its idempotency, and the create-vs-adopt singleton logic.
+    `src/tools/remindMe/index.test.tsx`'s wrapper needed updating too, since
+    `RemindersProvider` now calls `useAuth()` internally — any test mounting it (or
+    `EnergyProvider`) needs an `AuthProvider` ancestor with `aws-amplify/auth`/
+    `aws-amplify/utils` mocked, same as `AuthContext.test.tsx`.
+  - Full design writeup, including the migration-UX decision and its reasoning: see
+    `designs/user-personalization.md`'s "What Phase 2 built" section.
+
+### Fixed
+
+- **Reminder/Spoons writes were silently failing against the real sandbox** —
+  `npm run verify` passed and the UI looked correct (optimistic local state and the
+  always-on `localStorage` mirror both made it *look* like everything worked), but
+  scanning the actual DynamoDB tables during sandbox verification showed them
+  completely empty. Root cause: the Amplify Data schema's `defaultAuthorizationMode` is
+  `'apiKey'` (so `runAiTool`/`logEvent` need no per-call override), but
+  `Reminder`/`UserPreferences` only permit `allow.owner()` (Cognito). A
+  `generateClient<Schema>()` with no explicit `authMode` defaults every call to the
+  schema's `defaultAuthorizationMode` — so every create/update/delete/`observeQuery`
+  against the new owner-scoped models was being sent with the public API key instead of
+  the signed-in user's token, and AppSync correctly rejected all of them with "Not
+  Authorized." Fixed by setting `authMode: 'userPool'` on `src/lib/dataClient.ts`'s
+  client (used only for these two models). Left as a documented open risk in
+  `designs/user-personalization.md` for any future owner-scoped model: **the client's
+  default authMode is the schema's, not a specific model's own rule** — has to be set
+  explicitly, and the failure mode is silent (no test or casual click-through catches
+  it; only checking the actual backend table does).
+  - Verified by reading real AppSync response bodies via Playwright's network
+    listener (not just the UI) to see the `"errorType":"Unauthorized"` responses
+    directly, then re-verified end-to-end after the fix: a reminder and a spoons value
+    set while signed in were confirmed via direct DynamoDB scans (not just the UI),
+    survived a real page reload, and a second "device" with a pre-existing local
+    reminder merged it into the account on sign-in without duplicating anything already
+    there.
+- **A reminder created while signed in was still fully visible immediately after
+  signing out** — reported directly from manual testing (create a reminder, log out,
+  it's still there), and correctly flagged as wrong: this is account-scoped data, it
+  shouldn't linger on a device once nobody's signed in to that account anymore. Root
+  cause was the previous fix's own "sign-out mirroring" design (see above) — it wrote
+  every state Reminders was in, including backend-synced account data, into
+  `localStorage` continuously while signed in, specifically so sign-out wouldn't
+  regress to *stale* local data. That reasoning solved the wrong problem: it stopped
+  local data going stale, but at the cost of leaking account data into the
+  unauthenticated view. Fixed by never writing to `localStorage` while signed in, and
+  explicitly reverting to whatever `localStorage` already holds (from before sign-in,
+  untouched by the account session) the moment sign-out happens. Same fix applied to
+  `EnergyContext`/Spoons for the same reason, once the pattern was clear.
+  - A first attempt at this fix reintroduced the same bug through a subtler path: using
+    two separate effects (one mirroring signed-out state to `localStorage`, one
+    reverting on sign-out) raced each other on the sign-out transition itself — both
+    fire in the same render, and the mirroring effect still saw that render's *stale*,
+    still-signed-in `reminders` value (a sibling effect's `setState` doesn't retroactively
+    change what an already-running effect in the same commit sees), so it wrote the
+    account's data to `localStorage` a moment before the revert effect read it back
+    out. Caught by a unit test asserting the exact end state, not by manual
+    spot-checking. Fixed by merging both concerns into a single effect, removing the
+    race entirely.
+  - Verified live end-to-end against the real sandbox: sign in, add a reminder
+    (visible), sign out ("No reminders set yet."), sign back in (reminder reappears) —
+    with a direct DynamoDB scan confirming the row was never deleted server-side the
+    whole time, only ever correctly hidden from the signed-out view.
+
+## 2026-07-09
+
+### Added
+
+- **`utils/user-admin/`** — a standalone admin CLI (`npm run users -- <command>`) for
+  managing signed-up users directly: `list-users`, `list-data <user>` (every
+  Reminder/UserPreferences row a user owns), `reset-password <user>`, and
+  `delete-user <user>` (Cognito account + all their data, cascade-deleted; requires
+  typing the user's email back to confirm, since it's irreversible). Not part of the
+  app itself — a operator tool, run against whichever sandbox's pool/tables its config
+  points at.
+  - Deliberately no pool IDs, table names, or credentials in the committed script
+    (`index.mjs`) — those live in `utils/user-admin/config.json`, gitignored, created
+    automatically with blank fields the first time any command runs against a missing
+    config. AWS credentials themselves are never read from a file at all; the tool uses
+    the normal AWS CLI credential chain. A `discover` command reads the current
+    `amplify_outputs.json` plus a `ListTables` call to suggest what to put in
+    `config.json`, since hand-finding a Cognito pool ID and hashed DynamoDB table names
+    is exactly the kind of thing worth automating once rather than repeating from memory
+    every time (see this file's own 2026-07-08 entries for how much manual
+    `aws cognito-idp`/`aws dynamodb` work this session already involved).
+  - Owner-matching for `list-data`/`delete-user` works by prefix-matching the `owner`
+    field (`"<sub>::<username>"`, Amplify's `allow.owner()` format) rather than assuming
+    username always equals sub — resolves the target user's `sub` via `AdminGetUser`
+    first (accepts either email or the Cognito username/sub), then scans both tables
+    filtering on `begins_with(owner, "<sub>::")`.
+  - Verified end-to-end against the real sandbox: `list-users`/`list-data` against the
+    real account (read-only, safe); `reset-password` and the full `delete-user` flow
+    (including the confirmation-mismatch abort path) verified against a disposable
+    throwaway test user created and destroyed specifically for this, seeded with a real
+    reminder and preferences row first to confirm the cascade delete actually removes
+    them — confirmed via direct `AdminGetUser`/`GetItem` calls afterward that the
+    Cognito account and both rows were gone, while the real account's own data was
+    completely unaffected throughout.

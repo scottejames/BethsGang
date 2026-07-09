@@ -4,6 +4,7 @@ import { ToolShell } from './components/ToolShell';
 import { NowPlayingBar } from './components/NowPlayingBar';
 import { EnergyButton } from './components/EnergyButton';
 import { ReminderBanner } from './components/ReminderBanner';
+import { AccountButton } from './components/AccountButton';
 import { useUsageLog } from './hooks/useUsageLog';
 import { getTool } from './tools/registry';
 
@@ -22,6 +23,7 @@ function App() {
   return (
     <>
       <EnergyButton />
+      <AccountButton />
       <ReminderBanner />
       {activeTool ? (
         <ToolShell

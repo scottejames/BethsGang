@@ -185,6 +185,119 @@ week" — reach for CloudWatch Logs Insights in the console instead of eyeballin
 stream; the structured JSON shape means a simple `fields toolId, event | stats count()
 by toolId` query works directly.
 
+## Testing auth locally (`feature/user-accounts` branch)
+
+Auth (`amplify/auth/resource.ts`) needs a real Cognito user pool to test against — there's
+no local emulator for it. Use your one personal sandbox (`npx ampx sandbox` with no
+`--identifier`, same as `runLocal.sh` runs — that flag defaults to your OS username):
+
+```bash
+npx ampx sandbox
+npm run dev
+```
+
+**Don't pass a different `--identifier`** to spin up a second sandbox for auth
+testing specifically — that seemed like a reasonable way to isolate auth testing from
+"your main sandbox" when this was first written, but in practice it just creates a
+second, independent Cognito pool + DynamoDB tables + AppSync API + Lambda functions
+sitting alongside your real one. This actually happened during this feature's own
+development: an `authtest`-identified sandbox and the default `<username>`-identified
+one both existed and both had the current schema, and testing against the wrong one
+looked exactly like a sync bug (a reminder created in one didn't "follow" to a browser
+pointed at the other) until the two separate CloudFormation stacks were found via
+`aws cloudformation list-stacks`. If you ever do end up with more than one, `npx ampx
+sandbox delete --identifier <name>` tears one down cleanly (Cognito pool, tables,
+functions, all of it) — safe for whichever one *isn't* the one you actually use.
+
+Sign-up and password-reset both email a real confirmation code, so completing those two
+flows end-to-end needs a real inbox. Without one, you can still verify almost everything
+that matters:
+
+- **Sign-up and forgot-password reach Cognito correctly**: fill and submit each form: a
+  successful sign-up lands on a "We Emailed You" screen, a successful reset request lands
+  on a "Reset Password" (enter code) screen. Getting there proves the request succeeded;
+  only entering the code itself needs the real email.
+- **Sign-in, session persistence, and sign-out**, fully end-to-end, using an
+  admin-created confirmed user (bypasses email verification entirely):
+  ```bash
+  aws cognito-idp admin-create-user --user-pool-id <pool-id> \
+    --username someone@example.com \
+    --user-attributes Name=email,Value=someone@example.com Name=email_verified,Value=true \
+    --message-action SUPPRESS --temporary-password 'TempPass123!'
+  aws cognito-idp admin-set-user-password --user-pool-id <pool-id> \
+    --username someone@example.com --password 'RealPass123!' --permanent
+  ```
+  (find `<pool-id>` in the sandbox's `amplify_outputs.json` under `auth.user_pool_id`.)
+  Sign in through the real UI with that user, reload the page to confirm the session
+  survives (Amplify persists the tokens itself), then sign out.
+- Clean up afterwards: `aws cognito-idp admin-delete-user --user-pool-id <pool-id>
+  --username someone@example.com`.
+
+One gotcha worth knowing if you're scripting against the Authenticator's form fields: the
+email input's `name` attribute is `"username"` on the Sign In tab but `"email"` on the
+Create Account tab — inconsistent between the two, easy to lose time to.
+
+## Testing per-user Reminder/Spoons persistence (same branch)
+
+`Reminder` and `UserPreferences` are owner-scoped `a.model()`s — same sandbox setup as
+above, plus this specific check every time: **verify against the actual DynamoDB
+table, not just the UI.** A real bug here (a missing `authMode: 'userPool'` on the Data
+client) made every write fail server-side while the app looked completely normal —
+optimistic local state and the always-on `localStorage` mirror both make broken backend
+writes invisible from the UI alone. To actually confirm persistence:
+
+```bash
+# Table names include a hash that changes if the API gets recreated — look them up
+# fresh each time rather than assuming a name from a previous session:
+aws dynamodb list-tables --query "TableNames[?contains(@, 'Reminder') || contains(@, 'UserPreferences')]"
+
+aws dynamodb scan --table-name <Reminder-table-name>
+aws dynamodb scan --table-name <UserPreferences-table-name>
+```
+
+A meaningful end-to-end check: sign in as an admin-created test user (see above), add a
+reminder and move the Spoons slider, confirm both appear in the DynamoDB scan above
+(not just in the browser), then **reload the page** and confirm they're still there —
+proves the data came from `observeQuery()`, not just React state that happened to
+survive. Then sign out and confirm the reminder/Spoons value is *not* visible anymore
+("No reminders set yet.", Spoons back to this device's own local value) — account data
+must not linger in the signed-out view. Sign back in and confirm it reappears (proving
+it's still there server-side, just correctly hidden while signed out), which a
+DynamoDB scan can confirm directly.
+
+If `admin-create-user`/`admin-set-user-password` or a DynamoDB scan starts failing
+against IDs that worked earlier in the same session, first check whether you're
+actually pointed at your one sandbox — re-check `amplify_outputs.json`'s current
+`auth.user_pool_id` against `aws cloudformation list-stacks` before assuming AWS state
+drifted; it's more likely a second sandbox got created by accident (see above) than the
+same one changing IDs on its own.
+
+## Managing signed-up users (`utils/user-admin/`)
+
+A small standalone CLI for the four things you'd actually need to do to a real user
+account: list users, see what data a user has, reset a password, and delete a user
+(Cognito account + all their `Reminder`/`UserPreferences` rows — deletion asks for
+typed confirmation of the user's email first, since it's irreversible).
+
+```bash
+npm run users -- discover        # first time only — finds region/pool ID/table names
+                                  # for you to put in utils/user-admin/config.json
+npm run users -- list-users
+npm run users -- list-data <email-or-username>
+npm run users -- reset-password <email-or-username>
+npm run users -- delete-user <email-or-username>
+```
+
+The script itself (`index.mjs`) is committed — it has no pool IDs, table names, or
+credentials in it. Those live in `utils/user-admin/config.json`, which is gitignored
+and created automatically (with blank fields) the first time you run any command if
+it's missing. AWS credentials themselves are never read from that file — the tool uses
+your normal AWS CLI credential chain (`~/.aws/credentials`, `AWS_PROFILE`, SSO, etc.),
+same as running `aws` commands directly.
+
+Points at whichever sandbox `config.json` names — for the sandbox/pool-consolidation
+reason above, that should be your one default sandbox, not a separately-identified one.
+
 ## Keeping the project's artifacts current
 
 After shipping anything significant (a new tool, an architecture change, a real bug fix),
