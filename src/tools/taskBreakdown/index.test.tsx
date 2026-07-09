@@ -46,7 +46,7 @@ function wrapper({ children }: { children: ReactNode }) {
 // Exposes TaskStoreContext/ToolNavigationContext state for assertions — this app has
 // no router, so "did it navigate / did the right project get the tasks" has no visible
 // trace inside TaskBreakdown's own render. Same technique as
-// parkMySidequest/index.test.tsx's NavigationSpy.
+// everythingPile/index.test.tsx's NavigationSpy.
 function Spy() {
   const { projects, tasks } = useTaskStore();
   const { activeToolId } = useToolNavigation();
@@ -66,7 +66,7 @@ function Spy() {
 }
 
 // Seeds ToolNavigationContext's pendingBreakdownRequest before TaskBreakdown itself
-// ever mounts, simulating arriving via Sidequest's "Break down" button. Rendered first,
+// ever mounts, simulating arriving via Everything Pile's "Break down" button. Rendered first,
 // then swapped for the real component via rerender() — same provider tree/state
 // throughout, so the seeded value is there when TaskBreakdown's own mount effect reads it.
 function Seeder({ request }: { request: TaskBreakdownRequest }) {
@@ -129,7 +129,7 @@ describe('TaskBreakdown', () => {
     expect(screen.getByText('Buy tile spacers')).toBeInTheDocument();
   });
 
-  it('a standalone breakdown, sent to Sidequest, creates a new project holding the steps', async () => {
+  it('a standalone breakdown, sent to Everything Pile, creates a new project holding the steps', async () => {
     vi.mocked(runAiTool).mockResolvedValue('1. Buy tape\n2. Buy tile spacers');
     renderTool();
 
@@ -139,18 +139,18 @@ describe('TaskBreakdown', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Break it down' }));
     await screen.findByText('Buy tape');
 
-    expect(screen.getByRole('button', { name: 'Send to Sidequest' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Send to Sidequest' }));
+    expect(screen.getByRole('button', { name: 'Send to Everything Pile' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Send to Everything Pile' }));
 
     await waitFor(() => expect(screen.getByTestId('project-count')).toHaveTextContent('1'));
-    expect(screen.getByTestId('active-tool-id')).toHaveTextContent('park-my-sidequest');
+    expect(screen.getByTestId('active-tool-id')).toHaveTextContent('everything-pile');
     const taskList = screen.getByTestId('task-list').textContent ?? '';
     expect(taskList).toContain('Buy tape|');
     expect(taskList).toContain('Buy tile spacers|');
     expect(taskList).toContain('|small|now');
   });
 
-  it('pre-fills from a Sidequest handoff and sends steps back into that same project (no new one)', async () => {
+  it('pre-fills from an Everything Pile handoff and sends steps back into that same project (no new one)', async () => {
     vi.mocked(runAiTool).mockResolvedValue('1. Buy tape\n2. Buy tile spacers');
     renderToolWithHandoff({ projectId: 'existing-id', projectName: 'Kitchen reno', prefillText: 'Kitchen reno' });
 
@@ -160,12 +160,12 @@ describe('TaskBreakdown', () => {
     await screen.findByText('Buy tape');
 
     const sendButton = screen.getByRole('button', { name: 'Add to "Kitchen reno"' });
-    expect(screen.queryByRole('button', { name: 'Send to Sidequest' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Send to Everything Pile' })).not.toBeInTheDocument();
     fireEvent.click(sendButton);
 
-    await waitFor(() => expect(screen.getByTestId('active-tool-id')).toHaveTextContent('park-my-sidequest'));
+    await waitFor(() => expect(screen.getByTestId('active-tool-id')).toHaveTextContent('everything-pile'));
     // No new Project record — the handoff's origin project is assumed to already exist
-    // in Sidequest (this test never created one via addProject).
+    // in Everything Pile (this test never created one via addProject).
     expect(screen.getByTestId('project-count')).toHaveTextContent('0');
     const taskList = screen.getByTestId('task-list').textContent ?? '';
     expect(taskList).toContain('Buy tape|existing-id|small|now');

@@ -66,7 +66,7 @@ const TaskStoreContext = createContext<TaskStoreContextValue | null>(null);
 
 // Persistent provider, same pattern as EnergyContext/RemindersContext — mounted once
 // at the app root (see main.tsx) so any future tool can read/write the same store
-// without needing Park My Sidequest itself to be open. localStorage-only for now; a
+// without needing Everything Pile itself to be open. localStorage-only for now; a
 // per-user backend model (matching Reminder/UserPreferences) is a natural later phase,
 // deliberately not part of this pass.
 export function TaskStoreProvider({ children }: { children: ReactNode }) {

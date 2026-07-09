@@ -1056,3 +1056,27 @@ All notable changes to this project are documented here.
   hidden in that case, since there's nothing to toggle). Verified with unit tests
   (hidden by default, opens/closes on toggle, forced open when empty) and by driving
   the real running app with Playwright.
+- **Renamed Park My Sidequest to Everything Pile** — reported directly: what shipped as
+  a lightweight "park a stray task" tool had grown into the app's actual planning tool
+  (Projects, Tasks, sizes, categories, wired bidirectionally to Task Breakdown), so its
+  "parking lot" framing no longer fit, and it was reading as a second, competing
+  "quest"-themed tool alongside the still-unbuilt Side Quest Log idea. Chosen to avoid
+  both corporate-planner language and RPG-style gamification, and to free "quest"
+  wording entirely for Side Quest Log once that's built, so the two stop colliding.
+  Renamed throughout (folder, tool id, component, exports, CSS section comment — not
+  just the display label), following the same precedent as the White Noise → Distract
+  Me rename:
+  - `src/tools/parkMySidequest/` → `src/tools/everythingPile/`; `meta.id`
+    `'park-my-sidequest'` → `'everything-pile'`; icon 🎒 → 🧺.
+  - The synthetic bucket for project-less tasks, previously "Parking Lot", is now
+    "Everything Else" — keeps the same-family naming with the tool itself.
+  - Copy updated to match: "Park it" → "Add to pile", "What needs parking?" → "Add
+    anything", and the in-tool intro rewritten to describe a pile you drop things into
+    rather than a lot you park things in temporarily.
+  - Task Breakdown's "Send to Sidequest" button is now "Send to Everything Pile";
+    `navigateToTool('park-my-sidequest')` calls updated to `'everything-pile'`
+    throughout, including in tests.
+  - Verified with the full unit test suite (updated assertions for every renamed
+    string) and by driving the real running app with Playwright: Home card, in-tool
+    copy, and the add/list flow all confirmed under the new name with no console
+    errors.

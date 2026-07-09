@@ -164,7 +164,8 @@ mechanics — most of these are just a new system prompt away.
         pre-sign-in local state on sign-out — see `designs/user-personalization.md` for
         the full story, including a first attempted fix that reintroduced the same bug
         via a race between two effects.
-- [x] **Park My Sidequest** — a simple task manager: Projects (optional grouping) and
+- [x] **Everything Pile** (originally shipped as **Park My Sidequest**, renamed) — a
+      simple task manager: Projects (optional grouping) and
       Tasks (title, a Small/Large size, and a Now / Later / Not Your Problem category),
       built on top of a new shared `TaskStoreContext` — see "Shared Task Store" under
       Infrastructure below, this is its first consumer. Initially shipped wired into no
@@ -172,7 +173,7 @@ mechanics — most of these are just a new system prompt away.
       losing its tasks — they're detached (project-less) rather than destroyed.
       Completed tasks stay visible (struck through, sunk to the bottom) rather than
       disappearing. `localStorage`-backed only, no backend model this pass. Covered by
-      unit tests (`TaskStoreContext.test.tsx`, `parkMySidequest/index.test.tsx`) and
+      unit tests (`TaskStoreContext.test.tsx`, `everythingPile/index.test.tsx`) and
       verified with Playwright against the real running app.
       - **UI rewritten as a project/task tree** shortly after first shipping, on direct
         feedback that the original filter-chip layout didn't tie projects to tasks
@@ -196,6 +197,12 @@ mechanics — most of these are just a new system prompt away.
         into a proper Context) so one tool can navigate to another at all — the actual
         prerequisite for every other link in "Linking tools together" below, not just
         this one. See `CHANGELOG.md`'s "Added" entry for the full design.
+      - **Renamed to Everything Pile**, reported directly: the tool had grown well past
+        a lightweight "parking lot" into the app's actual planning tool, and its
+        "sidequest" framing collided with the still-unbuilt Side Quest Log idea below.
+        Renamed throughout (folder, id, component, exports — not just the display
+        label); the "Parking Lot" bucket is now "Everything Else"; "Park it" is now
+        "Add to pile". See `CHANGELOG.md`'s "Changed" entry for the full list.
 - [x] **Dopamine Menu** — a short, user-curated, editable list of "quick, easy,
       low-effort things that reliably feel good" (stretch, step outside, a favourite
       song, text a friend, a hot drink), plus a "🎲 Surprise me" button that reveals one
@@ -308,7 +315,7 @@ worth building next marked ⭐. See "Sources" at the bottom of this section.
 ### Linking tools together
 
 Concrete connections worth wiring up as tools accumulate. The Shared Task Store (below)
-now exists, shipped via Park My Sidequest — none of the connections below are wired up
+now exists, shipped via Everything Pile — none of the connections below are wired up
 yet, by explicit choice, but the store itself is no longer the blocker:
 
 - ~~**Task Breakdown ↔ Shared Task Store**~~ — done, and bidirectional (see Shipped):
@@ -369,7 +376,7 @@ with the three most worth building next marked ⭐. Sources at the bottom.
    want it"). Grounded in PDA (Pathological Demand Avoidance) research: demands — even
    self-imposed ones from a to-do app — can trigger a genuine anxiety/avoidance response,
    and the standard advice is declarative language and framing tasks as choices, not
-   commands. This app's existing tools (Park My Sidequest, Remind Me, Call Script) are all
+   commands. This app's existing tools (Everything Pile, Remind Me, Call Script) are all
    phrased as commands and due dates by default, which is exactly the pattern PDA guidance
    says to avoid. Same shape as Spoons: one context, one `parseEnvelope`-style instruction
    prepended in the Lambda, zero per-tool code, and it would improve the app for anyone who
@@ -457,13 +464,13 @@ with the three most worth building next marked ⭐. Sources at the bottom.
 
 ## Infrastructure
 
-- [x] ⭐ **Shared Task Store (the "spine")** (see Shipped — **Park My Sidequest**) — a
+- [x] ⭐ **Shared Task Store (the "spine")** (see Shipped — **Everything Pile**) — a
       single canonical list of tasks, exposed as `TaskStoreContext` the same way
       `DistractMeContext` exposes audio state, `localStorage`-backed for now (an Amplify
       `a.model('Task')` once signed in is a natural later phase, same path
       Reminders/Spoons already took — not done yet). Shipped with Projects as a grouping
-      layer on top (not originally scoped here) and its first consumer, **Park My
-      Sidequest**. First tool-to-tool wiring now shipped too (Task Breakdown, see
+      layer on top (not originally scoped here) and its first consumer,
+      **Everything Pile**. First tool-to-tool wiring now shipped too (Task Breakdown, see
       Shipped above) — the rest of "Linking tools together" above is still unstarted,
       but the store and the navigation mechanism it needed are no longer the blocker.
 - ~~**Global alert/notification layer**~~ — shipped as part of **Remind Me** (see

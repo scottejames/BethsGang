@@ -3,15 +3,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { TaskStoreProvider } from '../../context/TaskStoreContext';
 import { ToolNavigationProvider, useToolNavigation } from '../../context/ToolNavigationContext';
-import { parkMySidequestTool } from './index';
+import { everythingPileTool } from './index';
 
 // ToolNavigationProvider logs usage via useUsageLog, which needs EnergyContext —
-// mocked out here since this file is only testing Sidequest's own behavior.
+// mocked out here since this file is only testing Everything Pile's own behavior.
 vi.mock('../../hooks/useUsageLog', () => ({
   useUsageLog: () => vi.fn(),
 }));
 
-const Component = parkMySidequestTool.Component;
+const Component = everythingPileTool.Component;
 
 function wrapper({ children }: { children: ReactNode }) {
   return (
@@ -21,9 +21,9 @@ function wrapper({ children }: { children: ReactNode }) {
   );
 }
 
-// Sidequest's "Break down" button acts entirely through ToolNavigationContext (sets
+// Everything Pile's "Break down" button acts entirely through ToolNavigationContext (sets
 // pendingBreakdownRequest, then navigates) — this app has no router, so there's no
-// visible change within Sidequest's own render to assert on. This spy, mounted
+// visible change within Everything Pile's own render to assert on. This spy, mounted
 // alongside the tool inside the same provider, makes those context side effects
 // observable without needing to render the whole App.
 function NavigationSpy() {
@@ -58,11 +58,11 @@ function categoryValue(label: 'Now' | 'Later' | 'Not Your Problem'): string {
 
 function addTaskTo(groupName: string, title: string, category?: 'Now' | 'Later' | 'Not Your Problem') {
   const scope = within(group(groupName));
-  fireEvent.change(scope.getByPlaceholderText('What needs parking?'), { target: { value: title } });
+  fireEvent.change(scope.getByPlaceholderText('Add anything'), { target: { value: title } });
   if (category) {
     fireEvent.change(scope.getByLabelText('Category'), { target: { value: categoryValue(category) } });
   }
-  fireEvent.click(scope.getByRole('button', { name: 'Park it' }));
+  fireEvent.click(scope.getByRole('button', { name: 'Add to pile' }));
 }
 
 function addProject(name: string) {
@@ -78,7 +78,7 @@ function selectProjectOption(scope: ReturnType<typeof within>, label: string) {
   fireEvent.change(scope.getByLabelText('Project'), { target: { value: option.value } });
 }
 
-describe('ParkMySidequest', () => {
+describe('EverythingPile', () => {
   beforeEach(() => {
     window.localStorage.removeItem('beths-gang:projects');
     window.localStorage.removeItem('beths-gang:tasks');
@@ -89,38 +89,38 @@ describe('ParkMySidequest', () => {
     window.localStorage.removeItem('beths-gang:tasks');
   });
 
-  it('always shows a Parking Lot group for standalone tasks, expanded by default', () => {
+  it('always shows an Everything Else group for standalone tasks, expanded by default', () => {
     renderTool();
-    expect(screen.getByText('Parking Lot', { selector: '.task-group-name' })).toBeInTheDocument();
+    expect(screen.getByText('Everything Else', { selector: '.task-group-name' })).toBeInTheDocument();
 
-    addTaskTo('Parking Lot', 'water the plants', 'Now');
-    expect(within(group('Parking Lot')).getByText('water the plants')).toBeInTheDocument();
+    addTaskTo('Everything Else', 'water the plants', 'Now');
+    expect(within(group('Everything Else')).getByText('water the plants')).toBeInTheDocument();
   });
 
-  it('always lists Parking Lot first, ahead of every project', () => {
+  it('always lists Everything Else first, ahead of every project', () => {
     renderTool();
     addProject('Kitchen reno');
     addProject('Side hustle');
 
     const names = screen.getAllByText(/.+/, { selector: '.task-group-name' }).map((el) => el.textContent);
-    expect(names).toEqual(['Parking Lot', 'Kitchen reno', 'Side hustle']);
+    expect(names).toEqual(['Everything Else', 'Kitchen reno', 'Side hustle']);
   });
 
-  it('adding a task from inside a project group ties it to that project, not Parking Lot', () => {
+  it('adding a task from inside a project group ties it to that project, not Everything Else', () => {
     renderTool();
     addProject('Kitchen reno');
 
     addTaskTo('Kitchen reno', 'grout tiles', 'Later');
 
     expect(within(group('Kitchen reno')).getByText('grout tiles')).toBeInTheDocument();
-    expect(within(group('Parking Lot')).queryByText('grout tiles')).not.toBeInTheDocument();
+    expect(within(group('Everything Else')).queryByText('grout tiles')).not.toBeInTheDocument();
   });
 
   it('re-triages a task to a different category via its tag select', () => {
     renderTool();
-    addTaskTo('Parking Lot', 'call the dentist', 'Later');
+    addTaskTo('Everything Else', 'call the dentist', 'Later');
 
-    const item = within(group('Parking Lot')).getByText('call the dentist').closest('li') as HTMLElement;
+    const item = within(group('Everything Else')).getByText('call the dentist').closest('li') as HTMLElement;
     const select = within(item).getByLabelText(/move .* to a different category/i) as HTMLSelectElement;
     expect(select.value).toBe('later');
 
@@ -130,16 +130,16 @@ describe('ParkMySidequest', () => {
 
   it('deletes a task', () => {
     renderTool();
-    addTaskTo('Parking Lot', 'cancel gym membership', 'Now');
+    addTaskTo('Everything Else', 'cancel gym membership', 'Now');
 
-    const item = within(group('Parking Lot')).getByText('cancel gym membership').closest('li') as HTMLElement;
+    const item = within(group('Everything Else')).getByText('cancel gym membership').closest('li') as HTMLElement;
     fireEvent.click(within(item).getByRole('button', { name: 'Delete' }));
 
-    expect(within(group('Parking Lot')).queryByText('cancel gym membership')).not.toBeInTheDocument();
-    expect(within(group('Parking Lot')).getByText('Nothing here.')).toBeInTheDocument();
+    expect(within(group('Everything Else')).queryByText('cancel gym membership')).not.toBeInTheDocument();
+    expect(within(group('Everything Else')).getByText('Nothing here.')).toBeInTheDocument();
   });
 
-  it('deleting a project moves its tasks into Parking Lot instead of losing them', () => {
+  it('deleting a project moves its tasks into Everything Else instead of losing them', () => {
     renderTool();
     addProject('Kitchen reno');
     addTaskTo('Kitchen reno', 'grout tiles', 'Later');
@@ -147,18 +147,18 @@ describe('ParkMySidequest', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete project Kitchen reno' }));
 
     expect(screen.queryByText('Kitchen reno', { selector: '.task-group-name' })).not.toBeInTheDocument();
-    expect(within(group('Parking Lot')).getByText('grout tiles')).toBeInTheDocument();
+    expect(within(group('Everything Else')).getByText('grout tiles')).toBeInTheDocument();
   });
 
   it('marking a task done strikes it through and sinks it to the bottom of its group', () => {
     renderTool();
-    addTaskTo('Parking Lot', 'first task', 'Now');
-    addTaskTo('Parking Lot', 'second task', 'Now');
+    addTaskTo('Everything Else', 'first task', 'Now');
+    addTaskTo('Everything Else', 'second task', 'Now');
 
-    const firstItem = within(group('Parking Lot')).getByText('first task').closest('li') as HTMLElement;
+    const firstItem = within(group('Everything Else')).getByText('first task').closest('li') as HTMLElement;
     fireEvent.click(within(firstItem).getByRole('checkbox'));
 
-    const items = within(group('Parking Lot')).getAllByRole('listitem');
+    const items = within(group('Everything Else')).getAllByRole('listitem');
     expect(items[items.length - 1]).toHaveTextContent('first task');
     expect(firstItem.className).toContain('task-item-done');
   });
@@ -171,7 +171,7 @@ describe('ParkMySidequest', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Collapse Kitchen reno' }));
 
     expect(within(group('Kitchen reno')).queryByText('grout tiles')).not.toBeInTheDocument();
-    expect(within(group('Kitchen reno')).queryByPlaceholderText('What needs parking?')).not.toBeInTheDocument();
+    expect(within(group('Kitchen reno')).queryByPlaceholderText('Add anything')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Expand Kitchen reno' }));
 
@@ -204,9 +204,9 @@ describe('ParkMySidequest', () => {
 
   it('edits a task\'s title and size in place', () => {
     renderTool();
-    addTaskTo('Parking Lot', 'water the plants', 'Now');
+    addTaskTo('Everything Else', 'water the plants', 'Now');
 
-    const item = within(group('Parking Lot')).getByText('water the plants').closest('li') as HTMLElement;
+    const item = within(group('Everything Else')).getByText('water the plants').closest('li') as HTMLElement;
     fireEvent.click(within(item).getByRole('button', { name: 'Edit "water the plants"' }));
 
     const editForm = within(item).getByLabelText('Edit task title').closest('form') as HTMLElement;
@@ -214,11 +214,11 @@ describe('ParkMySidequest', () => {
     fireEvent.click(within(editForm).getByLabelText('Large'));
     fireEvent.click(within(editForm).getByRole('button', { name: 'Save' }));
 
-    const updatedItem = within(group('Parking Lot')).getByText('water the office plants').closest('li') as HTMLElement;
+    const updatedItem = within(group('Everything Else')).getByText('water the office plants').closest('li') as HTMLElement;
     expect(within(updatedItem).getByLabelText('Size: large')).toBeInTheDocument();
   });
 
-  it('moves a task to a different project via the edit form, and back to Parking Lot', () => {
+  it('moves a task to a different project via the edit form, and back to Everything Else', () => {
     renderTool();
     addProject('Kitchen reno');
     addProject('Side hustle');
@@ -237,24 +237,24 @@ describe('ParkMySidequest', () => {
     const movedItem = within(group('Side hustle')).getByText('grout tiles').closest('li') as HTMLElement;
     fireEvent.click(within(movedItem).getByRole('button', { name: 'Edit "grout tiles"' }));
     const secondEditForm = within(movedItem).getByLabelText('Edit task title').closest('form') as HTMLElement;
-    selectProjectOption(within(secondEditForm), 'Parking Lot');
+    selectProjectOption(within(secondEditForm), 'Everything Else');
     fireEvent.click(within(secondEditForm).getByRole('button', { name: 'Save' }));
 
     expect(within(group('Side hustle')).queryByText('grout tiles')).not.toBeInTheDocument();
-    expect(within(group('Parking Lot')).getByText('grout tiles')).toBeInTheDocument();
+    expect(within(group('Everything Else')).getByText('grout tiles')).toBeInTheDocument();
   });
 
   it('cancelling a task edit discards the draft', () => {
     renderTool();
-    addTaskTo('Parking Lot', 'water the plants', 'Now');
+    addTaskTo('Everything Else', 'water the plants', 'Now');
 
-    const item = within(group('Parking Lot')).getByText('water the plants').closest('li') as HTMLElement;
+    const item = within(group('Everything Else')).getByText('water the plants').closest('li') as HTMLElement;
     fireEvent.click(within(item).getByRole('button', { name: 'Edit "water the plants"' }));
     fireEvent.change(within(item).getByLabelText('Edit task title'), { target: { value: 'something else entirely' } });
     fireEvent.click(within(item).getByRole('button', { name: 'Cancel' }));
 
-    expect(within(group('Parking Lot')).getByText('water the plants')).toBeInTheDocument();
-    expect(within(group('Parking Lot')).queryByText('something else entirely')).not.toBeInTheDocument();
+    expect(within(group('Everything Else')).getByText('water the plants')).toBeInTheDocument();
+    expect(within(group('Everything Else')).queryByText('something else entirely')).not.toBeInTheDocument();
   });
 
   it('the Break down button hands the project off to Task Breakdown and navigates there', () => {
@@ -270,8 +270,8 @@ describe('ParkMySidequest', () => {
     expect(typeof pending.projectId).toBe('string');
   });
 
-  it('Parking Lot does not get a Break down button (not a real project)', () => {
+  it('Everything Else does not get a Break down button (not a real project)', () => {
     renderTool();
-    expect(screen.queryByRole('button', { name: 'Break down project Parking Lot' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Break down project Everything Else' })).not.toBeInTheDocument();
   });
 });

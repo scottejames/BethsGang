@@ -21,7 +21,7 @@ function TaskBreakdown() {
   const { addProject, addTask } = useTaskStore();
   const [origin, setOrigin] = useState<Origin | null>(null);
 
-  // One-shot pickup of a handoff from Park My Sidequest's "Break down" button (see
+  // One-shot pickup of a handoff from Everything Pile's "Break down" button (see
   // ToolNavigationContext.tsx) — pre-fills the task text and remembers which project
   // to send the resulting steps back into, so that trip is a round trip into the same
   // project rather than creating a duplicate. Runs once on mount, not reactively:
@@ -51,16 +51,16 @@ function TaskBreakdown() {
         .map(cleanStep)
     : [];
 
-  // Sends this session's steps to Park My Sidequest: into the project this session
+  // Sends this session's steps to Everything Pile: into the project this session
   // started from (if any — see the mount effect above), or a new project named after
   // the task otherwise. Small and "now" by default, matching Task Breakdown's own
   // framing — these are "small, concrete, startable steps" you just asked for.
-  function handleSendToSidequest() {
+  function handleSendToEverythingPile() {
     const targetProjectId = origin ? origin.projectId : addProject(task.trim()).id;
     steps.forEach((step) => {
       addTask({ title: step, projectId: targetProjectId, size: 'small', category: 'now' });
     });
-    navigateToTool('park-my-sidequest');
+    navigateToTool('everything-pile');
   }
 
   return (
@@ -92,8 +92,8 @@ function TaskBreakdown() {
             ))}
           </ol>
           <div className="tool-result-actions">
-            <button type="button" onClick={handleSendToSidequest}>
-              {origin ? `Add to "${origin.projectName}"` : 'Send to Sidequest'}
+            <button type="button" onClick={handleSendToEverythingPile}>
+              {origin ? `Add to "${origin.projectName}"` : 'Send to Everything Pile'}
             </button>
           </div>
         </>

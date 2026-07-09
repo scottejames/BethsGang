@@ -88,14 +88,14 @@ architecture, dependencies, and deployment.
   same Context+Provider+hook shape as every other persistent provider, mounted at the
   app root so any tool can read/write it without navigating into whichever tool has it
   open. `localStorage`-backed only for now (no backend model yet, unlike
-  Reminder/UserPreferences above). Consumed by **Park My Sidequest** and, since it's
+  Reminder/UserPreferences above). Consumed by **Everything Pile** and, since it's
   the first tool-to-tool link (see below), **Task Breakdown** too. See `TODO.md`'s
   "Linking tools together" for what else this unlocks, still unstarted.
 - **Tool-to-tool navigation** (`src/context/ToolNavigationContext.tsx`) — owns
   `activeToolId` (previously local state in `App.tsx`) plus `navigateToTool`/`goHome`,
   so any tool can send the user to another tool, not just `Home`. Also where the
   "opened" usage-log event fires now, covering every navigation path uniformly rather
-  than only the Home-click one. Park My Sidequest's 🧩 "Break down" button uses this to
+  than only the Home-click one. Everything Pile's 🧩 "Break down" button uses this to
   jump to Task Breakdown, carrying a small typed handoff (`TaskBreakdownRequest`:
   which project, and what to pre-fill the task text with) via
   `pendingBreakdownRequest`/`requestTaskBreakdown`/`clearBreakdownRequest` — a one-shot

@@ -7,7 +7,7 @@ import { distractMeTool } from './distractMe';
 import { callScriptTool } from './callScript';
 import { isThisMadTool } from './isThisMad';
 import { remindMeTool } from './remindMe';
-import { parkMySidequestTool } from './parkMySidequest';
+import { everythingPileTool } from './everythingPile';
 import { dopamineMenuTool } from './dopamineMenu';
 
 // To add a new tool: create a folder under src/tools with a meta.ts + index.tsx,
@@ -21,7 +21,7 @@ export const tools: ToolDefinition[] = [
   callScriptTool,
   isThisMadTool,
   remindMeTool,
-  parkMySidequestTool,
+  everythingPileTool,
   dopamineMenuTool,
 ];
 

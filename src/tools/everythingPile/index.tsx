@@ -26,14 +26,14 @@ const SIZE_LABELS: Record<TaskSize, string> = {
 
 // Not a real project id — the fixed bucket for tasks with no projectId, always
 // rendered first so standalone (quick-capture) tasks are the easiest thing to get to
-// in the tree. Also doubles as the "move to Parking Lot" option's value in the
+// in the tree. Also doubles as the "move to Everything Else" option's value in the
 // task-edit project select.
 const UNFILED_ID = 'unfiled';
-const UNFILED_NAME = 'Parking Lot';
+const UNFILED_NAME = 'Everything Else';
 
 function sortTasks(tasks: Task[]): Task[] {
-  // Done tasks sink to the bottom (shown, not hidden, as a record of what got parked
-  // and cleared). Otherwise ordered by category so a group stays scannable without
+  // Done tasks sink to the bottom (shown, not hidden, as a record of what got cleared
+  // out of the pile). Otherwise ordered by category so a group stays scannable without
   // needing a second level of nesting per category.
   return [...tasks].sort((a, b) => {
     if (a.done !== b.done) return a.done ? 1 : -1;
@@ -86,7 +86,7 @@ function AddTaskRow({ projectId }: AddTaskRowProps) {
         type="text"
         value={title}
         onChange={(event) => setTitle(event.target.value)}
-        placeholder="What needs parking?"
+        placeholder="Add anything"
         aria-label="New task title"
       />
       <SizeToggle value={size} onChange={setSize} />
@@ -98,7 +98,7 @@ function AddTaskRow({ projectId }: AddTaskRowProps) {
         ))}
       </select>
       <button type="submit" disabled={!title.trim()}>
-        Park it
+        Add to pile
       </button>
     </form>
   );
@@ -107,7 +107,7 @@ function AddTaskRow({ projectId }: AddTaskRowProps) {
 interface TaskGroup {
   id: string;
   name: string;
-  // undefined for the synthetic "Parking Lot" bucket — doubles as "is this a real,
+  // undefined for the synthetic "Everything Else" bucket — doubles as "is this a real,
   // editable/deletable project" throughout the render below.
   project: Project | undefined;
   tasks: Task[];
@@ -119,7 +119,7 @@ interface TaskEditDraft {
   projectId: string | undefined;
 }
 
-function ParkMySidequest() {
+function EverythingPile() {
   const { projects, tasks, addProject, updateProject, deleteProject, updateTask, deleteTask } = useTaskStore();
   const { requestTaskBreakdown, navigateToTool } = useToolNavigation();
 
@@ -204,9 +204,10 @@ function ParkMySidequest() {
   return (
     <div className="tool-panel">
       <p className="tool-intro">
-        A parking lot for the stray tasks that pull your attention mid-task. A project
-        is a set of tasks — add one, size it, and file it as Now / Later / Not Your
-        Problem.
+        Everything lives here — projects and the tasks inside them, all in one pile.
+        Add a project, drop tasks into it (or leave them loose), size each one, and
+        file it as Now / Later / Not Your Problem whenever that's useful. Nothing has
+        to be sorted the moment it lands.
       </p>
 
       <form onSubmit={handleAddProject} className="new-project-form">
@@ -397,7 +398,7 @@ function ParkMySidequest() {
   );
 }
 
-export const parkMySidequestTool: ToolDefinition = {
+export const everythingPileTool: ToolDefinition = {
   meta,
-  Component: ParkMySidequest,
+  Component: EverythingPile,
 };

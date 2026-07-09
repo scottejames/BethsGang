@@ -2,7 +2,7 @@ import { createContext, useContext, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useUsageLog } from '../hooks/useUsageLog';
 
-// The specific payload for the Park My Sidequest -> Task Breakdown link (not a
+// The specific payload for the Everything Pile -> Task Breakdown link (not a
 // generic "any payload" system — kept narrow on purpose, easy to extend with another
 // named slot like this one if/when a second tool-to-tool link needs it).
 export interface TaskBreakdownRequest {

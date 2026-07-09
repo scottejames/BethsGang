@@ -379,7 +379,7 @@ textarea {
 
 /* A primary-style action after a tool's AI result — same look as .tool-form's own
    primary button, just usable outside a <form> (e.g. Task Breakdown's "send to
-   Sidequest", and any future tool-to-tool link that follows the same shape). */
+   Everything Pile", and any future tool-to-tool link that follows the same shape). */
 .tool-result-actions {
   margin-top: 16px;
 }
@@ -1121,7 +1121,7 @@ textarea {
   opacity: 0.7;
 }
 
-/* Park My Sidequest */
+/* Everything Pile */
 
 .new-project-form {
   display: flex;
