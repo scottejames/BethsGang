@@ -68,15 +68,21 @@ architecture, dependencies, and deployment.
   from `runAiTool`/`logEvent`'s public API key auth). `RemindersContext`/
   `EnergyContext` use them via `client.models.*.observeQuery()` (see
   `src/lib/dataClient.ts`) when signed in, and fall back to exactly their prior
-  `localStorage`-only behavior when signed out — these are the only two things in the
-  app that persist anything at all. Reminders migrate from `localStorage` to the
-  account silently on first sign-in per device; see
+  `localStorage`-only behavior when signed out. Reminders migrate from `localStorage`
+  to the account silently on first sign-in per device; see
   `designs/user-personalization.md`'s "What Phase 2 built" for the migration-UX
   decision and a real bug worth knowing about for any future owner-scoped model: the
   Data client's default authMode follows the *schema's* `defaultAuthorizationMode`, not
   a specific model's own authorization rule, so it has to be set explicitly per client
   (or per call) — the failure otherwise is a silent, UI-looks-fine "Not Authorized" on
   every write.
+- **Shared Task Store** (`src/context/TaskStoreContext.tsx`) — `Project`/`Task`, the
+  same Context+Provider+hook shape as every other persistent provider, mounted at the
+  app root so any tool can read/write it without navigating into whichever tool has it
+  open. `localStorage`-backed only for now (no backend model yet, unlike
+  Reminder/UserPreferences above). First (and currently only) consumer is the **Park My
+  Sidequest** tool — deliberately not wired into any other tool yet; see `TODO.md`'s
+  "Linking tools together" for what that would look like once it happens.
 
 ## Dependencies
 

@@ -747,3 +747,178 @@ All notable changes to this project are documented here.
     immediately after sign-in (screenshot confirms the app is fully visible, account
     button shows the email, no dialog left open), and reopening it still shows the
     Sign out panel correctly.
+
+### Added
+
+- **Shared Task Store + Park My Sidequest** — the ⭐ "Shared Task Store" infrastructure
+  idea from this file's own backlog (a canonical list of tasks other tools can
+  eventually feed into, instead of every list-producing tool throwing its output away),
+  built now and shipped with its first consumer.
+  - `src/context/TaskStoreContext.tsx` (new): `Project` (`id`, `name`, `createdAt`) and
+    `Task` (`id`, `title`, optional `projectId`, `size: 'small' | 'large'`,
+    `category: 'now' | 'later' | 'not-your-problem'`, `done`, `createdAt`). Same
+    Context+Provider+hook shape as `RemindersContext`/`EnergyContext`, mounted at the
+    app root in `main.tsx` (not tool-scoped) so any future tool can read/write the same
+    store without needing Park My Sidequest itself open. `localStorage`-backed only
+    this pass — a per-user backend model is a natural later phase, same incremental
+    path Reminders/Spoons already took, deliberately not part of this one.
+    `projectId` is optional by design: a task can stand alone (quick-capture, no
+    project chosen), matching the "Side Quest Log" backlog idea this tool grew out of
+    and keeping the model usable by any future tool that just wants to drop in a bare
+    task without a project to attach it to. Deleting a project detaches (not deletes)
+    its tasks — they become project-less rather than being silently destroyed.
+  - **Park My Sidequest** (`src/tools/parkMySidequest/`, 🎒): a project/chip filter row
+    (with inline "+ New project"), an add-task form (title, a Small/Large size toggle,
+    a Now/Later/Not Your Problem category select), and a three-section task board (one
+    per category) with per-task done-checkbox (struck through and sunk to the bottom of
+    its section rather than disappearing, so it stays visible as a record), a
+    category-move select for quick re-triage, and delete.
+  - Deliberately **not** wired into any existing tool yet, per explicit scope — no
+    "Send to Tasks" button on Task Breakdown or anywhere else. That's tracked
+    separately in `TODO.md`'s "Linking tools together" section, now unblocked but still
+    unstarted.
+  - Tests: `TaskStoreContext.test.tsx` covers add/update/delete for both projects and
+    tasks, the detach-on-project-delete behavior, and reading previously-stored data on
+    mount. `parkMySidequest/index.test.tsx` drives the actual component (Testing
+    Library): standalone vs. project-tied tasks land in the right category section,
+    re-triaging via the per-task select, deleting a task, and deleting a project
+    leaving its task behind.
+  - Verified against the real running app with Playwright: created a project, added
+    tasks in all three categories (some standalone, one tied to the project),
+    re-triaged one, marked one done, deleted the project and confirmed its task
+    survived (now project-less), and confirmed everything survives a full page
+    reload — re-navigating into the tool after reload, since this app has no router and
+    a reload always resets to the Home screen (not a bug, just how verification needed
+    to account for existing app behavior).
+  - One real test-script bug worth recording, not an app bug: an early verification
+    script used `button:has-text("All")` to click the project filter's "All" chip, which
+    is ambiguous — `ToolShell.tsx`'s existing back button reads "← All tools", also
+    matching a substring `has-text` selector, so the script was silently clicking back
+    to the Home screen instead. Looked exactly like the tool losing its own input field
+    (30-45s locator timeouts on the next step) and was initially mistaken for
+    Playwright/system-load flakiness before being traced to the actual selector
+    ambiguity. Fixed by scoping to the `.project-chips` container with an exact-text
+    role query.
+
+### Changed
+
+- **Park My Sidequest: rewrote the UI as a project/task tree** — direct feedback on the
+  first version: "projects need to be more directly tied to tasks. A project is
+  composed of a set of tasks. I would like to see more of a tree structure." The
+  previous layout treated a project as a filter chip (select one to narrow a shared
+  three-category board); the new one makes each project a real container. Data model
+  (`TaskStoreContext`) is completely unchanged — this was a presentation-only rewrite
+  of `src/tools/parkMySidequest/index.tsx` and its CSS.
+  - Each `Project`, plus a synthetic **"Unfiled"** group (always present, no delete
+    button) for tasks with no `projectId`, renders as a collapsible section: a header
+    (chevron, name, task count, delete for real projects) and, when expanded, its own
+    scoped "add task" row and task list. Adding a task from inside a group's row
+    always ties it to that group's project (or leaves it standalone inside Unfiled) —
+    there's no more implicit "currently selected project" to track separately from
+    what's on screen.
+  - Category (Now/Later/Not Your Problem) is no longer a top-level grouping — confirmed
+    via a clarifying question, to keep the tree at one level of depth rather than
+    Project → Category → Tasks. It's now a small colored tag per task (reusing the
+    same `<select>` for re-triage as before, restyled) — red for Now, amber for Later,
+    green for Not Your Problem. Tasks within a group still sort by category priority
+    then done-status (undone first, done sunk to the bottom, struck through — unchanged
+    from before) so scannability isn't lost by dropping the second nesting level.
+  - Deleting a project still detaches rather than deletes its tasks (no
+    `TaskStoreContext` change needed) — they simply reappear under Unfiled on the next
+    render, now visibly so instead of just "surviving" behind the old filter-chip UI.
+  - Collapsing/expanding is per-group, default expanded (confirmed via the same
+    clarifying question) — a real tree affordance rather than everything being
+    permanently visible regardless of how many tasks a project accumulates.
+  - Tests: `index.test.tsx` fully rewritten for the new structure (`TaskStoreContext`'s
+    own tests were untouched, confirming the data layer genuinely didn't need to
+    change) — standalone vs. project-tied tasks land in the right group, re-triage,
+    delete, done-sinks-to-bottom, collapse/expand hiding and restoring a group's
+    content, and project deletion moving tasks into Unfiled.
+  - Verified against the real running app in both themes: two projects plus a
+    standalone task populate the tree correctly, re-triage and done-marking both work
+    in place, collapsing/expanding a project toggles its content, deleting a project
+    moves its task into Unfiled, and everything survives a full reload (re-navigating
+    into the tool afterward, same as before — this app has no router).
+  - A second instance of the same class of test-script bug as the earlier "All"/"All
+    tools" one: a dark-mode verification script's `getByLabel('Category')` matched
+    *two* elements — the group's own add-row select (`aria-label="Category"`) and a
+    task's re-triage select (`aria-label="Move \"...\" to a different category"`),
+    since accessible-name label queries do case-insensitive substring matching by
+    default and the word "category" appears in both. Fixed with `{ exact: true }`.
+    Worth remembering as a general pattern: any two accessible names sharing a common
+    word are a latent Playwright ambiguity, not just exact substring matches like
+    "All"/"All tools" was.
+
+### Added
+
+- **Park My Sidequest: full edit lifecycle for Projects and Tasks** — prompted by
+  auditing the widget's CRUD completeness end to end: Projects had create/read/delete
+  but no rename, and Tasks could only have their category and done-status changed after
+  creation — title, size, and which project (if any) owned a task were all frozen at
+  creation time. Fixed all three gaps in one pass, plus the ability to move a task
+  between projects (or in/out of Unfiled), since re-parenting a task is really the same
+  operation as reassigning any other field.
+  - `TaskStoreContext`: new `updateProject(id, { name })`, and `updateTask`'s patch
+    type broadened to also accept `title` and `projectId` (previously only
+    `size`/`category`/`done`). Moving a task to Unfiled is just `{ projectId:
+    undefined }` — the same mechanism as moving it to any other project.
+  - **Project rename**: a pencil button next to each project's delete (×) button in the
+    group header (Unfiled has neither, same as before — it isn't a real project) swaps
+    the header for an inline rename form (text input, Save, Cancel; Escape also
+    cancels). Renaming doesn't touch any of that project's tasks.
+  - **Task edit**: a pencil button on each task row (next to Delete) swaps that row for
+    an inline form: title, the same Small/Large size toggle used by the add-task row
+    (pulled into a shared `SizeToggle` component so the two places a task's size can be
+    set don't drift apart), and a Project select (every project plus "Unfiled") for
+    re-parenting. Category and done-status are unchanged by this — they're already
+    directly editable at all times via the existing tag-select and checkbox, so edit
+    mode is specifically for the three fields that were previously frozen.
+  - Tests: `TaskStoreContext.test.tsx` covers `updateProject` and the broadened
+    `updateTask` (title change, moving between two real projects, and back to
+    standalone). `index.test.tsx` covers renaming a project (and cancelling), editing a
+    task's title/size in place, moving a task between projects and back to Unfiled via
+    the edit form, and cancelling a task edit leaving the original untouched.
+  - Verified against the real running app: renamed a project, edited a task's title and
+    size, moved it to a different project via the edit form, confirmed cancel discards
+    without saving, and confirmed the rename and the move both survive a full reload.
+  - A second test-script locator bug of the same shape as before, worth generalizing
+    the lesson from further: a verification script located a task row with a
+    `hasText`-filtered locator, entered edit mode (which replaces the title *text* with
+    an `<input value="...">`), then tried to re-use the *same* `hasText` locator to find
+    the now-open edit form — but Playwright locators re-evaluate lazily on every
+    action, and an input's `value` isn't text content, so the locator matched nothing
+    the second time. Fixed by locating the row positionally
+    (`.task-item.first()`) once there's only one candidate, rather than by text that
+    the action itself was about to change.
+
+### Fixed
+
+- **Park My Sidequest: the category tag dropdown was unreadable when open** — reported
+  directly: "the colour scheme on the drop down ... is hard to read." Every screenshot
+  taken while building the tag styling only showed the *closed* pill, which looked
+  fine (colored text on a light tinted background). Opening the actual dropdown showed
+  the real bug: browsers apply a `<select>`'s own `background`/`color` to its entire
+  open `<option>` list by default, not just the closed state, so each category tag's
+  translucent tinted pill background (`color-mix(..., transparent)`, designed to sit on
+  the app's own surface color) turned into a low-contrast wash behind every option —
+  dark, barely-legible text on a pink/amber/green tint for whichever category wasn't
+  currently selected. Fixed by explicitly styling `.category-tag option` back to plain
+  `var(--surface)`/`var(--text)`, so the color-coding stays on the closed pill without
+  leaking into the open list. Verified by actually opening each dropdown in a real
+  render (not just screenshotting the closed state) in both themes.
+
+### Changed
+
+- **Park My Sidequest: "Unfiled" renamed to "Parking Lot", and moved to always be the
+  first group** — asked directly what Unfiled was actually for, which surfaced that its
+  purpose (a home for standalone tasks, and a landing zone for tasks whose project got
+  deleted) wasn't obvious from the name, and that it read as just another
+  project-shaped section rather than the tool's actual default/quick-capture home. Pure
+  rename plus a reorder — `UNFILED_ID` (the internal sentinel used as the "move to
+  Parking Lot" option's value) is unchanged, only the displayed `UNFILED_NAME` and the
+  groups array's order changed. Being first now matches the name: it's the place you'd
+  reach for by default, not something tucked below every project.
+  - Test added specifically for the ordering (`index.test.tsx`): Parking Lot always
+    renders before every project, regardless of how many exist.
+  - Verified against the real running app: with two projects present, Parking Lot
+    renders first in the tree, both before and after adding projects.

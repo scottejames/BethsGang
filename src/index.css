@@ -1102,3 +1102,381 @@ textarea {
 .reminder-empty {
   opacity: 0.7;
 }
+
+/* Park My Sidequest */
+
+.new-project-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.new-project-form input {
+  font: inherit;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px dashed var(--border);
+  background: none;
+  color: var(--text);
+  flex: 1;
+  max-width: 260px;
+}
+
+.new-project-form button {
+  font: inherit;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.new-project-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.task-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-group {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.task-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px 4px 4px;
+}
+
+.task-group-toggle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  background: none;
+  border: none;
+  padding: 12px 8px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.task-group-name {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.task-group-count {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.task-group-edit,
+.task-group-delete {
+  font: inherit;
+  font-size: 14px;
+  background: none;
+  border: none;
+  color: var(--text);
+  opacity: 0.5;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.task-group-delete {
+  font-size: 16px;
+}
+
+.task-group-edit:hover,
+.task-group-delete:hover {
+  opacity: 1;
+}
+
+.task-group-rename-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  padding: 8px;
+}
+
+.task-group-rename-form input {
+  font: inherit;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: var(--bg);
+  color: var(--text-h);
+  flex: 1;
+}
+
+.task-group-rename-form button {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.task-group-rename-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.task-group-body {
+  padding: 0 16px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.add-task-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 0;
+}
+
+.add-task-row input[type='text'] {
+  font: inherit;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  flex: 1;
+  min-width: 160px;
+}
+
+.add-task-row select {
+  font: inherit;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.add-task-row button[type='submit'] {
+  font: inherit;
+  font-weight: 600;
+  background: var(--accent);
+  color: var(--accent-text);
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.add-task-row button[type='submit']:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.size-toggle {
+  display: flex;
+  gap: 4px;
+}
+
+.size-toggle button {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.size-toggle-active {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+.task-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.task-item-done {
+  opacity: 0.6;
+}
+
+.task-item-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-h);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-item-done .task-item-title {
+  text-decoration: line-through;
+}
+
+.task-item-edit {
+  font: inherit;
+  font-size: 13px;
+  background: none;
+  border: none;
+  color: var(--text);
+  opacity: 0.5;
+  padding: 6px 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.task-item-edit:hover {
+  opacity: 1;
+}
+
+.task-edit-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.task-edit-form input[type='text'] {
+  font: inherit;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: var(--surface);
+  color: var(--text);
+  flex: 1;
+  min-width: 140px;
+}
+
+.task-edit-form select {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.task-edit-form button {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.task-edit-form button[type='submit'] {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+
+.task-edit-form button[type='submit']:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.size-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.category-tag {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+/* The category color (below) is meant for the closed pill only — browsers render a
+   <select>'s open option list using that same background/color by default, and the
+   translucent tinted pill background turns into a low-contrast wash behind every
+   option (not just the selected one) once it's a solid dropdown popup rather than a
+   small pill sitting on the app's own surface. Overriding every <option> back to
+   plain, solid, always-readable colors keeps the color-coding on the closed pill
+   without it leaking into the open list. Found by actually opening the dropdown in a
+   real render — looked fine in every screenshot of the *closed* state. */
+.category-tag option {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 400;
+}
+
+.category-tag-now {
+  background: color-mix(in srgb, var(--rb1) 18%, transparent);
+  color: var(--rb1);
+}
+
+.category-tag-later {
+  background: color-mix(in srgb, var(--rb3) 20%, transparent);
+  color: #8a6a00;
+}
+
+@media (prefers-color-scheme: dark) {
+  .category-tag-later {
+    color: var(--rb3);
+  }
+}
+
+.category-tag-not-your-problem {
+  background: color-mix(in srgb, var(--rb4) 18%, transparent);
+  color: var(--rb4);
+}
+
+.task-empty {
+  opacity: 0.7;
+  font-size: 14px;
+  padding: 0 0 16px;
+}

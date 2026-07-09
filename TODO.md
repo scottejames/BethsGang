@@ -164,6 +164,29 @@ mechanics — most of these are just a new system prompt away.
         pre-sign-in local state on sign-out — see `designs/user-personalization.md` for
         the full story, including a first attempted fix that reintroduced the same bug
         via a race between two effects.
+- [x] **Park My Sidequest** — a simple task manager: Projects (optional grouping) and
+      Tasks (title, a Small/Large size, and a Now / Later / Not Your Problem category),
+      built on top of a new shared `TaskStoreContext` — see "Shared Task Store" under
+      Infrastructure below, this is its first consumer. Deliberately not wired into any
+      existing tool yet. A project can be deleted without losing its tasks — they're
+      detached (project-less) rather than destroyed. Completed tasks stay visible
+      (struck through, sunk to the bottom) rather than disappearing. `localStorage`-
+      backed only, no backend model this pass. Covered by unit tests
+      (`TaskStoreContext.test.tsx`, `parkMySidequest/index.test.tsx`) and verified with
+      Playwright against the real running app.
+      - **UI rewritten as a project/task tree** shortly after first shipping, on direct
+        feedback that the original filter-chip layout didn't tie projects to tasks
+        closely enough. Each project (plus a synthetic "Unfiled" bucket for standalone
+        tasks) is now a collapsible section with its own scoped add-task row and task
+        list; category became a per-task colored tag instead of a top-level grouping.
+        `TaskStoreContext` itself didn't need to change — see `CHANGELOG.md`'s "Changed"
+        entry for the full story.
+      - **Full edit lifecycle added** for both Projects (rename) and Tasks (title,
+        size, and moving a task between projects/Unfiled) — a gap found by explicitly
+        auditing CRUD completeness across the whole widget rather than just adding the
+        one thing asked for. Category and done-status were already editable at any
+        time; title/size/project were frozen at creation until this pass. See
+        `CHANGELOG.md`'s "Added" entry for the full story.
 
 ## Later / stretch ideas
 
@@ -266,8 +289,9 @@ worth building next marked ⭐. See "Sources" at the bottom of this section.
 
 ### Linking tools together
 
-Concrete connections worth wiring up as tools accumulate, once the Shared Task Store
-(below) exists:
+Concrete connections worth wiring up as tools accumulate. The Shared Task Store (below)
+now exists, shipped via Park My Sidequest — none of the connections below are wired up
+yet, by explicit choice, but the store itself is no longer the blocker:
 
 - **Task Breakdown → Shared Task Store**: each generated step gets a one-click "Send to
   Tasks" instead of living only in the tool's own output pane.
@@ -310,14 +334,15 @@ Concrete connections worth wiring up as tools accumulate, once the Shared Task S
 
 ## Infrastructure
 
-- [ ] ⭐ **Shared Task Store (the "spine")** — a single canonical list of tasks/items,
-      exposed as a `TaskStoreContext` the same way `DistractMeContext` exposes audio
-      state, backed by `localStorage` first and an Amplify `a.model('Task')` later once
-      auth lands. This is what turns the app from "a grid of unrelated tools" into a
-      system — see "Linking tools together" above for the specific connections it
-      unlocks. Worth building as soon as a second list-producing tool ships (Brain Dump
-      Sorter or Side Quest Log), since retrofitting it after three tools have grown their
-      own bespoke list UIs is more work than building it first.
+- [x] ⭐ **Shared Task Store (the "spine")** (see Shipped — **Park My Sidequest**) — a
+      single canonical list of tasks, exposed as `TaskStoreContext` the same way
+      `DistractMeContext` exposes audio state, `localStorage`-backed for now (an Amplify
+      `a.model('Task')` once signed in is a natural later phase, same path
+      Reminders/Spoons already took — not done yet). Shipped with Projects as a grouping
+      layer on top (not originally scoped here) and its first consumer, **Park My
+      Sidequest**. Deliberately **not** wired into any existing tool yet — no "Send to
+      Tasks" buttons anywhere — see "Linking tools together" above for what's still
+      unstarted.
 - ~~**Global alert/notification layer**~~ — shipped as part of **Remind Me** (see
       Shipped): `RemindersContext` (same pattern as `DistractMeContext`) owns the
       timers/alarms and keeps them firing regardless of which tool is open, surfaced via
@@ -339,6 +364,6 @@ Concrete connections worth wiring up as tools accumulate, once the Shared Task S
       synchronous `localStorage` reads/writes to `observeQuery()`-driven backend state
       when signed in. Auth remains opt-in, not a login wall — `localStorage` stays the
       default for anyone not signed in. Everything else that could still move to a
-      per-user model (Side Quest Log entries, Pomodoro settings/streaks, saved
-      messages, the Shared Task Store above, Distract Me's last sound/volume) is
+      per-user model (the Shared Task Store's `Task`/`Project` data below, Pomodoro
+      settings/streaks, saved messages, Distract Me's last sound/volume) is
       unstarted — see "Phase 3+" in `designs/user-personalization.md`.

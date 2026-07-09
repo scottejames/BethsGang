@@ -12,7 +12,7 @@ interface HomeProps {
 // "saying" tools help you word something to someone. Kept as explicit id groups
 // (not an interleaved array-index trick) so the grouping holds regardless of how
 // many columns the viewport happens to render the grid at.
-const DOING_GROUP = ['distract-me', 'pomodoro-timer', 'task-breakdown', 'remind-me'];
+const DOING_GROUP = ['distract-me', 'pomodoro-timer', 'task-breakdown', 'remind-me', 'park-my-sidequest'];
 const SAYING_GROUP = ['reply-starter', 'tone-checker', 'is-this-mad', 'call-script'];
 
 function lookupTools(ids: string[]): ToolDefinition[] {
