@@ -1498,3 +1498,52 @@ textarea {
   font-size: 14px;
   padding: 0 0 16px;
 }
+
+.dopamine-reveal {
+  margin: 20px 0;
+  padding: 20px 22px;
+  border-radius: 14px;
+  border: 1px solid var(--accent);
+  background: var(--accent-bg);
+  text-align: center;
+}
+
+.dopamine-reveal-text {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.dopamine-list {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dopamine-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.dopamine-item-text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.dopamine-item-controls {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}

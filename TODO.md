@@ -196,6 +196,18 @@ mechanics — most of these are just a new system prompt away.
         into a proper Context) so one tool can navigate to another at all — the actual
         prerequisite for every other link in "Linking tools together" below, not just
         this one. See `CHANGELOG.md`'s "Added" entry for the full design.
+- [x] **Dopamine Menu** — a short, user-curated, editable list of "quick, easy,
+      low-effort things that reliably feel good" (stretch, step outside, a favourite
+      song, text a friend, a hot drink), plus a "🎲 Surprise me" button that reveals one
+      at random, avoiding an immediate repeat when another item exists. `localStorage`-
+      backed only — no AI, and (deliberately, for now) no shared Context, since nothing
+      else reads this list yet; the first tool to persist its own state directly rather
+      than through a root-mounted provider. Seeded with 8 default items only the very
+      first time the app ever runs; a deliberately emptied list stays empty rather than
+      being silently reseeded. Covered by unit tests (seeding, add/delete/reorder, the
+      no-repeat reveal logic) and verified against the real running app with
+      Playwright in both themes. `TODO.md`'s "Dopamine Menu ↔ Pomodoro" link (below)
+      is still unstarted.
 
 ## Later / stretch ideas
 
@@ -223,15 +235,7 @@ worth building next marked ⭐. See "Sources" at the bottom of this section.
    item: every list-producing tool currently throws its output away. This is what makes
    the *other* two picks (and Side Quest Log / Brain Dump Sorter, once built) work
    together instead of as isolated islands.
-2. ⭐ **Dopamine Menu** — a short, user-curated, editable list of "quick, easy, low-effort
-   things that reliably feel good" (stretch, 2-min tidy, favourite song, text a friend,
-   step outside). No AI needed: just add/remove/reorder items in `localStorage`, plus a
-   "surprise me" button that picks one at random. Directly targets the ADHD dopamine-deficit
-   mechanism that gamified habit apps (Habitica, Finch, KUBBO) exploit with points and
-   pets — this is the low-tech, no-manipulation version: a shortcut past decision fatigue
-   ("what do I even do right now") straight to something rewarding, instead of a points
-   economy. Cheap to build, nothing to click-test against a sandbox (no AI call), and a
-   natural thing to surface as a suggestion from other tools (see "Linking tools" below).
+~~2. ⭐ **Dopamine Menu**~~ — shipped, see Shipped below.
 
 ~~3. ⭐ **Energy Check-In**~~ — shipped, see "Spoons energy level" under Shipped above (and
    Infrastructure below for what it unlocks next).
@@ -257,7 +261,7 @@ worth building next marked ⭐. See "Sources" at the bottom of this section.
 
 ### Client-side ideas (no AI, `localStorage`-backed)
 
-- [ ] **Dopamine Menu** — see ⭐ above.
+~~**Dopamine Menu**~~ — shipped, see Shipped above (⭐ pick above).
 - [ ] **Sensory Reset** — a single calm full-screen "during an overwhelm moment" tool: a
       slow breathing pacer animation, a 5-4-3-2-1 grounding script, and a couple of
       one-line reminders (cold water, step outside, noise-cancelling on). No input, no

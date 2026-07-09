@@ -1010,3 +1010,24 @@ All notable changes to this project are documented here.
     add back) and confirmed exactly one "Kitchen reno" group with the new tasks, no
     duplicate; separately, a standalone Task Breakdown session confirmed a brand-new
     project gets created and named after the task text.
+- **Dopamine Menu** — the ⭐ tool idea from this file's own `TODO.md` research, built
+  now: a short, user-curated, editable list of "quick, easy, low-effort things that
+  reliably feel good" (stretch, step outside, a favourite song), plus a "🎲 Surprise
+  me" button that reveals one at random. Targets decision fatigue directly — the whole
+  point is a shortcut past "what do I even do right now" straight to something
+  rewarding, not a points/streaks economy.
+  - `localStorage`-backed only, no AI and no shared Context — the first tool in the app
+    to persist its own state directly rather than through a root-mounted
+    Context+Provider, since (unlike Reminders/Spoons/the Task Store) nothing else needs
+    to read or write this list yet. `TODO.md`'s "Dopamine Menu ↔ Pomodoro" link is a
+    natural candidate to promote this into a shared Context later, if that gets built.
+  - Seeded with 8 short default items only the very first time the app runs (the
+    `localStorage` key is entirely absent) — a key present but holding an empty array
+    means the user deliberately cleared their list, and is left alone rather than
+    silently reseeded.
+  - "Surprise me" avoids repeating the same item twice in a row when another one
+    exists, so mashing the button doesn't just show the same suggestion back.
+  - Verified with unit tests (seeding, add/delete, reorder, the no-repeat reveal logic,
+    and the "deliberately emptied list stays empty" case) and by driving the real
+    running app with Playwright in both light and dark theme (add an item, surprise
+    me, confirm no console errors).

@@ -8,6 +8,7 @@ import { callScriptTool } from './callScript';
 import { isThisMadTool } from './isThisMad';
 import { remindMeTool } from './remindMe';
 import { parkMySidequestTool } from './parkMySidequest';
+import { dopamineMenuTool } from './dopamineMenu';
 
 // To add a new tool: create a folder under src/tools with a meta.ts + index.tsx,
 // then list it here. That's the entire integration surface for the UI.
@@ -21,6 +22,7 @@ export const tools: ToolDefinition[] = [
   isThisMadTool,
   remindMeTool,
   parkMySidequestTool,
+  dopamineMenuTool,
 ];
 
 export function getTool(id: string): ToolDefinition | undefined {
