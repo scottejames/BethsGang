@@ -5,11 +5,7 @@ mechanics — most of these are just a new system prompt away.
 
 ## Up next
 
-- [ ] **Side Quest Log** — a one-line quick-capture parking lot for stray thoughts that
-      pull your attention mid-task. Add a line, keep working, come back to a running list
-      later to triage (do it / bin it / turn it into a real task). No AI needed — pure
-      client-side tool backed by `localStorage`, first tool in the app that isn't
-      AI-backed. Good proof that the framework isn't AI-only.
+~~- [ ] **Side Quest Log**~~ — shipped, see Shipped below.
 ~~- [ ] **Is This Mad?**~~ — shipped, see Shipped below.
 ~~- [ ] **Just The Facts**~~ — merged into Is This Mad? rather than shipped separately,
       see Shipped below.
@@ -199,10 +195,21 @@ mechanics — most of these are just a new system prompt away.
         this one. See `CHANGELOG.md`'s "Added" entry for the full design.
       - **Renamed to Everything Pile**, reported directly: the tool had grown well past
         a lightweight "parking lot" into the app's actual planning tool, and its
-        "sidequest" framing collided with the still-unbuilt Side Quest Log idea below.
-        Renamed throughout (folder, id, component, exports — not just the display
-        label); the "Parking Lot" bucket is now "Everything Else"; "Park it" is now
-        "Add to pile". See `CHANGELOG.md`'s "Changed" entry for the full list.
+        "sidequest" framing collided with the Side Quest Log idea (now also shipped,
+        see below). Renamed throughout (folder, id, component, exports — not just the
+        display label); the "Parking Lot" bucket is now "Everything Else"; "Park it"
+        is now "Add to pile". See `CHANGELOG.md`'s "Changed" entry for the full list.
+      - **Groups now start collapsed**, reported directly: expanded-by-default got
+        cluttered as the pile grew. A freshly created project still opens immediately
+        (so you're not stuck reopening the thing you just made), and both deleting a
+        project with tasks and moving a task via the edit form auto-open wherever it
+        just landed, so nothing feels like it silently vanished. See `CHANGELOG.md`'s
+        "Changed" entry for the full list.
+      - **Convert between an empty project and a task**, requested directly: an empty
+        project can become a single task in Everything Else (📤, only shown while
+        empty), and any task anywhere in the tree can become its own empty project
+        (📁) — two symmetrical shape-shifts for when a project and a task turn out to
+        be the same-sized thing. See `CHANGELOG.md`'s "Added" entry for the full list.
 - [x] **Dopamine Menu** — a short, user-curated, editable list of "quick, easy,
       low-effort things that reliably feel good" (stretch, step outside, a favourite
       song, text a friend, a hot drink), plus a "🎲 Surprise me" button that reveals one
@@ -220,13 +227,42 @@ mechanics — most of these are just a new system prompt away.
         me and a small "✎ Edit list" toggle show up front; the add/reorder/delete list
         only appears once the user opens it (or automatically, if the list is empty
         and there's nothing to hide).
+- [x] **Side Quest Log** — a one-line quick-capture parking spot for the stray thought
+      that pulls your attention mid-task: log it, keep working, come back later to
+      triage each one as Done / Bin it / Make it a task. "Make it a task" is the first
+      "Linking tools together" (below) connection to actually ship — it promotes the
+      entry into the Shared Task Store, landing project-less in Everything Pile's
+      "Everything Else" bucket, small and "later" by default. `localStorage`-backed
+      only, no AI, no shared Context (same shape as Dopamine Menu) — nothing else
+      needs to read this log, it only ever writes into the Task Store. Newest entry
+      shown first. Covered by unit tests (empty state, add/persist, ordering, all
+      three triage actions) and verified against the real running app with Playwright
+      in both themes, including confirming a promoted entry actually lands in
+      Everything Pile with the right size/category.
+- [x] **Brain Dump Sorter** — paste or dictate a paragraph or two of unstructured
+      brain dump; get back the actionable parts as a short list, each with a checkbox
+      (included by default) and a directly editable text field. "Send N to Everything
+      Pile" sends only the checked, non-blank ones, project-less and small/"later" by
+      default (same as Side Quest Log's "Make it a task"), then clears the input with
+      a one-line confirmation. AI-backed: new `SYSTEM_PROMPTS['brain-dump-sorter']`
+      entry, no new `USER_MESSAGE_BUILDERS` needed. Also captures speech via the
+      browser's native Web Speech API ("🎙️ Dictate", only shown when supported) to
+      transcribe directly into the text field, appending across multiple dictation
+      sessions rather than replacing what's typed — no new dependency, no audio sent
+      anywhere. Covered by unit tests (extraction, include/exclude, editing before
+      sending, the empty-result state, and dictation with a mock `SpeechRecognition`)
+      and verified against the real running app with Playwright, AppSync intercepted,
+      confirming sent tasks land in Everything Pile with the edited text and right
+      size/category.
 
 ## Later / stretch ideas
 
 - [ ] **How Long Will This Actually Take** — time-blindness estimator: describe a task,
       get a realistic time estimate plus a buffer.
-- [ ] **Brain Dump Sorter** — paste a messy stream-of-consciousness dump, get it split into
-      Do Now / Someday / Reference / Not Actually Yours to worry about.
+~~- [ ] **Brain Dump Sorter**~~ — shipped, see Shipped below (built to a simpler,
+      directly-requested spec — select/edit/send to Everything Pile rather than the
+      four-way Do Now/Someday/Reference/Not Actually Yours split originally sketched
+      here).
 - [ ] **Action-level usage events for non-AI tools** — the shipped usage logging (see
       Shipped) only captures "opened" for Distract Me, Pomodoro Timer, and Remind Me,
       since those aren't centralized through `useAiTool` the way AI-backed tools are.
@@ -321,13 +357,16 @@ yet, by explicit choice, but the store itself is no longer the blocker:
 - ~~**Task Breakdown ↔ Shared Task Store**~~ — done, and bidirectional (see Shipped):
   a project can be sent to Task Breakdown and its steps sent back, either into that
   same project or a new one depending on where the session started.
-- **Brain Dump Sorter → Shared Task Store**: the "Do Now" bucket specifically lands in the
-  same store as Task Breakdown's steps — they're the same kind of thing, just produced by
-  different entry points.
+- ~~**Brain Dump Sorter → Shared Task Store**~~ — done (see Shipped), though shaped
+  differently than sketched here: rather than a "Do Now" bucket auto-landing in the
+  store, every extracted task gets a checkbox and an editable field, and only the
+  ones the user selects (as-is or edited) get sent to Everything Pile, project-less
+  and small/"later" by default.
 - **Is This Mad? → Shared Task Store**: the "Asks" field's extracted bullet list of "what
   they're actually asking you to do" is also just tasks.
-- **Side Quest Log → Shared Task Store**: triaging an entry to "do it" promotes it into
-  the same store rather than the log being a dead end.
+- ~~**Side Quest Log → Shared Task Store**~~ — done (see Shipped): triaging an entry to
+  "Make it a task" promotes it into the same store, landing project-less in Everything
+  Pile's "Everything Else" bucket, rather than the log being a dead end.
 - **Is This Mad? → Reply Starter**: after getting a calm read on an incoming message, a
   "draft a reply" button hands the original message straight to Reply Starter instead of
   requiring a copy-paste round trip.
@@ -470,9 +509,10 @@ with the three most worth building next marked ⭐. Sources at the bottom.
       `a.model('Task')` once signed in is a natural later phase, same path
       Reminders/Spoons already took — not done yet). Shipped with Projects as a grouping
       layer on top (not originally scoped here) and its first consumer,
-      **Everything Pile**. First tool-to-tool wiring now shipped too (Task Breakdown, see
-      Shipped above) — the rest of "Linking tools together" above is still unstarted,
-      but the store and the navigation mechanism it needed are no longer the blocker.
+      **Everything Pile**. Two of "Linking tools together" above now shipped too (Task
+      Breakdown's bidirectional wiring, and Side Quest Log's "Make it a task" — see
+      Shipped above for both) — the rest is still unstarted, but the store and the
+      navigation mechanism it needed are no longer the blocker.
 - ~~**Global alert/notification layer**~~ — shipped as part of **Remind Me** (see
       Shipped): `RemindersContext` (same pattern as `DistractMeContext`) owns the
       timers/alarms and keeps them firing regardless of which tool is open, surfaced via

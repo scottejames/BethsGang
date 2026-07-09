@@ -56,7 +56,18 @@ function categoryValue(label: 'Now' | 'Later' | 'Not Your Problem'): string {
   return { Now: 'now', Later: 'later', 'Not Your Problem': 'not-your-problem' }[label];
 }
 
+// Groups start collapsed by default (except a project right after creation — see
+// EverythingPile's handleAddProject) — expand first if needed so the add-task row
+// this helper targets actually exists in the DOM.
+function ensureExpanded(groupName: string) {
+  const expandButton = screen.queryByRole('button', { name: `Expand ${groupName}` });
+  if (expandButton) {
+    fireEvent.click(expandButton);
+  }
+}
+
 function addTaskTo(groupName: string, title: string, category?: 'Now' | 'Later' | 'Not Your Problem') {
+  ensureExpanded(groupName);
   const scope = within(group(groupName));
   fireEvent.change(scope.getByPlaceholderText('Add anything'), { target: { value: title } });
   if (category) {
@@ -89,12 +100,19 @@ describe('EverythingPile', () => {
     window.localStorage.removeItem('beths-gang:tasks');
   });
 
-  it('always shows an Everything Else group for standalone tasks, expanded by default', () => {
+  it('always shows an Everything Else group for standalone tasks, collapsed by default', () => {
     renderTool();
     expect(screen.getByText('Everything Else', { selector: '.task-group-name' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand Everything Else' })).toBeInTheDocument();
 
     addTaskTo('Everything Else', 'water the plants', 'Now');
     expect(within(group('Everything Else')).getByText('water the plants')).toBeInTheDocument();
+  });
+
+  it('a freshly created project starts expanded, ready to add a task right away', () => {
+    renderTool();
+    addProject('Kitchen reno');
+    expect(screen.getByRole('button', { name: 'Collapse Kitchen reno' })).toBeInTheDocument();
   });
 
   it('always lists Everything Else first, ahead of every project', () => {
@@ -109,6 +127,7 @@ describe('EverythingPile', () => {
   it('adding a task from inside a project group ties it to that project, not Everything Else', () => {
     renderTool();
     addProject('Kitchen reno');
+    ensureExpanded('Everything Else');
 
     addTaskTo('Kitchen reno', 'grout tiles', 'Later');
 
@@ -273,5 +292,48 @@ describe('EverythingPile', () => {
   it('Everything Else does not get a Break down button (not a real project)', () => {
     renderTool();
     expect(screen.queryByRole('button', { name: 'Break down project Everything Else' })).not.toBeInTheDocument();
+  });
+
+  it('an empty project can be turned into a task in Everything Else', () => {
+    renderTool();
+    addProject('Kitchen reno');
+
+    fireEvent.click(screen.getByLabelText('Turn project "Kitchen reno" into a task'));
+
+    expect(screen.queryByText('Kitchen reno', { selector: '.task-group-name' })).not.toBeInTheDocument();
+    expect(within(group('Everything Else')).getByText('Kitchen reno')).toBeInTheDocument();
+    const item = within(group('Everything Else')).getByText('Kitchen reno').closest('li') as HTMLElement;
+    expect(within(item).getByLabelText('Size: small')).toBeInTheDocument();
+  });
+
+  it('a project with tasks in it does not offer the turn-into-a-task button', () => {
+    renderTool();
+    addProject('Kitchen reno');
+    addTaskTo('Kitchen reno', 'grout tiles', 'Later');
+
+    expect(screen.queryByLabelText('Turn project "Kitchen reno" into a task')).not.toBeInTheDocument();
+  });
+
+  it('a standalone task can be turned into its own project', () => {
+    renderTool();
+    addTaskTo('Everything Else', 'redo the bathroom', 'Later');
+
+    fireEvent.click(screen.getByLabelText('Turn "redo the bathroom" into a project'));
+
+    expect(within(group('Everything Else')).queryByText('redo the bathroom')).not.toBeInTheDocument();
+    expect(screen.getByText('redo the bathroom', { selector: '.task-group-name' })).toBeInTheDocument();
+    // The new project starts expanded, same as one created via the New project form.
+    expect(screen.getByRole('button', { name: 'Collapse redo the bathroom' })).toBeInTheDocument();
+  });
+
+  it('a task already inside a project can also be turned into its own project', () => {
+    renderTool();
+    addProject('Kitchen reno');
+    addTaskTo('Kitchen reno', 'grout tiles', 'Later');
+
+    fireEvent.click(screen.getByLabelText('Turn "grout tiles" into a project'));
+
+    expect(within(group('Kitchen reno')).queryByText('grout tiles')).not.toBeInTheDocument();
+    expect(screen.getByText('grout tiles', { selector: '.task-group-name' })).toBeInTheDocument();
   });
 });

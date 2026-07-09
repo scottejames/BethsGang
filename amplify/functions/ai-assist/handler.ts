@@ -45,6 +45,13 @@ Asks:
 Put "- Nothing — this is just an update, no action needed" as the only bullet if there's genuinely nothing to act on.
 Be warm but factual. Do not validate a catastrophizing reading even if the context suggests the user is anxious about it — stay grounded in the message itself.`,
 
+  'brain-dump-sorter': `You help neurodivergent people who have a messy stream-of-consciousness brain dump — typed or dictated — and need the actionable parts pulled out of it.
+You will be given a paragraph or two of unstructured text. It may ramble, repeat itself, jump between unrelated topics, or mix real to-dos in with feelings, venting, or observations that don't imply any action.
+Read it and extract only the concrete, actionable tasks buried in it — the parts that could become a checklist item. Skip anything that's just a feeling, a worry, or an observation with nothing to act on.
+Rewrite each one as a short, concrete task title in a few words — not a full sentence restating what they wrote.
+Format as a numbered list ("1. ...", "2. ...", "3. ..."), one task per line, in the order they were mentioned in the text. If there is genuinely nothing actionable in the text, respond with exactly: NONE
+Do not add commentary, headers, or explanations — respond with only the numbered list, or the single word NONE.`,
+
   // Internal-only: no frontend tile of its own (never appears in registry.ts). Called
   // directly by Tone Checker's screenshot feature to turn an image into plain text, which
   // then flows through the normal 'tone-checker' prompt unchanged — this prompt only

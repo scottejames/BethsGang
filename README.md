@@ -255,6 +255,15 @@ instruction entirely since complexity/tone doesn't apply to mechanical transcrip
 The extracted text lands back in the same textarea the user would've typed into, so it
 flows through the tool's normal (unmodified) analysis afterwards.
 
+A tool can also accept dictated speech instead of (or alongside) typing — see Brain
+Dump Sorter's "🎙️ Dictate" toggle. This is entirely client-side via the browser's
+native Web Speech API (`SpeechRecognition`/`webkitSpeechRecognition`), transcribing
+straight into the same text field a user would've typed into — no Lambda call, no
+audio ever leaves the browser. TypeScript's bundled DOM lib doesn't declare a
+`SpeechRecognition` type of its own, so the tool defines a small local interface for
+just the surface it uses rather than reaching for `any`. Feature-detected (the button
+only renders when the API actually exists), since browser support isn't universal.
+
 ## Roadmap
 
 Ideas for future tools, and what's up next, are tracked in [`TODO.md`](./TODO.md).

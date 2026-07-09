@@ -1080,3 +1080,95 @@ All notable changes to this project are documented here.
     string) and by driving the real running app with Playwright: Home card, in-tool
     copy, and the add/list flow all confirmed under the new name with no console
     errors.
+
+### Added
+
+- **Side Quest Log** — a one-line quick-capture parking spot for the stray thought that
+  pulls your attention mid-task: log it, keep working, come back later to triage each
+  one as Done (handled it directly, no task needed), Bin it (didn't matter), or Make it
+  a task. The first of `TODO.md`'s "Linking tools together" connections to actually
+  ship: "Make it a task" promotes the entry into the Shared Task Store (`addTask` on
+  `TaskStoreContext`), landing project-less in Everything Pile's "Everything Else"
+  bucket, small and "later" by default, so the log never becomes a dead end. `TODO.md`
+  described three triage outcomes in one place but a later cross-reference only
+  mentioned two ("do it" promoting to the store) — resolved in favor of the clearer
+  three-way version, since "handled it myself" and "worth tracking as a real task" are
+  genuinely different outcomes.
+  - `localStorage`-backed only, no AI and no shared Context, same as Dopamine Menu —
+    nothing else needs to read this log, it only ever writes into the Task Store.
+    Newest entry shown first, right next to the input it was just typed into.
+  - Verified with unit tests (empty state, add/persist, ordering, all three triage
+    actions including confirming Done/Bin it create no task) and by driving the real
+    running app with Playwright in both themes: logged entries, promoted one, and
+    confirmed it actually landed in Everything Pile with the right size/category, with
+    no console errors throughout.
+
+### Changed
+
+- **Everything Pile's groups now start collapsed** — reported directly: showing every
+  project's tasks expanded by default got cluttered as the pile grew; neater to start
+  closed and open only what you're working on. The tracked state flipped from a
+  "collapsed" set (default expanded) to an "expanded" set (default collapsed) — same
+  shape, opposite default. A few actions still auto-open the group whatever just
+  landed in, so nothing feels like it vanished:
+  - A freshly created project opens immediately, so you're not stuck reopening the
+    thing you just made before adding its first task.
+  - Deleting a project that had tasks auto-opens "Everything Else", since that's where
+    those tasks just got moved (detached, not destroyed).
+  - Moving a task to a different project (or back to Everything Else) via the edit
+    form auto-opens the destination.
+  - Verified with unit tests (collapsed by default, a new project starts expanded, and
+    both auto-open cases above) and by driving the real running app with Playwright.
+
+### Added
+
+- **Convert between an empty project and a task in Everything Pile** — requested
+  directly, two small symmetrical shape-shifts for when a project and a task turn out
+  to be the same-sized thing:
+  - A project with nothing in it gets a 📤 button (only shown when empty, next to 🧩/
+    ✎/×) that deletes the project and creates a single task named after it, landing in
+    Everything Else — small and "later" by default, same as Side Quest Log's "Make it
+    a task". Not offered once a project has any tasks, since collapsing them into one
+    task would either lose them or need a decision per task.
+  - Any task, anywhere in the tree (standalone in Everything Else or already inside a
+    project), gets a 📁 button (next to ✎ edit) that creates a new project named after
+    it and deletes the task. Size/category/done don't carry over, since a bare project
+    doesn't have those. The new project opens immediately, same as one made via the
+    "New project" form.
+  - Both conversions open wherever the result landed (Everything Else for
+    project→task, the new project for task→project), consistent with the
+    just-added-collapsed-by-default auto-open behavior above.
+  - Verified with unit tests (button only appears on empty projects, both conversions'
+    resulting size/expansion state, a task already inside a project converting too)
+    and by driving the real running app with Playwright.
+- **Brain Dump Sorter** — a new AI-backed tool, requested directly: paste or dictate a
+  paragraph or two of unstructured stream-of-consciousness, get back the actionable
+  parts as a numbered list, then pick which ones make sense, edit any that don't quite
+  fit, and send the rest on to Everything Pile.
+  - New `SYSTEM_PROMPTS['brain-dump-sorter']` entry in `ai-assist/handler.ts` — no new
+    `USER_MESSAGE_BUILDERS` entry needed, the raw brain dump text passes straight
+    through like Task Breakdown's does. The prompt explicitly skips venting/feelings
+    with no action attached, and returns the literal string `NONE` when nothing in the
+    text is actionable, rather than an empty response — a clearer sentinel for the
+    frontend to key off than an empty string would be.
+  - Each returned task renders as a checkbox (included by default) plus a directly
+    editable text input — no separate edit-mode toggle, since the whole point is
+    picking/tweaking a handful of short lines in one pass. "Send N to Everything Pile"
+    only sends the checked, non-blank ones, project-less and small/"later" by default
+    (same as Side Quest Log's "Make it a task"), then clears the input and shows a
+    one-line confirmation, ready for the next brain dump.
+  - **Dictation**: a "🎙️ Dictate" toggle uses the browser's native Web Speech API
+    (`SpeechRecognition`/`webkitSpeechRecognition`) to transcribe speech directly into
+    the text field — no new dependency, no audio sent anywhere. Only shown when the
+    browser actually supports it (feature-detected, not assumed); appended text
+    accumulates across multiple dictation sessions rather than replacing what's typed.
+    TypeScript's bundled DOM lib has no `SpeechRecognition` type of its own (only a
+    few of its supporting event types do), so this tool declares a minimal local
+    interface for just the surface it uses instead of reaching for `any`.
+  - Verified with unit tests (extraction, include/exclude, editing before sending, the
+    empty-result state, dictate button absent without browser support, and — with a
+    mock `SpeechRecognition` installed — starting/stopping dictation and appending a
+    recognized result) and by driving the real running app with Playwright, with the
+    AppSync call intercepted (same approach as prior AI-tool verification): sorted a
+    real brain dump, deselected one task, edited another, sent the rest, and confirmed
+    they landed in Everything Pile with the edited text and the right size/category.

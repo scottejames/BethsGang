@@ -120,11 +120,15 @@ interface TaskEditDraft {
 }
 
 function EverythingPile() {
-  const { projects, tasks, addProject, updateProject, deleteProject, updateTask, deleteTask } = useTaskStore();
+  const { projects, tasks, addProject, addTask, updateProject, deleteProject, updateTask, deleteTask } = useTaskStore();
   const { requestTaskBreakdown, navigateToTool } = useToolNavigation();
 
   const [newProjectName, setNewProjectName] = useState('');
-  const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(new Set());
+  // Tracks which groups are *open* (inverse of a "collapsed" set) — everything starts
+  // closed for a neater default view, opened only as needed. A freshly created project
+  // is added here immediately (see handleAddProject) so you're not stuck reopening the
+  // thing you just made before you can add its first task.
+  const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(new Set());
 
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [projectDraftName, setProjectDraftName] = useState('');
@@ -136,12 +140,13 @@ function EverythingPile() {
     event.preventDefault();
     const trimmed = newProjectName.trim();
     if (!trimmed) return;
-    addProject(trimmed);
+    const project = addProject(trimmed);
+    setExpandedGroupIds((current) => new Set(current).add(project.id));
     setNewProjectName('');
   }
 
-  function toggleCollapsed(groupId: string) {
-    setCollapsedGroupIds((current) => {
+  function toggleExpanded(groupId: string) {
+    setExpandedGroupIds((current) => {
       const next = new Set(current);
       if (next.has(groupId)) {
         next.delete(groupId);
@@ -150,6 +155,17 @@ function EverythingPile() {
       }
       return next;
     });
+  }
+
+  // Deleting a project detaches its tasks into Everything Else (see useTaskStore's
+  // deleteProject) — opening that group automatically means the moved tasks are
+  // actually visible instead of silently landing somewhere already closed.
+  function handleDeleteProject(project: Project) {
+    const hadTasks = tasks.some((task) => task.projectId === project.id);
+    deleteProject(project.id);
+    if (hadTasks) {
+      setExpandedGroupIds((current) => new Set(current).add(UNFILED_ID));
+    }
   }
 
   function startEditingProject(project: Project) {
@@ -175,6 +191,9 @@ function EverythingPile() {
     const trimmed = taskDraft.title.trim();
     if (!trimmed || !editingTaskId) return;
     updateTask(editingTaskId, { title: trimmed, size: taskDraft.size, projectId: taskDraft.projectId });
+    // Moving a task to a different project (or back to Everything Else) should open
+    // wherever it just landed — same reasoning as handleDeleteProject below.
+    setExpandedGroupIds((current) => new Set(current).add(taskDraft.projectId ?? UNFILED_ID));
     setEditingTaskId(null);
   }
 
@@ -184,6 +203,26 @@ function EverythingPile() {
   function handleBreakdown(project: Project) {
     requestTaskBreakdown({ projectId: project.id, projectName: project.name, prefillText: project.name });
     navigateToTool('task-breakdown');
+  }
+
+  // Only offered when the project is empty (see the render below) — converting one
+  // that still has tasks would either lose them or need a decision per task, out of
+  // scope for a one-click action. Deletes the project and creates a single task named
+  // after it, landing in Everything Else — small and "later" by default, same as
+  // Side Quest Log's "Make it a task" promotion.
+  function handleProjectToTask(project: Project) {
+    addTask({ title: project.name, projectId: undefined, size: 'small', category: 'later' });
+    deleteProject(project.id);
+    setExpandedGroupIds((current) => new Set(current).add(UNFILED_ID));
+  }
+
+  // The reverse direction — any task, anywhere in the tree, can become its own
+  // project. Nothing about the task (size, category, done) carries over, since a bare
+  // project doesn't have those; only its title becomes the new project's name.
+  function handleTaskToProject(task: Task) {
+    const project = addProject(task.title);
+    deleteTask(task.id);
+    setExpandedGroupIds((current) => new Set(current).add(project.id));
   }
 
   const groups: TaskGroup[] = [
@@ -225,7 +264,7 @@ function EverythingPile() {
 
       <div className="task-tree">
         {groups.map((group) => {
-          const collapsed = collapsedGroupIds.has(group.id);
+          const collapsed = !expandedGroupIds.has(group.id);
           const isRenamingThisGroup = group.project !== undefined && editingProjectId === group.project.id;
 
           return (
@@ -257,7 +296,7 @@ function EverythingPile() {
                       className="task-group-toggle"
                       aria-expanded={!collapsed}
                       aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${group.name}`}
-                      onClick={() => toggleCollapsed(group.id)}
+                      onClick={() => toggleExpanded(group.id)}
                     >
                       <span aria-hidden="true">{collapsed ? '▸' : '▾'}</span>
                       <span className="task-group-name">{group.name}</span>
@@ -274,6 +313,17 @@ function EverythingPile() {
                         >
                           🧩
                         </button>
+                        {group.tasks.length === 0 && (
+                          <button
+                            type="button"
+                            className="task-group-edit"
+                            aria-label={`Turn project "${group.name}" into a task`}
+                            title="Turn into a task in Everything Else"
+                            onClick={() => handleProjectToTask(group.project!)}
+                          >
+                            📤
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="task-group-edit"
@@ -286,7 +336,7 @@ function EverythingPile() {
                           type="button"
                           className="task-group-delete"
                           aria-label={`Delete project ${group.name}`}
-                          onClick={() => deleteProject(group.project!.id)}
+                          onClick={() => handleDeleteProject(group.project!)}
                         >
                           ×
                         </button>
@@ -378,6 +428,15 @@ function EverythingPile() {
                                 onClick={() => startEditingTask(task)}
                               >
                                 ✎
+                              </button>
+                              <button
+                                type="button"
+                                className="task-item-edit"
+                                aria-label={`Turn "${task.title}" into a project`}
+                                title="Turn into its own project"
+                                onClick={() => handleTaskToProject(task)}
+                              >
+                                📁
                               </button>
                               <button type="button" className="copy-button" onClick={() => deleteTask(task.id)}>
                                 Delete

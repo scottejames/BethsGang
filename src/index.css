@@ -1558,3 +1558,81 @@ textarea {
   gap: 6px;
   flex-shrink: 0;
 }
+
+/* Side Quest Log */
+
+.sidequest-list {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidequest-item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.sidequest-item-text {
+  flex: 1;
+  min-width: 160px;
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.sidequest-item-controls {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Brain Dump Sorter */
+
+.brain-dump-dictate-active {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.brain-dump-list {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.brain-dump-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.brain-dump-item-text {
+  flex: 1;
+  font: inherit;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.brain-dump-sent {
+  margin-top: 16px;
+  font-weight: 600;
+  color: var(--accent);
+}
