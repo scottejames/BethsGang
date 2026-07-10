@@ -5,4 +5,5 @@ export const meta: ToolMeta = {
   name: 'Pomodoro Timer',
   tagline: 'A simple focus timer to help you stay on task',
   icon: '🍅',
+  category: 'general',
 };

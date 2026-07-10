@@ -135,7 +135,7 @@ textarea:focus-visible {
   display: block;
   width: 120px;
   height: 5px;
-  margin: 0 0 32px;
+  margin: 0 0 24px;
   border-radius: 999px;
   background: var(--rainbow-gradient);
 }
@@ -143,6 +143,28 @@ textarea:focus-visible {
 .home-subtitle {
   margin: 0;
   font-size: 18px;
+}
+
+.home-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.home-tab {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-weight: 600;
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.home-tab-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
 }
 
 .tool-grid {

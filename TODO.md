@@ -548,3 +548,19 @@ with the three most worth building next marked ⭐. Sources at the bottom.
       `designs/user-personalization.md`'s "What Phase 3 built". Everything else that
       could still move to a per-user model (Pomodoro settings/streaks, saved messages,
       Distract Me's last sound/volume) is unstarted — see "Phase 4+" in the same doc.
+- [x] **Home split into "General Purpose"/"Planning" tabs** — requested directly.
+      `ToolMeta` gained a required `category: 'planning' | 'general'` field; "planning"
+      means "wired into the Shared Task Store" (Everything Pile, Task Breakdown, Side
+      Quest Log, Brain Dump Sorter), everything else is "general". A required field on
+      each tool's own `meta.ts`, not a separately maintained grouping list — deliberately
+      not reintroducing the manual-curation burden the `DOING_GROUP`/`SAYING_GROUP`
+      columns caused before they were removed a day earlier. Covered by `Home.test.tsx`
+      and verified with Playwright in both themes. See `CHANGELOG.md`'s "Added" entry
+      for the full list.
+      - **Fixed: going back from a tool always landed on General Purpose**, reported
+        directly, even when the tool was opened from Planning. The active tab was
+        local state in `Home.tsx`, which has no persistent identity across
+        `App.tsx` swapping it out for the open tool and back — moved into
+        `ToolNavigationContext` instead, the same place `activeToolId` already
+        lives for the same reason. See `CHANGELOG.md`'s "Fixed" entry for the
+        full story.

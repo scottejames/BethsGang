@@ -5,4 +5,5 @@ export const meta: ToolMeta = {
   name: 'Dopamine Menu',
   tagline: 'Quick, easy things that reliably feel good',
   icon: '🍭',
+  category: 'general',
 };

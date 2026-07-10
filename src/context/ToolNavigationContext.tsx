@@ -1,6 +1,7 @@
 import { createContext, useContext, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useUsageLog } from '../hooks/useUsageLog';
+import type { ToolCategory } from '../tools/types';
 
 // The specific payload for the Everything Pile -> Task Breakdown link (not a
 // generic "any payload" system — kept narrow on purpose, easy to extend with another
@@ -18,6 +19,15 @@ interface ToolNavigationContextValue {
   pendingBreakdownRequest: TaskBreakdownRequest | null;
   requestTaskBreakdown: (request: TaskBreakdownRequest) => void;
   clearBreakdownRequest: () => void;
+  // Which of Home's two tabs was showing. Lives here rather than as local state in
+  // Home.tsx specifically so it survives Home unmounting when a tool opens — without
+  // this, going back from a Planning tool always landed back on General Purpose
+  // (Home's local state remounting to its default) regardless of which tab you'd
+  // actually opened the tool from. Home only ever writes this via its own tab
+  // clicks — selecting a tool never needs to touch it, since a tool can only be
+  // clicked from whichever tab is already showing it.
+  activeCategory: ToolCategory;
+  setActiveCategory: (category: ToolCategory) => void;
 }
 
 const ToolNavigationContext = createContext<ToolNavigationContextValue | null>(null);
@@ -31,6 +41,7 @@ const ToolNavigationContext = createContext<ToolNavigationContextValue | null>(n
 export function ToolNavigationProvider({ children }: { children: ReactNode }) {
   const [activeToolId, setActiveToolId] = useState<string | null>(null);
   const [pendingBreakdownRequest, setPendingBreakdownRequest] = useState<TaskBreakdownRequest | null>(null);
+  const [activeCategory, setActiveCategory] = useState<ToolCategory>('general');
   const logUsage = useUsageLog();
 
   function navigateToTool(id: string) {
@@ -59,6 +70,8 @@ export function ToolNavigationProvider({ children }: { children: ReactNode }) {
         pendingBreakdownRequest,
         requestTaskBreakdown,
         clearBreakdownRequest,
+        activeCategory,
+        setActiveCategory,
       }}
     >
       {children}

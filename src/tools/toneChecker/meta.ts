@@ -5,4 +5,5 @@ export const meta: ToolMeta = {
   name: 'Tone Checker',
   tagline: "Check how a message might land before you hit send",
   icon: '💬',
+  category: 'general',
 };

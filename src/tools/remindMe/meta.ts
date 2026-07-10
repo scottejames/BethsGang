@@ -5,4 +5,5 @@ export const meta: ToolMeta = {
   name: 'Remind Me',
   tagline: 'Set a reminder in plain English — no fields to fill in',
   icon: '⏰',
+  category: 'general',
 };

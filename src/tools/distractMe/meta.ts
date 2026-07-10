@@ -5,4 +5,5 @@ export const meta: ToolMeta = {
   name: 'Distract Me',
   tagline: 'Background sound to help you focus or tune things out',
   icon: '🎧',
+  category: 'general',
 };

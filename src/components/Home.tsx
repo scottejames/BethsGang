@@ -1,20 +1,34 @@
 import { tools } from '../tools/registry';
+import type { ToolCategory } from '../tools/types';
 import { ToolCard } from './ToolCard';
 import { useReminders } from '../context/RemindersContext';
+import { useToolNavigation } from '../context/ToolNavigationContext';
 import logo from '../assets/logo.png';
 
 interface HomeProps {
   onSelectTool: (id: string) => void;
 }
 
+const TABS: { id: ToolCategory; label: string }[] = [
+  { id: 'general', label: 'General Purpose' },
+  { id: 'planning', label: 'Planning' },
+];
+
 export function Home({ onSelectTool }: HomeProps) {
   const { reminders } = useReminders();
+  // Lives in ToolNavigationContext, not local state — see its own comment for why:
+  // local state here would reset to the default every time Home remounts after
+  // going back from a tool, regardless of which tab that tool was actually opened
+  // from.
+  const { activeCategory, setActiveCategory } = useToolNavigation();
 
   // Only Remind Me has a meaningful "active count" today — extend this if another
   // tool grows one rather than adding a generic mechanism nothing else needs yet.
   function badgeCountFor(toolId: string): number | undefined {
     return toolId === 'remind-me' ? reminders.length : undefined;
   }
+
+  const visibleTools = tools.filter((tool) => tool.meta.category === activeCategory);
 
   return (
     <div className="home">
@@ -25,8 +39,24 @@ export function Home({ onSelectTool }: HomeProps) {
         <p className="home-subtitle">A small toolbox for getting unstuck.</p>
       </div>
       <span className="home-rainbow-bar" aria-hidden="true" />
+
+      <div className="home-tabs" role="tablist">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={activeCategory === tab.id}
+            className={`home-tab${activeCategory === tab.id ? ' home-tab-active' : ''}`}
+            onClick={() => setActiveCategory(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className="tool-grid">
-        {tools.map((tool) => (
+        {visibleTools.map((tool) => (
           <ToolCard
             key={tool.meta.id}
             meta={tool.meta}

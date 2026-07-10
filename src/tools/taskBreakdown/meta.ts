@@ -5,4 +5,5 @@ export const meta: ToolMeta = {
   name: 'Task Breakdown',
   tagline: 'Turn a big task into small, startable steps',
   icon: '🧩',
+  category: 'planning',
 };

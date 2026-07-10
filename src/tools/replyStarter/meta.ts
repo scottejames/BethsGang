@@ -5,4 +5,5 @@ export const meta: ToolMeta = {
   name: 'Reply Starter',
   tagline: 'Stuck on a reply? Get a few low-effort drafts to send',
   icon: '✍️',
+  category: 'general',
 };

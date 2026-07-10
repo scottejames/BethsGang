@@ -5,4 +5,5 @@ export const meta: ToolMeta = {
   name: 'Side Quest Log',
   tagline: 'Log the stray thought, keep working, sort it out later',
   icon: '💭',
+  category: 'planning',
 };

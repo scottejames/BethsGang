@@ -5,4 +5,5 @@ export const meta: ToolMeta = {
   name: 'Everything Pile',
   tagline: 'Every project and task, all in one place — sort them whenever that helps',
   icon: '🧺',
+  category: 'planning',
 };

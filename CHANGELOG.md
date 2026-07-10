@@ -1227,3 +1227,51 @@ All notable changes to this project are documented here.
     it's still there, untouched. Disposable test data and the test user were deleted
     afterward; the sandbox itself was left running, since it wasn't started for this
     task and isn't this task's to tear down.
+
+## 2026-07-10
+
+### Added
+
+- **Home split into two tabs: "General Purpose" and "Planning"** — requested
+  directly, as a follow-up to a design conversation about which tools are actually
+  "planning" tools. "Planning" is specifically the tools wired into the Shared Task
+  Store (Everything Pile itself, Task Breakdown, Side Quest Log, Brain Dump Sorter);
+  everything else is "General Purpose", including tools that are arguably "about
+  getting things done" (Remind Me) but aren't part of that pipeline.
+  - `ToolMeta` gained a required `category: 'planning' | 'general'` field
+    (`src/tools/types.ts`); every existing tool's `meta.ts` declares one. This is a
+    different mechanism than the fixed `DOING_GROUP`/`SAYING_GROUP` columns removed
+    a day earlier for needing manual curation on every new tool — a required field on
+    the tool's own metadata, not a separately maintained list, so adding a tool still
+    can't forget to land somewhere (`tsc` would refuse to compile a `meta.ts` missing
+    it) without reintroducing that curation burden.
+  - `Home.tsx` renders two independent `.tool-grid`s, one per tab, filtered from
+    `registry.ts` by category — `useState<ToolCategory>` (defaulting to
+    `'general'`, the larger and longer-standing set), no routing involved. The
+    active-reminder badge on Remind Me's card is untouched, since it's keyed by
+    `toolId`, not by which tab happens to be showing.
+  - Verified with a new `Home.test.tsx` (default tab and its contents, switching
+    tabs, tool selection still calling through correctly, the reminder badge still
+    working) and by driving the real running app with Playwright in both themes.
+
+### Fixed
+
+- **Going back from a tool always landed on the General Purpose tab**, even from a
+  Planning tool — reported directly. `Home.tsx`'s active-tab state was local
+  (`useState`), so it reset to the default every time Home remounted after
+  `App.tsx` swapped back from `ToolShell`; `Home` has no persistent identity across
+  that swap; `App.tsx` doesn't render it while a tool is open, it isn't hidden by
+  CSS. Fixed by moving `activeCategory`/`setActiveCategory` into
+  `ToolNavigationContext` (which does stay mounted throughout, same reason
+  `activeToolId` itself already lives there) instead of Home's own state — Home now
+  reads/writes it via `useToolNavigation()`. Selecting a tool needed no extra
+  logic to keep this correct: a tool can only ever be clicked from whichever tab is
+  already showing it, so the last tab written by an explicit tab click is always
+  the right one to restore.
+  - Verified with two new `Home.test.tsx` cases that mount Home inside a
+    `rerender()`-toggled wrapper (mirroring `App.tsx`'s real conditional exactly,
+    rather than two separate `render()` calls that would each get a fresh, unlinked
+    provider tree) — going back from a Planning tool restores the Planning tab, and
+    going back from a General Purpose tool still shows General Purpose. Also
+    confirmed against the real running app with Playwright: opened Everything Pile
+    from the Planning tab, clicked back, Planning was still the active tab.

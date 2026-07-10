@@ -5,4 +5,5 @@ export const meta: ToolMeta = {
   name: 'Call Script',
   tagline: "A script to read from for a call you've been putting off",
   icon: '📞',
+  category: 'general',
 };
