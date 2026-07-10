@@ -1436,3 +1436,15 @@ All notable changes to this project are documented here.
     app end to end with Playwright — including the actual GraphQL `runAiTool`
     call, network-mocked (same approach as the earlier double-click QA pass) so
     the check never hits the real Anthropic-backed Lambda.
+
+### Added
+
+- **`CODING_GUIDELINES.md`** — prescriptive, forward-looking coding rules for this
+  repo's actual stack (React/TypeScript, Amplify Gen2, Vitest/Testing Library/
+  Playwright), each illustrated with a real example already in the codebase.
+  Already linked from `README.md`'s intro; the file itself was the missing piece.
+- **`CODE_SMELLS.md`** — a read-through of the whole `src/`/`amplify/` codebase
+  against `CODING_GUIDELINES.md`, focused on simplification opportunities (no code
+  changed). Numbered findings ranked by impact vs. safety, with an explicit
+  "not smells" section calling out patterns that look duplicative but are
+  deliberately shaped that way — a discussion doc to work through, not a patch.
