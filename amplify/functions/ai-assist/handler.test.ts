@@ -13,6 +13,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildAssignmentBreakdownMessage,
   buildCallScriptMessage,
+  buildCooksCornerMessage,
   buildEnergyInstruction,
   buildEssayStructureMessage,
   buildIsThisMadMessage,
@@ -234,6 +235,36 @@ describe('buildEssayStructureMessage', () => {
   it('falls back to treating a non-JSON string as the raw description', () => {
     const message = buildEssayStructureMessage('just a plain pasted description');
     expect(message).toContain('just a plain pasted description');
+  });
+});
+
+describe('buildCooksCornerMessage', () => {
+  it('includes just the fridge items for a first-pass request (no prior ideas)', () => {
+    const raw = JSON.stringify({ fridgeItems: 'cheese, capers, potatoes, chicken' });
+
+    const message = buildCooksCornerMessage(raw);
+
+    expect(message).toContain('cheese, capers, potatoes, chicken');
+    expect(message).not.toContain('Current meal ideas');
+    expect(message).not.toContain('Feedback');
+  });
+
+  it('includes the prior meal ideas and feedback for a revision/elaboration request', () => {
+    const raw = JSON.stringify({
+      fridgeItems: 'cheese, capers, potatoes, chicken',
+      currentMealIdeas: '1. Chicken Piccata — chicken in a caper butter sauce',
+      feedback: 'The chicken piccata sounds good, elaborate on that one',
+    });
+
+    const message = buildCooksCornerMessage(raw);
+
+    expect(message).toContain('1. Chicken Piccata — chicken in a caper butter sauce');
+    expect(message).toContain('The chicken piccata sounds good, elaborate on that one');
+  });
+
+  it('falls back to treating a non-JSON string as the raw fridge items', () => {
+    const message = buildCooksCornerMessage('cheese, capers, potatoes, chicken');
+    expect(message).toContain('cheese, capers, potatoes, chicken');
   });
 });
 

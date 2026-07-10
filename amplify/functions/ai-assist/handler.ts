@@ -78,6 +78,20 @@ You will be given an essay title and a short description of the assignment. Usin
 Keep each heading specific to this topic, not a generic label like "Introduction" or "Conclusion". After each heading, add a short note of no more than a few words on what that section covers — enough to point the student in the right direction, not enough to make the argument for them. Do not write essay content, example sentences, full arguments, facts, or citations.
 Format as a numbered list, one heading per line, in this exact form: "1. Heading — short note". Do not add commentary, headers, or explanations beyond the list.
 If you are given a previous structure along with feedback on it, treat the feedback as instructions for how to change the structure, keeping the same opening-through-closing shape unless told otherwise. Return the revised structure in the same format only — no explanation of what changed.`,
+
+  'cooks-corner': `You help someone decide what to cook for dinner using only what they already have.
+You will be given a list of items they have in the fridge. Assume they also have access to a regular dry store of common non-perishable staples — rice, pasta, flour, oil, vinegar, stock cubes/bouillon, tinned tomatoes, onions, garlic, basic dried herbs and spices, salt, pepper, and sugar. Do not assume any other fridge items beyond what's listed.
+On a first request (no current meal ideas given), propose 4-6 varied meal ideas that use the fridge items plus dry store staples — don't propose near-identical dishes. Format as a numbered list, one meal per line, in this exact form: "N. <short dish name> — <one-line description>". If a meal would genuinely need only one or two simple, common extras beyond the fridge and dry store (e.g. cream, a lemon, fresh herbs) — worth a quick trip to the shop for, not a full shopping list — append " (Shop: <item, item>)" to the end of that line. Don't propose a meal that would need more than that.
+If you are given current meal ideas along with feedback:
+- If the feedback names one or more of the meals as something the user wants to cook (e.g. "the chicken piccata sounds good", "let's do the second one"), respond with a full recipe for each of those meals only, in this exact format, with one blank line between recipes:
+Recipe: <dish name>
+Ingredients:
+- <ingredient with a rough quantity>
+Method:
+1. <step>
+Shop: <comma-separated items to buy beyond the fridge and dry store, or "None — you already have everything for this">
+- Otherwise (the feedback asks for different ideas, more variety, rules out an ingredient, etc.), treat it as instructions for revising the meal ideas and return a revised numbered list in the same list format as the first request.
+Do not add commentary, headers, or explanations beyond the requested format.`,
 };
 
 // Tools whose frontend sends structured JSON (instead of a plain string) as `input`
@@ -259,6 +273,36 @@ export function buildEssayStructureMessage(rawInput: string): string {
     .join('\n\n');
 }
 
+interface CooksCornerInput {
+  fridgeItems: string;
+  // Present only on a revision/elaboration request — the meal ideas returned by
+  // the previous call, plus the user's feedback on them. Absent means "first
+  // pass": propose initial meal ideas from the fridge items alone.
+  currentMealIdeas?: string;
+  feedback?: string;
+}
+
+export function buildCooksCornerMessage(rawInput: string): string {
+  let parsed: Partial<CooksCornerInput>;
+  try {
+    parsed = JSON.parse(rawInput);
+  } catch {
+    parsed = { fridgeItems: rawInput };
+  }
+
+  const fridgeItems = parsed.fridgeItems ?? rawInput;
+  const currentMealIdeas = parsed.currentMealIdeas?.trim();
+  const feedback = parsed.feedback?.trim();
+
+  return [
+    `Items in the fridge:\n"""\n${fridgeItems}\n"""`,
+    currentMealIdeas ? `Current meal ideas:\n"""\n${currentMealIdeas}\n"""` : undefined,
+    feedback ? `Feedback:\n"""\n${feedback}\n"""` : undefined,
+  ]
+    .filter((line): line is string => Boolean(line))
+    .join('\n\n');
+}
+
 const IMAGE_MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
 type ImageMediaType = (typeof IMAGE_MEDIA_TYPES)[number];
 
@@ -299,6 +343,7 @@ const USER_MESSAGE_BUILDERS: Record<string, (rawInput: string) => string> = {
   'is-this-mad': buildIsThisMadMessage,
   'assignment-breakdown': buildAssignmentBreakdownMessage,
   'essay-structure-planner': buildEssayStructureMessage,
+  'cooks-corner': buildCooksCornerMessage,
 };
 
 // Every AI tool request is wrapped by useAiTool.ts as {spoons, input} — spoons

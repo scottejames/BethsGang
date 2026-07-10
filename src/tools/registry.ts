@@ -16,6 +16,7 @@ import { assignmentBreakdownTool } from './assignmentBreakdown';
 import { essayStructurePlannerTool } from './essayStructurePlanner';
 import { timetableTool } from './timetable';
 import { timeEstimatorTool } from './timeEstimator';
+import { cooksCornerTool } from './cooksCorner';
 
 // To add a new tool: create a folder under src/tools with a meta.ts + index.tsx,
 // then list it here. That's the entire integration surface for the UI.
@@ -37,6 +38,7 @@ export const tools: ToolDefinition[] = [
   essayStructurePlannerTool,
   timetableTool,
   timeEstimatorTool,
+  cooksCornerTool,
 ];
 
 export function getTool(id: string): ToolDefinition | undefined {
