@@ -266,6 +266,39 @@ describe('buildCooksCornerMessage', () => {
     const message = buildCooksCornerMessage('cheese, capers, potatoes, chicken');
     expect(message).toContain('cheese, capers, potatoes, chicken');
   });
+
+  it('sends the "common basics" framing instead of a fridge list when yolo is set, and never leaks an empty fridgeItems', () => {
+    const raw = JSON.stringify({ yolo: true });
+
+    const message = buildCooksCornerMessage(raw);
+
+    expect(message).toContain('YOLO');
+    expect(message).toContain('common everyday basics');
+    expect(message).not.toContain('Items in the fridge');
+  });
+
+  it('prefers yolo framing over fridgeItems if both are somehow present', () => {
+    const raw = JSON.stringify({ yolo: true, fridgeItems: 'cheese, capers' });
+
+    const message = buildCooksCornerMessage(raw);
+
+    expect(message).not.toContain('Items in the fridge');
+    expect(message).not.toContain('cheese, capers');
+  });
+
+  it('includes prior meal ideas and feedback alongside the yolo framing for a YOLO-originated revision', () => {
+    const raw = JSON.stringify({
+      yolo: true,
+      currentMealIdeas: '1. Cheese on Toast — quick and simple',
+      feedback: 'something with eggs instead',
+    });
+
+    const message = buildCooksCornerMessage(raw);
+
+    expect(message).toContain('YOLO');
+    expect(message).toContain('1. Cheese on Toast — quick and simple');
+    expect(message).toContain('something with eggs instead');
+  });
 });
 
 describe('buildScreenshotToTextContent', () => {

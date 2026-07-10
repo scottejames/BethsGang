@@ -168,4 +168,56 @@ describe('CooksCorner', () => {
     expect(screen.getByText('Pan-fry the chicken until golden.')).toBeInTheDocument();
     expect(screen.getByText('cream')).toBeInTheDocument();
   });
+
+  it('the YOLO button works with no fridge items typed, sending just { yolo: true }', async () => {
+    vi.mocked(runAiTool).mockResolvedValue(MEAL_IDEAS);
+    renderTool();
+
+    expect(screen.getByRole('button', { name: '🎲 YOLO' })).not.toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: '🎲 YOLO' }));
+    await screen.findByText(/Chicken Piccata/);
+
+    const [, envelope] = vi.mocked(runAiTool).mock.calls[0];
+    const { input } = JSON.parse(envelope);
+    expect(JSON.parse(input)).toEqual({ yolo: true });
+  });
+
+  it('YOLO ignores whatever is typed in the fridge items textarea', async () => {
+    vi.mocked(runAiTool).mockResolvedValue(MEAL_IDEAS);
+    renderTool();
+
+    fireEvent.change(screen.getByPlaceholderText('e.g. cheese, capers, potatoes, chicken'), {
+      target: { value: 'cheese, capers, potatoes, chicken' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '🎲 YOLO' }));
+    await screen.findByText(/Chicken Piccata/);
+
+    const [, envelope] = vi.mocked(runAiTool).mock.calls[0];
+    const { input } = JSON.parse(envelope);
+    expect(JSON.parse(input)).toEqual({ yolo: true });
+  });
+
+  it('sends { yolo: true } (not fridgeItems) on a feedback call after a YOLO-originated result', async () => {
+    vi.mocked(runAiTool).mockResolvedValueOnce(MEAL_IDEAS).mockResolvedValueOnce(RECIPE);
+    renderTool();
+
+    fireEvent.click(screen.getByRole('button', { name: '🎲 YOLO' }));
+    await screen.findByText(/Chicken Piccata/);
+
+    fireEvent.change(screen.getByPlaceholderText(/chicken piccata sounds good/i), {
+      target: { value: 'The chicken piccata sounds good' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Update with feedback' }));
+    await screen.findByRole('heading', { name: 'Chicken Piccata' });
+
+    const [, secondEnvelope] = vi.mocked(runAiTool).mock.calls[1];
+    const { input } = JSON.parse(secondEnvelope);
+    const payload = JSON.parse(input);
+    expect(payload).toEqual({
+      yolo: true,
+      currentMealIdeas: MEAL_IDEAS,
+      feedback: 'The chicken piccata sounds good',
+    });
+    expect(payload.fridgeItems).toBeUndefined();
+  });
 });

@@ -1620,3 +1620,36 @@ All notable changes to this project are documented here.
     parsed meal-ideas list including its optional shop note, the revision payload
     sent to the AI, the feedback field clearing after an update, and the parsed
     recipe rendering).
+
+- **Cook's Corner: a "🎲 YOLO" button**, requested directly — one click, no
+  typing required, for simple meal ideas from common everyday basics (eggs,
+  milk, cheese, bread, a few basic vegetables) instead of the user's actual
+  fridge contents. Icon and framing match Dopamine Menu's existing "🎲 Surprise
+  me" convention for "just decide for me" actions.
+  - No new backend infrastructure — reuses the exact same `cooks-corner`
+    system prompt and `buildCooksCornerMessage`, extended with a `yolo?: boolean`
+    input flag. When set, the builder swaps the "Items in the fridge: ..." line
+    for an explicit "no specific items given, use common basics" framing instead
+    — the system prompt gained one paragraph describing what to assume in that
+    case, and the output format (numbered list, optional `(Shop: ...)` note,
+    `Recipe:` elaboration on request) is completely unchanged, so all of the
+    existing frontend parsing needed zero changes.
+  - YOLO ignores whatever's currently typed in the fridge-items textarea, if
+    anything — the point is "don't make me decide," not "consider what I've
+    half-typed." A new `isYolo` bit of component state tracks which path
+    produced the meal ideas currently on screen, so a follow-up "the second one
+    sounds good" feedback call sends `{ yolo: true, ... }` rather than
+    `{ fridgeItems: '', ... }` when the ideas came from YOLO — an empty
+    `fridgeItems` would have re-triggered the "no items given" framing anyway
+    given how the builder falls back, but sending the honest `yolo` flag avoids
+    relying on that coincidence.
+  - Verified with `handler.test.ts` (the yolo framing appearing instead of a
+    fridge list, yolo taking priority if `fridgeItems` is somehow also present,
+    and the framing surviving a feedback/revision call alongside
+    `currentMealIdeas`) and `cooksCorner/index.test.tsx` (the button working with
+    nothing typed, ignoring typed-but-unsubmitted fridge items, and the
+    feedback-after-YOLO payload shape) — plus driving the real running app with
+    Playwright in both themes, confirming the actual GraphQL request body sent
+    exactly `{"yolo":true}` with no `fridgeItems` key, and that a YOLO result
+    could be followed up with feedback through to a full recipe. Zero console
+    errors throughout.

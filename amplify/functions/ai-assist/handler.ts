@@ -81,7 +81,8 @@ If you are given a previous structure along with feedback on it, treat the feedb
 
   'cooks-corner': `You help someone decide what to cook for dinner using only what they already have.
 You will be given a list of items they have in the fridge. Assume they also have access to a regular dry store of common non-perishable staples — rice, pasta, flour, oil, vinegar, stock cubes/bouillon, tinned tomatoes, onions, garlic, basic dried herbs and spices, salt, pepper, and sugar. Do not assume any other fridge items beyond what's listed.
-On a first request (no current meal ideas given), propose 4-6 varied meal ideas that use the fridge items plus dry store staples — don't propose near-identical dishes. Format as a numbered list, one meal per line, in this exact form: "N. <short dish name> — <one-line description>". If a meal would genuinely need only one or two simple, common extras beyond the fridge and dry store (e.g. cream, a lemon, fresh herbs) — worth a quick trip to the shop for, not a full shopping list — append " (Shop: <item, item>)" to the end of that line. Don't propose a meal that would need more than that.
+Sometimes no specific fridge items are given at all — the user doesn't want to stop and list them, they just want a quick decision made for them. In that case, suggest simple meals using only very common everyday basics almost any kitchen has (eggs, milk, butter, cheese, bread, a few basic vegetables like an onion or a bag of salad) plus the dry store staples above. Keep these especially quick and low-effort, and don't invent or claim to know a specific fridge inventory you weren't actually given.
+On a first request (no current meal ideas given), propose 4-6 varied meal ideas that use the fridge items (or, with no items given, the common basics above) plus dry store staples — don't propose near-identical dishes. Format as a numbered list, one meal per line, in this exact form: "N. <short dish name> — <one-line description>". If a meal would genuinely need only one or two simple, common extras beyond what's already assumed (e.g. cream, a lemon, fresh herbs) — worth a quick trip to the shop for, not a full shopping list — append " (Shop: <item, item>)" to the end of that line. Don't propose a meal that would need more than that.
 If you are given current meal ideas along with feedback:
 - If the feedback names one or more of the meals as something the user wants to cook (e.g. "the chicken piccata sounds good", "let's do the second one"), respond with a full recipe for each of those meals only, in this exact format, with one blank line between recipes:
 Recipe: <dish name>
@@ -274,10 +275,18 @@ export function buildEssayStructureMessage(rawInput: string): string {
 }
 
 interface CooksCornerInput {
-  fridgeItems: string;
+  // Absent (rather than required) specifically to support the "YOLO" button —
+  // see `yolo` below — which deliberately sends no fridge list at all.
+  fridgeItems?: string;
+  // Set by the "YOLO" button: skip listing fridge items entirely and ask for
+  // simple meals from common everyday basics instead. Takes priority over
+  // `fridgeItems` if both are somehow present, since the point of YOLO is
+  // "don't make me list anything."
+  yolo?: boolean;
   // Present only on a revision/elaboration request — the meal ideas returned by
   // the previous call, plus the user's feedback on them. Absent means "first
-  // pass": propose initial meal ideas from the fridge items alone.
+  // pass": propose initial meal ideas from the fridge items (or, under yolo,
+  // common basics) alone.
   currentMealIdeas?: string;
   feedback?: string;
 }
@@ -290,12 +299,17 @@ export function buildCooksCornerMessage(rawInput: string): string {
     parsed = { fridgeItems: rawInput };
   }
 
-  const fridgeItems = parsed.fridgeItems ?? rawInput;
+  const fridgeItems = parsed.fridgeItems?.trim();
   const currentMealIdeas = parsed.currentMealIdeas?.trim();
   const feedback = parsed.feedback?.trim();
 
+  const fridgeLine =
+    parsed.yolo || !fridgeItems
+      ? 'No specific fridge items given — the user hit "YOLO" and wants simple meals from common everyday basics instead (see the system prompt for what to assume). Do not invent a specific fridge inventory.'
+      : `Items in the fridge:\n"""\n${fridgeItems}\n"""`;
+
   return [
-    `Items in the fridge:\n"""\n${fridgeItems}\n"""`,
+    fridgeLine,
     currentMealIdeas ? `Current meal ideas:\n"""\n${currentMealIdeas}\n"""` : undefined,
     feedback ? `Feedback:\n"""\n${feedback}\n"""` : undefined,
   ]

@@ -4,7 +4,8 @@ import { meta } from './meta';
 import type { ToolDefinition } from '../types';
 
 interface CooksCornerPayload {
-  fridgeItems: string;
+  fridgeItems?: string;
+  yolo?: boolean;
   currentMealIdeas?: string;
   feedback?: string;
 }
@@ -88,13 +89,29 @@ function parseRecipes(output: string): Recipe[] {
 function CooksCorner() {
   const [fridgeItems, setFridgeItems] = useState('');
   const [feedback, setFeedback] = useState('');
+  // Tracks whether the meal ideas currently on screen came from typed fridge items
+  // or from YOLO's "just decide for me" path — so a later feedback/elaborate call
+  // sends the right payload shape either way, without asking the user to have
+  // typed anything just because they're now giving feedback.
+  const [isYolo, setIsYolo] = useState(false);
   const { output, loading, error, run } = useAiTool(meta.id);
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!fridgeItems.trim()) return;
 
+    setIsYolo(false);
     const payload: CooksCornerPayload = { fridgeItems: fridgeItems.trim() };
+    run(JSON.stringify(payload));
+  }
+
+  // One click, no typing required — the model is asked to suggest simple meals
+  // from common everyday basics instead of specific listed fridge items. Ignores
+  // whatever's currently in the textarea, if anything: YOLO means "don't make me
+  // decide," not "consider what I've typed so far."
+  function handleYolo() {
+    setIsYolo(true);
+    const payload: CooksCornerPayload = { yolo: true };
     run(JSON.stringify(payload));
   }
 
@@ -106,7 +123,7 @@ function CooksCorner() {
     if (!feedback.trim() || !output) return;
 
     const payload: CooksCornerPayload = {
-      fridgeItems: fridgeItems.trim(),
+      ...(isYolo ? { yolo: true } : { fridgeItems: fridgeItems.trim() }),
       currentMealIdeas: output,
       feedback: feedback.trim(),
     };
@@ -135,9 +152,18 @@ function CooksCorner() {
           disabled={loading}
         />
 
-        <button type="submit" disabled={loading || !fridgeItems.trim()}>
-          {loading ? 'Thinking of meals…' : 'Suggest meals'}
-        </button>
+        <div className="tool-form-row">
+          <button type="submit" disabled={loading || !fridgeItems.trim()}>
+            {loading && !isYolo ? 'Thinking of meals…' : 'Suggest meals'}
+          </button>
+          <button type="button" className="secondary-button" onClick={handleYolo} disabled={loading}>
+            {loading && isYolo ? 'Thinking of meals…' : '🎲 YOLO'}
+          </button>
+        </div>
+        <p className="tool-field-hint">
+          Don't want to list your fridge? YOLO picks something simple from common
+          everyday basics instead.
+        </p>
       </form>
 
       {error && <p className="tool-error">{error}</p>}
