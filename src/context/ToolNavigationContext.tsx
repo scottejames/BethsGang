@@ -19,13 +19,14 @@ interface ToolNavigationContextValue {
   pendingBreakdownRequest: TaskBreakdownRequest | null;
   requestTaskBreakdown: (request: TaskBreakdownRequest) => void;
   clearBreakdownRequest: () => void;
-  // Which of Home's two tabs was showing. Lives here rather than as local state in
-  // Home.tsx specifically so it survives Home unmounting when a tool opens — without
-  // this, going back from a Planning tool always landed back on General Purpose
-  // (Home's local state remounting to its default) regardless of which tab you'd
-  // actually opened the tool from. Home only ever writes this via its own tab
-  // clicks — selecting a tool never needs to touch it, since a tool can only be
-  // clicked from whichever tab is already showing it.
+  // Which of Home's two tabs was showing (see TABS in Home.tsx for their current
+  // labels). Lives here rather than as local state in Home.tsx specifically so it
+  // survives Home unmounting when a tool opens — without this, going back from a
+  // tool always landed back on whichever tab was first (Home's local state
+  // remounting to its default) regardless of which tab you'd actually opened the
+  // tool from. Home only ever writes this via its own tab clicks — selecting a tool
+  // never needs to touch it, since a tool can only be clicked from whichever tab is
+  // already showing it.
   activeCategory: ToolCategory;
   setActiveCategory: (category: ToolCategory) => void;
 }

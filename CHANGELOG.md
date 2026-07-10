@@ -1275,3 +1275,102 @@ All notable changes to this project are documented here.
     going back from a General Purpose tool still shows General Purpose. Also
     confirmed against the real running app with Playwright: opened Everything Pile
     from the Planning tab, clicked back, Planning was still the active tab.
+
+### Changed
+
+- **Renamed the two Home tabs**: "General Purpose" → **Everyday Helpers**, "Planning"
+  → **Get Organized** — requested directly, as a follow-up to a naming brainstorm
+  (the original labels read like product-manager categories next to names like
+  Dopamine Menu and Brain Dump Sorter). Display-label change only — the underlying
+  `ToolCategory` values (`'general'`/`'planning'`) are unchanged, so no tool's
+  `meta.ts` needed touching. Updated everywhere the old labels were quoted in
+  comments/docs (`ToolNavigationContext.tsx`, `README.md`) to either the new labels or
+  a description that won't go stale the next time the labels change.
+
+### Fixed
+
+- **Pre-launch QA pass: 8 findings, worked through one at a time** — ahead of
+  opening the app to more users, did a full QA pass: read every design doc against
+  every tool's actual behavior, then drove the real app with a headless browser
+  (Playwright, network-mocked for AI calls) to confirm or rule out each candidate
+  before touching any code. Findings and investigation notes captured in `BUGS.md`
+  (kept up to date with what got fixed vs. deliberately left as-is) so the list
+  could be reviewed and worked through one item at a time with direct sign-off
+  before each fix, rather than fixed all at once. Every fix has a test that
+  reproduces the bug first (confirmed failing pre-fix, passing post-fix), per
+  standing instruction.
+  - **Double-click duplicated projects/tasks** — Task Breakdown's "Send to
+    Everything Pile", Brain Dump Sorter's "Send N to Everything Pile", and Side
+    Quest Log's "Make it a task" had no guard against a fast double-click; confirmed
+    live (two native clicks dispatched in the same tick via Playwright) that this
+    created two full duplicate projects with duplicate tasks. Fixed with a
+    `ref`-based one-shot guard in all three — a `ref` rather than state/a
+    null-check, since two click handlers can run back-to-back before React
+    re-renders a disabled button, so a state check alone still sees the stale
+    pre-click value at the moment the second handler runs.
+  - **Misleading reminder error** — "remind me every day to take meds" (no time
+    given) showed "That's in the past — try a time after now" instead of asking for
+    a time. Cause: the `daily`/`weekdays` no-time fallback in `reminderParser.ts`
+    set `fireAt = now`, which always tripped the immediately-following past-time
+    check. Fixed with an early, specific rejection instead, matching the existing
+    no-repeat "couldn't work out when" error's shape.
+  - **A repeating reminder missed for multiple days fired a burst of duplicate
+    "due" banners**, roughly one every 15 seconds, instead of catching up silently
+    — `checkReminders` in `RemindersContext.tsx` only advanced a missed reminder by
+    one occurrence per check, so a reminder several days overdue kept re-firing
+    until it caught up. Fixed by looping `computeNextOccurrence` until the result
+    is actually in the future, so exactly one `due` event fires per reminder per
+    check — matching how a one-shot reminder's catch-up already worked. A
+    fake-timer test reproducing the exact 50-hours-overdue scenario was written
+    first and confirmed failing before the fix.
+  - **Home's General Purpose/Planning tabs used `role="tablist"`/`role="tab"`/
+    `aria-selected`** without implementing the ARIA Tabs pattern's keyboard
+    behavior (arrow-key navigation, `aria-controls` linking each tab to a
+    tabpanel) — confirmed live that `aria-controls` was `null` on both tabs and
+    `ArrowLeft` did nothing while a tab was focused. Restyled as a labeled
+    toggle-button group (`role="group"` + `aria-pressed`) instead of implementing
+    the full pattern, since two buttons filtering the same tool grid don't need
+    independent tabpanels — an accurate, simpler contract for what it actually is.
+  - **README/OPERATE/designs docs described auth and per-user persistence as
+    unmerged `feature/user-accounts` work** — confirmed via `git branch`/`git
+    ls-tree` that it's been live on `main` for a while (`TODO.md`/`CHANGELOG.md`
+    both already correctly showed it shipped). Corrected the stale branch
+    references in all three docs.
+  - **Brief flash of stale local data on page reload while signed in** —
+    `RemindersContext`/`EnergyContext`/`TaskStoreContext` all key their signed-in/
+    signed-out branching purely off `isSignedIn`, which starts `false` until
+    `AuthContext`'s async session check resolves, so a signed-in user's local
+    `localStorage` leftovers could render briefly before the real account data
+    arrived. Considered gating all three providers' initial state on the sign-in
+    check resolving, but rejected it: that would have also delayed
+    `RemindersContext`'s mount-time catch-up check (see above) — a real, tested
+    reliability guarantee — trading a brief cosmetic issue for a functional
+    regression. Scoped down to just the highest-visibility spot instead: Remind
+    Me's Active Reminders list now shows a neutral "Loading…" placeholder instead
+    of local reminders until `useAuth().loading` resolves; underlying provider
+    state/effects are untouched, so the reminder-firing mechanism is unaffected.
+    `EnergyButton`'s spoons badge and `EverythingPile`'s task tree have the same
+    underlying flash risk, left open.
+  - **No confirmation or undo on destructive deletes** — Everything Pile's task
+    Delete, Dopamine Menu's item Delete, and Side Quest Log's Done/Bin it were all
+    instant and unrecoverable, unlike project deletion (which already detaches
+    rather than destroys tasks, so it never needed this). Built a reusable
+    soft-delete pattern: `src/hooks/useUndoableDelete.ts` (the item disappears from
+    its list immediately; the real delete only commits after a 5-second grace
+    window, cancellable via undo) + `src/components/UndoToastStack.tsx` (a
+    bottom-right toast stack — the one corner not already used by the reminder
+    banner, now-playing bar, or Energy/Account buttons). Wired into all three
+    destructive deletes; deliberately *not* Side Quest Log's "Make it a task",
+    since that entry's content survives as a task in Everything Pile rather than
+    being lost, so there's nothing to undo in the same sense.
+  - **No size or rate limiting on the public, unauthenticated `runAiTool`
+    endpoint** — reviewed directly and decided acceptable at current scale (the
+    Anthropic API itself is the relevant scale concern, not this app's own
+    infrastructure); left as-is rather than adding a client-side length cap or a
+    backend rate limit.
+  - Verified throughout with `npm run verify` (169 tests passing, up from 155 at
+    the start of this pass) and, for the browser-observable fixes, a headless
+    Chromium session (Playwright, installed ad hoc into `node_modules` for this
+    session via `npm install --no-save` — not a new committed project dependency)
+    driving the real dev server with the AppSync call intercepted for the
+    double-click repro, same approach already used elsewhere in this project.

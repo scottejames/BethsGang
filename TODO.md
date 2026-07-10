@@ -271,6 +271,19 @@ mechanics — most of these are just a new system prompt away.
       Worth adding "sound played", "timer completed", "reminder created" events if
       opened-only turns out to be too coarse — would need a small amount of per-tool
       instrumentation rather than the current zero-touch approach.
+- [ ] **Remaining items from the 2026-07-10 pre-launch QA pass (`BUGS.md`)** — most
+      findings were fixed (see `CHANGELOG.md`'s "Fixed" entry for that date), but a
+      few were deliberately left open:
+      - `EnergyButton`'s spoons badge and `EverythingPile`'s task tree have the same
+        "brief flash of stale local data while signed in" risk that Remind Me's list
+        was fixed for — not fixed there, since gating every consumer on the sign-in
+        check meant rewriting every affected component's tests to await it, judged
+        overkill for a brief, low-frequency cosmetic issue at the time.
+      - `EverythingPile`'s project-group disclosure toggles have `aria-expanded` but
+        no `aria-controls` linking to the group body they expand — a smaller version
+        of the same gap the Home tabs fix addressed.
+      - No size limit or rate limiting on the public `runAiTool` endpoint — reviewed
+        and decided acceptable at current scale; revisit if usage grows.
 
 ## Research: new tool ideas (2026-07-07)
 
@@ -564,3 +577,7 @@ with the three most worth building next marked ⭐. Sources at the bottom.
         `ToolNavigationContext` instead, the same place `activeToolId` already
         lives for the same reason. See `CHANGELOG.md`'s "Fixed" entry for the
         full story.
+      - **Renamed the tabs**: "General Purpose" → **Everyday Helpers**, "Planning" →
+        **Get Organized**, requested directly after a naming brainstorm. Display
+        labels only — `ToolCategory`'s underlying `'general'`/`'planning'` values are
+        unchanged. See `CHANGELOG.md`'s "Changed" entry for the full list.
