@@ -1448,3 +1448,40 @@ All notable changes to this project are documented here.
   changed). Numbered findings ranked by impact vs. safety, with an explicit
   "not smells" section calling out patterns that look duplicative but are
   deliberately shaped that way — a discussion doc to work through, not a patch.
+- **Essay Structure Planner** tool, added to the Study Help tab — requested
+  directly. Takes an essay title and a short assignment description and proposes a
+  light-touch essay structure: an opening heading, a run of body headings that
+  build the argument in order (not independent parallel topics), and a closing
+  heading, each with a short few-word note — deliberately terse scaffolding, not
+  research or the essay itself. The student can give feedback to have it revise
+  the structure (repeatable — each revision becomes the new baseline for the next
+  round), or send the structure straight to Everything Pile as a new project once
+  satisfied, same pattern as Assignment Breakdown.
+  - `buildEssayStructureMessage` (`ai-assist/handler.ts`) follows the standard
+    `USER_MESSAGE_BUILDERS` single-message pattern — title, description, and (on a
+    revision) the prior structure and feedback, all folded into one prompt. Runs
+    on the same `claude-haiku-4-5` every other tool uses.
+  - **Revision history**, kept here since the first two approaches were both
+    tried and reverted in the same session: (1) initially built with live web
+    search (`web_search_20260209`) on `claude-sonnet-5`, requiring its own
+    `runEssayStructurePlanner` branch in `handler()` outside
+    `USER_MESSAGE_BUILDERS` (a different model, a declared server-side tool, and
+    a real multi-turn conversation for revisions) — reverted when this hit
+    AppSync's hard 30-second direct-Lambda-resolver ceiling in practice ("Execution
+    timed out"), since Sonnet 5 defaults to adaptive thinking on when unset (unlike
+    every other model this app calls) and web search's own round trips didn't
+    reliably fit the window; (2) tried tightening that same architecture (thinking
+    disabled, low effort, `max_uses` capped at 2, no `pause_turn` resume) rather
+    than abandoning web search — reverted anyway, alongside a prompt rewrite, once
+    real output showed the model producing a set of independent research topics
+    instead of an essay with a narrative arc, and the web-search-grounded answers
+    reading as more sophisticated/information-dense than a "point the student in
+    the right direction" tool should be for a student audience. Landed on the
+    simple, deterministic-model version above.
+  - Verified with new tests in `handler.test.ts` (message content for both the
+    first-pass and revision shapes) and `essayStructurePlanner/index.test.tsx`
+    (submit gating, heading parsing, the revision payload sent to the AI, the
+    feedback field clearing after an update, and the Everything Pile handoff) and
+    by driving the real running app end to end with Playwright — the AI call
+    network-mocked over the actual GraphQL `runAiTool` request so the check never
+    hits the real Anthropic-backed Lambda.

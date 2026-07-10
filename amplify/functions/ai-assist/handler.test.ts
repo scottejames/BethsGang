@@ -14,6 +14,7 @@ import {
   buildAssignmentBreakdownMessage,
   buildCallScriptMessage,
   buildEnergyInstruction,
+  buildEssayStructureMessage,
   buildIsThisMadMessage,
   buildReplyStarterMessage,
   buildScreenshotToTextContent,
@@ -198,6 +199,41 @@ describe('buildAssignmentBreakdownMessage', () => {
   it('falls back to treating a non-JSON string as the raw instructions', () => {
     const message = buildAssignmentBreakdownMessage('just plain pasted instructions');
     expect(message).toContain('just plain pasted instructions');
+  });
+});
+
+describe('buildEssayStructureMessage', () => {
+  it('includes the title and description for a first-pass request (no prior structure)', () => {
+    const raw = JSON.stringify({
+      title: 'The Causes of WWI',
+      description: '2000 words, focus on alliance systems.',
+    });
+
+    const message = buildEssayStructureMessage(raw);
+
+    expect(message).toContain('The Causes of WWI');
+    expect(message).toContain('2000 words, focus on alliance systems.');
+    expect(message).not.toContain('Current structure');
+    expect(message).not.toContain('Feedback to address');
+  });
+
+  it('includes the prior structure and feedback for a revision request', () => {
+    const raw = JSON.stringify({
+      title: 'The Causes of WWI',
+      description: '2000 words, focus on alliance systems.',
+      currentStructure: '1. Alliance systems — how they escalated the conflict.',
+      feedback: 'Add a section on the assassination of Franz Ferdinand.',
+    });
+
+    const message = buildEssayStructureMessage(raw);
+
+    expect(message).toContain('1. Alliance systems — how they escalated the conflict.');
+    expect(message).toContain('Add a section on the assassination of Franz Ferdinand.');
+  });
+
+  it('falls back to treating a non-JSON string as the raw description', () => {
+    const message = buildEssayStructureMessage('just a plain pasted description');
+    expect(message).toContain('just a plain pasted description');
   });
 });
 

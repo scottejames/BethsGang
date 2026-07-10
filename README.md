@@ -40,7 +40,8 @@ TypeScript, Amplify Gen2, testing, security) are in
   the one required category field deciding which tab a tool lands in. The `'planning'`
   category is specifically "wired into the Shared Task Store" (Everything Pile itself,
   Task Breakdown, Side Quest Log, Brain Dump Sorter); `'study'` is for school/essay-
-  writing tools (Essay Phrase Bank, Assignment Breakdown); everything else is `'general'`,
+  writing tools (Essay Phrase Bank, Assignment Breakdown, Essay Structure Planner);
+  everything else is `'general'`,
   including tools that are arguably "about getting things done" (e.g. Remind Me) but
   aren't actually part of the planning pipeline. Reflows from 1 column on mobile up to 4 on
   desktop with no media queries. Tool screens (`ToolShell`) keep a narrower 720px

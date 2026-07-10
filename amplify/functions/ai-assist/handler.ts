@@ -65,6 +65,12 @@ Do not add commentary, encouragement, or headers — respond with the checklist 
   'screenshot-to-text': `You transcribe screenshots of conversations (texts, WhatsApp, Slack, email, or similar) into plain text so the conversation can be analyzed for tone afterwards.
 Read the image and output every message in chronological order, top to bottom as shown. If multiple speakers are visible, prefix each line with who sent it followed by a colon — use "Me:" for the user's own messages (usually the bubbles on the right, or in a distinct accent color) and "Them:" for the other person's (usually on the left), or the person's name if it's clearly labeled in the screenshot. If you genuinely can't tell who sent a message, prefix it with "Unknown:".
 Output only the transcribed conversation, one message per line — no commentary, no description of the screenshot, no markdown, nothing else.`,
+
+  'essay-structure-planner': `You help students plan the structure of an essay before they start writing it — a heading outline, not the essay itself, and not a research summary.
+You will be given an essay title and a short description of the assignment. Using your own general knowledge of the topic (no research needed), propose 4-7 headings that form the shape of an essay: an opening heading that frames the question, a run of body headings that build the argument in a logical order — each one following naturally from the one before it, not independent topics that could be reordered without changing anything — and a closing heading that ties back to the opening.
+Keep each heading specific to this topic, not a generic label like "Introduction" or "Conclusion". After each heading, add a short note of no more than a few words on what that section covers — enough to point the student in the right direction, not enough to make the argument for them. Do not write essay content, example sentences, full arguments, facts, or citations.
+Format as a numbered list, one heading per line, in this exact form: "1. Heading — short note". Do not add commentary, headers, or explanations beyond the list.
+If you are given a previous structure along with feedback on it, treat the feedback as instructions for how to change the structure, keeping the same opening-through-closing shape unless told otherwise. Return the revised structure in the same format only — no explanation of what changed.`,
 };
 
 // Tools whose frontend sends structured JSON (instead of a plain string) as `input`
@@ -213,6 +219,39 @@ export function buildAssignmentBreakdownMessage(rawInput: string): string {
     .join('\n\n');
 }
 
+interface EssayStructureInput {
+  title: string;
+  description: string;
+  // Present only on a revision request — the structure returned by the previous
+  // call, plus the student's feedback on it. Absent means "first pass": propose an
+  // initial structure from the title and description alone.
+  currentStructure?: string;
+  feedback?: string;
+}
+
+export function buildEssayStructureMessage(rawInput: string): string {
+  let parsed: Partial<EssayStructureInput>;
+  try {
+    parsed = JSON.parse(rawInput);
+  } catch {
+    parsed = { description: rawInput };
+  }
+
+  const title = parsed.title?.trim();
+  const description = parsed.description ?? rawInput;
+  const currentStructure = parsed.currentStructure?.trim();
+  const feedback = parsed.feedback?.trim();
+
+  return [
+    title ? `Essay title: ${title}` : undefined,
+    `Assignment description:\n"""\n${description}\n"""`,
+    currentStructure ? `Current structure:\n"""\n${currentStructure}\n"""` : undefined,
+    feedback ? `Feedback to address:\n"""\n${feedback}\n"""` : undefined,
+  ]
+    .filter((line): line is string => Boolean(line))
+    .join('\n\n');
+}
+
 const IMAGE_MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
 type ImageMediaType = (typeof IMAGE_MEDIA_TYPES)[number];
 
@@ -252,6 +291,7 @@ const USER_MESSAGE_BUILDERS: Record<string, (rawInput: string) => string> = {
   'call-script': buildCallScriptMessage,
   'is-this-mad': buildIsThisMadMessage,
   'assignment-breakdown': buildAssignmentBreakdownMessage,
+  'essay-structure-planner': buildEssayStructureMessage,
 };
 
 // Every AI tool request is wrapped by useAiTool.ts as {spoons, input} — spoons
