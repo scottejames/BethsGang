@@ -126,6 +126,7 @@ TypeScript, Amplify Gen2, testing, security) are in
 |---|---|
 | `react`, `react-dom` | UI |
 | `vite`, `@vitejs/plugin-react` | Dev server & build |
+| `vite-plugin-pwa` | Generates the web app manifest and a Workbox service worker at build time — see "Progressive Web App" below |
 | `typescript` | Type checking |
 | `aws-amplify` | Frontend client for calling the Amplify Data API |
 | `@aws-amplify/ui-react` | The `<Authenticator>` component behind `AccountButton.tsx` |
@@ -206,6 +207,54 @@ gets added later.
    see `amplify/functions/ai-assist/resource.ts`.
 4. Push to the connected branch to trigger a build. Amplify builds the backend first,
    then the frontend (which picks up the freshly generated `amplify_outputs.json`).
+
+## Progressive Web App
+
+`vite build` (via `vite-plugin-pwa`, configured in `vite.config.ts`) generates a web app
+manifest and a Workbox service worker alongside the usual `dist/` output — no separate
+build step. This is what lets a browser (or a user, via the browser's own "Install"
+prompt) install the app to a device's home screen/dock/app list and open it in its own
+window, without an app-store listing.
+
+- **Update strategy: `registerType: 'autoUpdate'`.** No "a new version is available,
+  reload?" prompt to design or dismiss — the next visit after a deploy picks up the new
+  service worker silently, in the background. Matches this app's own low-decision-
+  fatigue design (`designs/design-principles.md`) rather than adding a UI choice nothing
+  asked for.
+- **What's precached (works with zero network):** the JS/CSS/HTML app shell and the PWA
+  icons — Workbox's default `globPatterns` in `vite-plugin-pwa`'s `generateSW` mode.
+  Every client-side, `localStorage`-backed tool (Pomodoro Timer, Distract Me, Remind Me,
+  Timetable, Dopamine Menu, Essay Phrase Bank, and Side Quest Log) keeps working fully
+  offline once installed, since none of them need the app shell to be re-fetched or any
+  backend call to function.
+- **What's deliberately *not* precached:** AI-backed tool calls and signed-in DynamoDB
+  sync — both go through the same `runAiTool`/`observeQuery()` backend paths as always,
+  and genuinely need a network connection. No offline queueing or optimistic-then-sync
+  behavior was added for these; a call made while offline just surfaces the same error
+  state `useAiTool.ts`'s `catch` block already produces for any failed network call —
+  correct behavior for "the network call failed," which is what offline actually is.
+- **Distract Me's ambient audio (`public/audio/*.mp3`, ~7.8MB total) is runtime-cached,
+  not precached** — a `workbox.runtimeCaching` rule (`CacheFirst`, 90-day expiry) in
+  `vite.config.ts` caches each track the first time it's actually played, not on
+  install. Precaching all four tracks up front would make every fresh install download
+  audio before the app is even usable, for sounds the user may never choose to play.
+- **Icons** (`public/pwa-192.png`, `public/pwa-512.png`, `public/pwa-maskable-512.png`)
+  were generated from the existing `public/favicon.png` (the circular hammer/toolbox
+  badge already used for the browser tab icon — see "Assets" below for its own
+  provenance) via a one-off Pillow script, not committed as a build step: a plain
+  upscale for the two standard sizes, and a third "maskable" variant with the badge
+  composited onto a solid `--bg`-colored canvas at ~80% scale so an OS home screen can
+  crop it to a circle/squircle/rounded-square without clipping the artwork — see the
+  [maskable icon spec](https://w3c.github.io/manifest/#icon-masks) for why that inner
+  "safe zone" padding matters. Regenerate all three from a new source logo the same way
+  if the logo ever changes.
+- **`registerSW.js` and the `<link rel="manifest">` tag are auto-injected into
+  `dist/index.html`** by the plugin at build time — nothing to maintain by hand in the
+  checked-in `index.html`.
+- **Verifying it locally:** `npm run build && npm run preview`, then check DevTools'
+  Application tab (Service Workers should show `activated`; Manifest should show no
+  errors) — `npm run dev` does not register a service worker in most configurations, so
+  installability can't be checked from the plain dev server.
 
 ## Adding a new tool
 

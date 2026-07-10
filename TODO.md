@@ -529,6 +529,17 @@ with the three most worth building next marked ⭐. Sources at the bottom.
 
 ## Infrastructure
 
+- [x] **Progressive Web App** — installable to a device's home screen/dock, requested
+      directly. `vite-plugin-pwa` generates a web app manifest + Workbox service worker
+      at build time, `registerType: 'autoUpdate'` (silent, no reload prompt). App shell
+      (JS/CSS/HTML/icons) precached so every client-side/`localStorage` tool works
+      fully offline once installed; AI-backed tools and signed-in sync deliberately
+      stay network-dependent, surfacing the same error state they already have for any
+      failed call. Distract Me's ~7.8MB of ambient audio is runtime-cached (played once,
+      cached after) rather than precached, so a fresh install doesn't download sounds
+      nobody's chosen to play yet. Three new icon sizes (192, 512, and a maskable 512
+      with safe-zone padding) generated from the existing favicon. Full details:
+      `README.md`'s "Progressive Web App" section.
 - [x] **Timetable** — shipped, Study Help tab. Requested directly: "add timetable
       which will give alarms when lesson starts in the next 15 mins." A weekly,
       day-of-week-keyed recurring timetable (not date-keyed — "last Monday is likely

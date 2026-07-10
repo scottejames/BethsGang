@@ -1559,3 +1559,41 @@ All notable changes to this project are documented here.
     that doesn't match the expected format) and by driving the real running app
     with Playwright, AppSync intercepted so the check never hits the real
     Anthropic-backed Lambda.
+
+- **Progressive Web App support** — the app is now installable to a device's home
+  screen/dock, requested directly. `vite-plugin-pwa` (new build-time-only dev
+  dependency) generates a web app manifest and a Workbox service worker as part of
+  `vite build` — no separate build step, nothing hand-maintained in `index.html`
+  (the plugin auto-injects the manifest link and register script).
+  - `registerType: 'autoUpdate'` — a new deploy's service worker takes over
+    silently on the next visit, no "reload to update?" prompt to design or
+    dismiss. Matches this app's existing low-decision-fatigue design principle
+    rather than adding a UI choice nothing asked for.
+  - The app shell (JS/CSS/HTML/icons) is precached, so every client-side,
+    `localStorage`-backed tool (Pomodoro Timer, Distract Me, Remind Me, Timetable,
+    Dopamine Menu, Essay Phrase Bank, Side Quest Log) keeps working fully offline
+    once installed. AI-backed tools and signed-in DynamoDB sync are deliberately
+    left network-dependent — a call made offline just hits the same error state
+    `useAiTool.ts`'s `catch` block already produces for any failed call, which is
+    correct: that *is* what a failed network call looks like.
+  - Distract Me's ambient audio (`public/audio/*.mp3`, ~7.8MB across 4 tracks) is
+    **runtime-cached, not precached** — a `CacheFirst` Workbox route caches each
+    track the first time it's actually played (90-day expiry), so a fresh install
+    doesn't download sounds nobody's chosen to play yet, and confirmed working by
+    playing a track through a real service-worker-controlled page and checking the
+    Cache Storage entry landed.
+  - Three new icon files (`public/pwa-192.png`, `public/pwa-512.png`,
+    `public/pwa-maskable-512.png`), generated from the existing
+    `public/favicon.png` badge via a one-off Pillow script (not a build step) — a
+    plain upscale for the two standard sizes, and a maskable variant with the
+    badge composited onto a solid `--bg`-colored canvas at ~80% scale so an OS
+    home screen can crop it to a circle/squircle without clipping the artwork.
+  - Verified end to end against the actual production build (`vite build` +
+    `vite preview`, not the plain dev server, which doesn't register a service
+    worker) with Playwright: service worker reaches `activated` with no pending
+    `waiting`/`installing` state, the manifest parses with all three icons
+    resolving 200, and — after a reload to establish service-worker *control* of
+    the page (the same "second visit" behavior a real browser install goes
+    through) — a played audio file actually lands in the `distract-me-audio`
+    Cache Storage bucket. Zero console errors throughout. Full details:
+    `README.md`'s new "Progressive Web App" section.
