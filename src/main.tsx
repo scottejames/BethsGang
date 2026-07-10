@@ -8,6 +8,7 @@ import { DistractMeProvider } from './context/DistractMeContext'
 import { EnergyProvider } from './context/EnergyContext'
 import { RemindersProvider } from './context/RemindersContext'
 import { TaskStoreProvider } from './context/TaskStoreContext'
+import { TimetableProvider } from './context/TimetableContext'
 import { ToolNavigationProvider } from './context/ToolNavigationContext'
 
 createRoot(document.getElementById('root')!).render(
@@ -16,11 +17,13 @@ createRoot(document.getElementById('root')!).render(
       <EnergyProvider>
         <DistractMeProvider>
           <RemindersProvider>
-            <TaskStoreProvider>
-              <ToolNavigationProvider>
-                <App />
-              </ToolNavigationProvider>
-            </TaskStoreProvider>
+            <TimetableProvider>
+              <TaskStoreProvider>
+                <ToolNavigationProvider>
+                  <App />
+                </ToolNavigationProvider>
+              </TaskStoreProvider>
+            </TimetableProvider>
           </RemindersProvider>
         </DistractMeProvider>
       </EnergyProvider>

@@ -131,7 +131,7 @@ bit," "shortly," "soon") — these fail gracefully with the existing "couldn't w
 when" error rather than guessing an arbitrary specific duration for genuinely vague
 language.
 
-## Architecture: `RemindersContext` and `ReminderBanner`
+## Architecture: `RemindersContext` and `AlertBanner`
 
 Follows the persistent-provider pattern (`designs/architecture-overview.md`), extended
 in two ways nothing before it needed:
@@ -156,9 +156,11 @@ distract-me-and-pomodoro.md`) applied preemptively rather than rediscovered the 
 a second time. The mount-time catch-up call is separately guarded by a `useRef` flag
 (not state) so Strict Mode's mount→cleanup→mount dev cycle can't run it twice either.
 
-**Notifications:** the in-app `ReminderBanner` (rendered unconditionally in `App.tsx`,
-top-center) is the guaranteed channel. The browser's Notification API is used
-best-effort on top of it — permission requested on first `addReminder` call (a user
+**Notifications:** the in-app banner (originally `ReminderBanner`, later renamed
+`AlertBanner` and shared with Timetable's own alerts — see `designs/timetable.md`;
+rendered unconditionally in `App.tsx`, top-center) is the guaranteed channel. The
+browser's Notification API is used best-effort on top of it — permission requested on
+first `addReminder` call (a user
 gesture, satisfying the browser's permission-prompt requirement), and a failed or denied
 notification never blocks or replaces the in-app banner.
 

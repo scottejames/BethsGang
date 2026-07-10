@@ -130,7 +130,7 @@ function requestNotificationPermissionOnce() {
   }
 }
 
-// Best-effort only — the in-app banner (see ReminderBanner.tsx) is the guaranteed
+// Best-effort only — the in-app banner (see AlertBanner.tsx) is the guaranteed
 // fallback whether permission was denied, unsupported, or this throws.
 function showBrowserNotification(event: FiredEvent) {
   if (typeof Notification === 'undefined') return;

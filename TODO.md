@@ -518,6 +518,16 @@ with the three most worth building next marked ⭐. Sources at the bottom.
 
 ## Infrastructure
 
+- [x] **Timetable** — shipped, Study Help tab. Requested directly: "add timetable
+      which will give alarms when lesson starts in the next 15 mins." A weekly,
+      day-of-week-keyed recurring timetable (not date-keyed — "last Monday is likely
+      the same as this Monday" was the requestor's own framing, and it points
+      straight at the right model), `TimetableContext` following the exact
+      `RemindersContext`/`TaskStoreContext` persistent-provider pattern. Prototyped
+      first as a standalone styled Artifact for a non-technical requestor to react to
+      before any real app code was written, approved as-is. `ReminderBanner` renamed
+      to `AlertBanner` and merged with Timetable's own alerts into one shared stack.
+      Full design and testing notes: `designs/timetable.md`.
 - [x] ⭐ **Shared Task Store (the "spine")** (see Shipped — **Everything Pile**) — a
       single canonical list of tasks, exposed as `TaskStoreContext` the same way
       `DistractMeContext` exposes audio state. `localStorage`-backed when signed out;

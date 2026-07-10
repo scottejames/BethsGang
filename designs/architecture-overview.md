@@ -84,27 +84,29 @@ put the actual state in a React Context provider mounted once at the app root
 that context; a persistent UI element outside the tool tree (rendered unconditionally in
 `App.tsx`) can be another.
 
-Four providers now use this shape, each extending it slightly further:
+Five providers now use this shape, each extending it slightly further:
 
 | Provider | Persistent UI | What it added |
 |---|---|---|
 | `DistractMeContext` | `NowPlayingBar` | The original pattern — see `designs/distract-me-and-pomodoro.md` |
 | `EnergyContext` | `EnergyButton` | A global *setting* every tool reads, not just a stateful widget |
-| `RemindersContext` | `ReminderBanner` | State that must survive a full page reload, not just tool navigation, and fire on its own timer regardless of what's on screen — see `designs/remind-me.md` |
+| `RemindersContext` | `AlertBanner` | State that must survive a full page reload, not just tool navigation, and fire on its own timer regardless of what's on screen — see `designs/remind-me.md` |
+| `TimetableContext` | `AlertBanner` (shared) | A second "fires independent of what's on screen" source feeding the *same* banner as `RemindersContext` — every screen corner was already claimed, and this was the Rule-of-Three case for merging the display layer rather than adding a competing one. See `designs/timetable.md`. |
 | `AuthContext` | `AccountButton` | Reflects state Amplify itself already persists (session tokens) rather than owning storage directly — see `designs/user-personalization.md` |
 
-All four are wired into `main.tsx` in the same nested-provider block, and their
+All five are wired into `main.tsx` in the same nested-provider block, and their
 persistent UI components are rendered unconditionally in `App.tsx` alongside each other
-(`EnergyButton` top-right, `AccountButton` top-left, `ReminderBanner` top-center,
+(`EnergyButton` top-right, `AccountButton` top-left, `AlertBanner` top-center,
 `NowPlayingBar` bottom-center — corners/edges claimed in build order, worth checking
-before adding a fifth).
+before adding another).
 
-`RemindersContext` and `EnergyContext` are also, independently, the only two providers
-whose *storage* is conditional on `AuthContext`: `localStorage` when signed out (as
-described above, unchanged), a backend `a.model()` behind `AuthContext`'s `isSignedIn`
+`RemindersContext`, `TimetableContext`, and `EnergyContext` are also, independently, the
+only providers whose *storage* is conditional on `AuthContext`: `localStorage` when
+signed out (as described above, unchanged), a backend `a.model()` behind
+`AuthContext`'s `isSignedIn`
 when signed in. That's a second, orthogonal axis from this table — which UI owns which
-persistent React state — not a fifth pattern; see `designs/user-personalization.md`'s
-"What Phase 2 built" for how the storage switch itself works.
+persistent React state — not a new pattern of its own; see `designs/user-
+personalization.md`'s "What Phase 2 built" for how the storage switch itself works.
 
 ## Where things live
 
@@ -112,9 +114,10 @@ persistent React state — not a fifth pattern; see `designs/user-personalizatio
 src/
   tools/<tool-id>/       — one folder per tool (meta.ts + index.tsx)
   tools/registry.ts      — the single list the UI reads from
-  context/               — persistent-provider pattern (Energy, DistractMe, Reminders, Auth)
+  context/               — persistent-provider pattern (Energy, DistractMe, Reminders,
+                            Timetable, Auth)
   components/            — Home, ToolShell, Modal, and the always-mounted UI (EnergyButton,
-                            AccountButton, ReminderBanner, NowPlayingBar)
+                            AccountButton, AlertBanner, NowPlayingBar)
   hooks/                 — useAiTool (the energy envelope), useReminders, useAuth, useUsageLog
   lib/                   — pure functions with no React dependency (aiClient, reminderParser,
                             usageLog, imageCapture)

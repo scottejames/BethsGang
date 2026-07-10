@@ -77,6 +77,26 @@ const schema = a.schema({
       createdAt: a.datetime().required(),
     })
     .authorization((allow) => [allow.owner()]),
+
+  // Timetable — see designs/timetable.md and src/context/TimetableContext.tsx.
+  // Weekly-recurring by design: entries are keyed by day-of-week, not by date, so
+  // "this Monday" and "last Monday" are the same set of rows — there's no repeat rule
+  // to advance the way Reminder.repeat needs one. `dayOfWeek` is a plain string
+  // ('monday'..'sunday'), not a GraphQL enum, per the same "might evolve" reasoning as
+  // every other plain-string field in this schema. `startTime`/`endTime` are AWSTime
+  // (a.time()) — TimetableContext.tsx converts to/from this app's "HH:mm" client shape.
+  TimetableEntry: a
+    .model({
+      dayOfWeek: a.string().required(),
+      startTime: a.time().required(),
+      endTime: a.time(),
+      label: a.string().required(),
+      location: a.string(),
+      // Unset means "use the default (15 minutes)" — same "explicit value always
+      // wins" rule as Reminder.warnBeforeMinutes.
+      alertMinutesBefore: a.integer(),
+    })
+    .authorization((allow) => [allow.owner()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;

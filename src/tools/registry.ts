@@ -14,6 +14,7 @@ import { brainDumpSorterTool } from './brainDumpSorter';
 import { essayPhraseBankTool } from './essayPhraseBank';
 import { assignmentBreakdownTool } from './assignmentBreakdown';
 import { essayStructurePlannerTool } from './essayStructurePlanner';
+import { timetableTool } from './timetable';
 
 // To add a new tool: create a folder under src/tools with a meta.ts + index.tsx,
 // then list it here. That's the entire integration surface for the UI.
@@ -33,6 +34,7 @@ export const tools: ToolDefinition[] = [
   essayPhraseBankTool,
   assignmentBreakdownTool,
   essayStructurePlannerTool,
+  timetableTool,
 ];
 
 export function getTool(id: string): ToolDefinition | undefined {

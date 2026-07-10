@@ -346,7 +346,8 @@ textarea {
 }
 
 .tool-field select,
-.tool-field input[type='text'] {
+.tool-field input[type='text'],
+.tool-field input[type='time'] {
   font: inherit;
   font-weight: 400;
   padding: 10px 12px;
@@ -995,9 +996,12 @@ textarea {
   color: var(--accent-text);
 }
 
-/* Reminder banner — fixed top-center, distinct from EnergyButton (top-right) and
-   NowPlayingBar (bottom-center) so nothing overlaps. */
-.reminder-banner-stack {
+/* Alert banner — fixed top-center, distinct from EnergyButton (top-right) and
+   NowPlayingBar (bottom-center) so nothing overlaps. Shared by Remind Me's fired
+   events and Timetable's lesson alerts (see AlertBanner.tsx) — two independent
+   contexts, one merged display stack, since every other screen corner/edge is
+   already claimed. */
+.alert-banner-stack {
   position: fixed;
   top: 16px;
   left: 50%;
@@ -1011,7 +1015,7 @@ textarea {
   padding: 0 16px;
 }
 
-.reminder-banner-item {
+.alert-banner-item {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1025,19 +1029,23 @@ textarea {
   color: var(--text-h);
 }
 
-.reminder-banner-warning {
+.alert-banner-warning {
   border-left-color: var(--rb3);
 }
 
-.reminder-banner-due {
+.alert-banner-due {
   border-left-color: var(--rb4);
 }
 
-.reminder-banner-text {
+.alert-banner-lesson {
+  border-left-color: var(--accent-2);
+}
+
+.alert-banner-text {
   flex: 1;
 }
 
-.reminder-banner-item button {
+.alert-banner-item button {
   flex-shrink: 0;
   background: none;
   border: none;
@@ -1048,12 +1056,12 @@ textarea {
   opacity: 0.7;
 }
 
-.reminder-banner-item button:hover {
+.alert-banner-item button:hover {
   opacity: 1;
 }
 
 /* Undo toast stack — fixed bottom-right, the one corner not already used by the
-   reminder banner (top-center), now-playing bar (bottom-center), or the Energy/
+   alert banner (top-center), now-playing bar (bottom-center), or the Energy/
    Account buttons (top-right/top-left). */
 .undo-toast-stack {
   position: fixed;
@@ -1704,4 +1712,172 @@ textarea {
   margin-top: 16px;
   font-weight: 600;
   color: var(--accent);
+}
+
+/* Timetable — a weekly grid, wider than the usual 720px tool-shell reading width for
+   the same reason Home's card grid is (see #root/.tool-shell/.home comment): a 7-day
+   row needs room, not line-length restraint. Scrolls horizontally within its own
+   container on narrow viewports rather than the page itself scrolling sideways. */
+.timetable-week-wrap {
+  max-width: 1180px;
+  margin: 24px auto 0;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.timetable-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(190px, 1fr));
+  gap: 14px;
+  min-width: 1180px;
+}
+
+.timetable-day-col {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 160px;
+}
+
+.timetable-day-col-today {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.timetable-day-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.timetable-day-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-h);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.timetable-day-count {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+
+.timetable-lesson-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+/* --lc/--lc-bg are set inline per lesson, hashed from the lesson's own label (see
+   colorForLabel in index.tsx) — the same subject reads as the same color everywhere
+   it appears across the week, a real pattern-recognition aid rather than decoration. */
+.timetable-lesson-card {
+  background: var(--lc-bg);
+  border-left: 3px solid var(--lc);
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font: inherit;
+  color: var(--text-h);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.timetable-lesson-card:hover {
+  filter: brightness(0.97);
+}
+
+@media (prefers-color-scheme: dark) {
+  .timetable-lesson-card:hover {
+    filter: brightness(1.15);
+  }
+}
+
+.timetable-lesson-time {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+
+.timetable-lesson-label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.timetable-lesson-location {
+  font-size: 12.5px;
+  opacity: 0.75;
+}
+
+.timetable-empty-day {
+  list-style: none;
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.55;
+  padding: 4px 2px;
+}
+
+.timetable-day-foot {
+  display: flex;
+  gap: 6px;
+}
+
+.timetable-add-btn {
+  flex: 1;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.timetable-add-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.timetable-copy-btn {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text-h);
+}
+
+.timetable-copy-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.timetable-copy-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 20px;
 }

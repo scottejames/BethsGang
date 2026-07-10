@@ -17,6 +17,7 @@ other document assumes its patterns.
 | [`usage-logging.md`](./usage-logging.md) | Knowing what people actually do with the app — the dedicated-Lambda decision, the privacy trade-off behind what gets logged, and a synchronous-throw bug worth remembering for any future fire-and-forget telemetry. |
 | [`branding-and-theme.md`](./branding-and-theme.md) | The hand-drawn logo and the rainbow theme sampled from it — image processing (transparency, favicon), the decorative-only rule for rainbow colors vs. the one grounding accent, and why layout went through two feedback rounds. |
 | [`user-personalization.md`](./user-personalization.md) | User accounts, all shipped on `main`: Phase 1 (Cognito auth), Phase 2 (per-user Reminders + Spoons), and Phase 3 (the Shared Task Store) — including the storage decision (DynamoDB via `a.model()`) and the schema-evolution strategy for changes after this point. |
+| [`timetable.md`](./timetable.md) | A weekly recurring lesson timetable with a 15-minutes-before alarm, shipped on `main`. Day-of-week (not date) keyed, so "last Monday looks like this Monday" needs no explicit repeat rule at all — simpler than Remind Me's `RepeatRule`, not a bigger version of it. Built from a prototype (a standalone Artifact, styled to match the app) approved directly by a non-technical requestor before any real app code was written. `ReminderBanner` renamed to `AlertBanner` and merged with Timetable's own alerts into one shared stack — the Rule-of-Three case for a shared display layer over two independent contexts. |
 
 ## Keeping this useful
 

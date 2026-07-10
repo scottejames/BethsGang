@@ -2,7 +2,7 @@ import { Home } from './components/Home';
 import { ToolShell } from './components/ToolShell';
 import { NowPlayingBar } from './components/NowPlayingBar';
 import { EnergyButton } from './components/EnergyButton';
-import { ReminderBanner } from './components/ReminderBanner';
+import { AlertBanner } from './components/AlertBanner';
 import { AccountButton } from './components/AccountButton';
 import { useToolNavigation } from './context/ToolNavigationContext';
 import { getTool } from './tools/registry';
@@ -19,7 +19,7 @@ function App() {
     <>
       <EnergyButton />
       <AccountButton />
-      <ReminderBanner />
+      <AlertBanner />
       {activeTool ? (
         <ToolShell icon={activeTool.meta.icon} name={activeTool.meta.name} onBack={goHome}>
           <activeTool.Component />

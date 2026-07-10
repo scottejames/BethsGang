@@ -1485,3 +1485,57 @@ All notable changes to this project are documented here.
     by driving the real running app end to end with Playwright — the AI call
     network-mocked over the actual GraphQL `runAiTool` request so the check never
     hits the real Anthropic-backed Lambda.
+
+- **Timetable** tool, added to the Study Help tab — requested directly: "add
+  timetable which will give alarms when lesson starts in the next 15 mins." A
+  weekly, day-of-week-keyed (not date-keyed) recurring lesson grid — "last Monday
+  is likely the same as this Monday" was the requestor's own framing, and it points
+  straight at storing entries by weekday rather than needing an explicit repeat
+  rule the way Remind Me's reminders do. Full design, including the reasoning for
+  every decision below: `designs/timetable.md`.
+  - **Prototyped before any real app code**, since the requestor is non-technical
+    — a standalone, self-contained HTML/CSS/JS Artifact styled to match the app's
+    real CSS custom properties (colors, fonts), with a fake "preview a time"
+    control so the alert could be seen firing without waiting in real time.
+    Approved as-is and used as the direct reference for the shipped UI (the weekly
+    grid, the "copy this day to…" interaction, and the alert wording all carried
+    over unchanged).
+  - New owner-scoped `TimetableEntry` model (`amplify/data/resource.ts`) and
+    `TimetableContext.tsx`, following `RemindersContext`/`TaskStoreContext`'s exact
+    persistent-provider pattern (`localStorage` when signed out, `observeQuery()`-
+    driven DynamoDB when signed in, same silent first-sign-in migration). A 30s
+    tick checks today's weekday entries against a per-entry alert lead time
+    (default 15 min, same "explicit value always wins" rule as
+    `Reminder.warnBeforeMinutes`), with catch-up-on-mount for an entry already
+    inside its alert window — but, unlike Remind Me, deliberately **no** catch-up
+    for an entry whose start time has already passed, since a stale "starting in
+    15 min" for a lesson already 20 minutes in would be actively misleading rather
+    than a missed courtesy notice.
+  - **`ReminderBanner` renamed to `AlertBanner`** and now merges `RemindersContext`'s
+    fired events with `TimetableContext`'s lesson alerts into one shared top-center
+    stack — every screen corner/edge was already claimed
+    (`designs/architecture-overview.md`'s corner-claim table), so a second
+    independent banner had nowhere to go without overlapping the first. Two
+    genuinely distinct event sources feeding one shared display is the
+    Rule-of-Three case `CODING_GUIDELINES.md` §1 describes, not a premature
+    abstraction — the two contexts stay fully independent; only the rendering
+    layer merges. Lesson alerts get their own `.alert-banner-lesson` accent color
+    so they're still visually distinguishable at a glance.
+  - **The tool screen** (`src/tools/timetable/`): a 7-column weekly grid (all days
+    shown, weekends included but empty by default), each lesson a clickable card
+    colored by a deterministic hash of its own label (same subject reads as the
+    same color everywhere it appears across the week), a "copy this day to…"
+    action (⧉) that replaces — not merges into — each target day's entries, and an
+    add/edit modal built on the existing `Modal.tsx` component (day, start/end
+    time, label, room, per-lesson alert lead time, delete-when-editing).
+  - Verified with `TimetableContext.test.tsx` (signed-out/signed-in split mirroring
+    `RemindersContext.test.tsx`, alert-window firing and its correct minutes-left
+    text, per-entry alert override, catch-up-on-mount vs. the deliberate no-catch-
+    up-for-a-passed-lesson case, once-per-day firing, CRUD, and `copyDay`'s
+    replace-not-merge semantics against both localStorage and the mocked backend),
+    `AlertBanner.test.tsx` (the merge itself, seeded through both real contexts),
+    and `timetable/index.test.tsx` (add/edit/delete and the copy-day flow through
+    the real UI) — plus driving the live dev server with Playwright: seeding an
+    entry 7 minutes from real wall-clock time and confirming the alert banner
+    appeared globally, including on the Home screen with Timetable itself closed,
+    in both light and dark theme.
