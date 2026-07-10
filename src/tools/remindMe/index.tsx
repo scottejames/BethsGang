@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useReminders } from '../../context/RemindersContext';
 import type { RepeatRule } from '../../context/RemindersContext';
+import { useAuth } from '../../context/AuthContext';
 import { parseReminderText } from '../../lib/reminderParser';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
@@ -29,6 +30,13 @@ function repeatLabel(repeat: RepeatRule): string | undefined {
 
 function RemindMe() {
   const { reminders, addReminder, cancelReminder } = useReminders();
+  // While the sign-in check is still in flight, `reminders` may briefly be this
+  // device's local (possibly stale, possibly empty, possibly just wrong) data even
+  // for a signed-in user — the account's real reminders only arrive once signed-in
+  // status is known and observeQuery responds. Only the list below is gated on this;
+  // the reminder-firing mechanism (RemindersContext) is unaffected and keeps working
+  // exactly as before, so this is purely about not showing a false list on screen.
+  const { loading: authLoading } = useAuth();
   const [nlText, setNlText] = useState('');
 
   const trimmedNlText = nlText.trim();
@@ -91,7 +99,9 @@ function RemindMe() {
       <hr className="reminder-divider" />
 
       <h2 className="reminder-list-heading">Active reminders</h2>
-      {sortedReminders.length === 0 ? (
+      {authLoading ? (
+        <p className="reminder-empty">Loading…</p>
+      ) : sortedReminders.length === 0 ? (
         <p className="reminder-empty">No reminders set yet.</p>
       ) : (
         <ul className="reminder-list">

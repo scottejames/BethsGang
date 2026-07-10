@@ -59,20 +59,20 @@ describe('Home', () => {
     window.localStorage.removeItem('beths-gang:energy-spoons');
   });
 
-  it('defaults to the General Purpose tab, showing general tools but not planning ones', () => {
+  it('defaults to the Everyday Helpers tab, showing general tools but not planning ones', () => {
     renderHome();
-    expect(screen.getByRole('tab', { name: 'General Purpose' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: 'Everyday Helpers' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('Distract Me')).toBeInTheDocument();
     expect(screen.getByText('Pomodoro Timer')).toBeInTheDocument();
     expect(screen.queryByText('Everything Pile')).not.toBeInTheDocument();
     expect(screen.queryByText('Task Breakdown')).not.toBeInTheDocument();
   });
 
-  it('switches to the Planning tab, showing only the tools wired into the Shared Task Store', () => {
+  it('switches to the Get Organized tab, showing only the tools wired into the Shared Task Store', () => {
     renderHome();
-    fireEvent.click(screen.getByRole('tab', { name: 'Planning' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Get Organized' }));
 
-    expect(screen.getByRole('tab', { name: 'Planning' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: 'Get Organized' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('Everything Pile')).toBeInTheDocument();
     expect(screen.getByText('Task Breakdown')).toBeInTheDocument();
     expect(screen.getByText('Side Quest Log')).toBeInTheDocument();
@@ -87,7 +87,7 @@ describe('Home', () => {
     expect(onSelectTool).toHaveBeenCalledWith('pomodoro-timer');
   });
 
-  it('keeps the active-reminder badge working on the General Purpose tab', () => {
+  it('keeps the active-reminder badge working on the Everyday Helpers tab', () => {
     window.localStorage.setItem(
       'beths-gang:reminders',
       JSON.stringify([
@@ -104,32 +104,32 @@ describe('Home', () => {
     expect(screen.getByText('1')).toBeInTheDocument();
   });
 
-  it('remembers the Planning tab across Home unmounting and remounting (going back from a tool)', () => {
+  it('remembers the Get Organized tab across Home unmounting and remounting (going back from a tool)', () => {
     const onSelectTool = vi.fn();
     const { rerender } = render(<HomeOrNothing onSelectTool={onSelectTool} showHome />, { wrapper });
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Planning' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Get Organized' }));
     fireEvent.click(screen.getByText('Task Breakdown'));
 
     // Simulate App.tsx swapping Home out for the opened tool, then back again.
     rerender(<HomeOrNothing onSelectTool={onSelectTool} showHome={false} />);
     rerender(<HomeOrNothing onSelectTool={onSelectTool} showHome />);
 
-    expect(screen.getByRole('tab', { name: 'Planning' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: 'Get Organized' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('Everything Pile')).toBeInTheDocument();
   });
 
-  it('going back from a General Purpose tool still shows General Purpose (not stuck on a prior tab)', () => {
+  it('going back from an Everyday Helpers tool still shows Everyday Helpers (not stuck on a prior tab)', () => {
     const onSelectTool = vi.fn();
     const { rerender } = render(<HomeOrNothing onSelectTool={onSelectTool} showHome />, { wrapper });
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Planning' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'General Purpose' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Get Organized' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Everyday Helpers' }));
     fireEvent.click(screen.getByText('Pomodoro Timer'));
 
     rerender(<HomeOrNothing onSelectTool={onSelectTool} showHome={false} />);
     rerender(<HomeOrNothing onSelectTool={onSelectTool} showHome />);
 
-    expect(screen.getByRole('tab', { name: 'General Purpose' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: 'Everyday Helpers' })).toHaveAttribute('aria-pressed', 'true');
   });
 });

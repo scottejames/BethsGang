@@ -149,6 +149,37 @@ describe('RemindersContext (signed out)', () => {
     expect(result.current.reminders).toHaveLength(0);
   });
 
+  it('a repeating reminder missed for multiple days catches up in one silent jump, not a burst of duplicate due events', async () => {
+    const now = new Date('2026-07-08T09:00:00');
+    vi.setSystemTime(now);
+
+    // 50 hours overdue — computeNextOccurrence only advances one calendar day at a
+    // time, so a naive single-step catch-up would leave this reminder still in the
+    // past after the first fire, forcing it to fire again on the next 15-second
+    // check (and again after that) until it's finally caught up. Correct behavior:
+    // exactly one "due" event, and the reminder already sitting at a future
+    // occurrence right away — same as how a one-shot reminder catches up.
+    const overdueReminder = {
+      id: 'daily-1',
+      message: 'take meds',
+      fireAt: new Date(now.getTime() - 50 * 60 * 60 * 1000).toISOString(),
+      warnedForCurrentFireAt: false,
+      repeat: { kind: 'daily' as const },
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify([overdueReminder]));
+
+    const { result } = renderHook(() => useReminders(), { wrapper });
+
+    expect(result.current.firedEvents.filter((event) => event.kind === 'due')).toHaveLength(1);
+    expect(new Date(result.current.reminders[0].fireAt).getTime()).toBeGreaterThan(now.getTime());
+
+    // No further bursts on subsequent checks — it's already caught up.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
+    expect(result.current.firedEvents.filter((event) => event.kind === 'due')).toHaveLength(1);
+  });
+
   it('cancelReminder removes a reminder and dismissEvent removes a fired event', async () => {
     const now = new Date('2026-07-08T14:00:00');
     vi.setSystemTime(now);

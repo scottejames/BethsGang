@@ -56,6 +56,10 @@ function BrainDumpSorter() {
   const { output, loading, error, run } = useAiTool(meta.id);
   const { addTask } = useTaskStore();
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  // Guards against a fast double-click sending the same batch twice — see the
+  // identical guard (and its comment) in taskBreakdown/index.tsx for why this needs
+  // to be a ref rather than a state/draftTasks-null check.
+  const sentRef = useRef(false);
 
   const speechRecognitionSupported = Boolean(getSpeechRecognitionConstructor());
 
@@ -71,6 +75,7 @@ function BrainDumpSorter() {
   // from a previous brain dump, rather than the two piling up together.
   useEffect(() => {
     if (output === null) return;
+    sentRef.current = false;
     setSentMessage(null);
     if (output.trim().toUpperCase() === 'NONE') {
       setDraftTasks([]);
@@ -125,7 +130,8 @@ function BrainDumpSorter() {
   }
 
   function handleSend() {
-    if (!draftTasks) return;
+    if (!draftTasks || sentRef.current) return;
+    sentRef.current = true;
     const toSend = draftTasks.filter((draft) => draft.included && draft.text.trim());
     toSend.forEach((draft) => {
       addTask({ title: draft.text.trim(), projectId: undefined, size: 'small', category: 'later' });

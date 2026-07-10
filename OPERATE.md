@@ -186,7 +186,7 @@ week" — reach for CloudWatch Logs Insights in the console instead of eyeballin
 stream; the structured JSON shape means a simple `fields toolId, event | stats count()
 by toolId` query works directly.
 
-## Testing auth locally (`feature/user-accounts` branch)
+## Testing auth locally
 
 Auth (`amplify/auth/resource.ts`) needs a real Cognito user pool to test against — there's
 no local emulator for it. Use your one personal sandbox (`npx ampx sandbox` with no
@@ -238,7 +238,7 @@ One gotcha worth knowing if you're scripting against the Authenticator's form fi
 email input's `name` attribute is `"username"` on the Sign In tab but `"email"` on the
 Create Account tab — inconsistent between the two, easy to lose time to.
 
-## Testing per-user Reminder/Spoons persistence (same branch)
+## Testing per-user Reminder/Spoons persistence
 
 `Reminder` and `UserPreferences` are owner-scoped `a.model()`s — same sandbox setup as
 above, plus this specific check every time: **verify against the actual DynamoDB

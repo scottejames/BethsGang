@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAiTool } from '../../hooks/useAiTool';
 import { useTaskStore } from '../../context/TaskStoreContext';
 import { useToolNavigation } from '../../context/ToolNavigationContext';
@@ -20,6 +20,11 @@ function TaskBreakdown() {
   const { pendingBreakdownRequest, clearBreakdownRequest, navigateToTool } = useToolNavigation();
   const { addProject, addTask } = useTaskStore();
   const [origin, setOrigin] = useState<Origin | null>(null);
+  // Guards against a fast double-click sending the same breakdown twice — a ref
+  // (checked-and-set synchronously) rather than state, since two click handlers
+  // dispatched back-to-back can both run before React re-renders with a disabled
+  // button, and a state check would still see the stale pre-click value in that case.
+  const sentRef = useRef(false);
 
   // One-shot pickup of a handoff from Everything Pile's "Break down" button (see
   // ToolNavigationContext.tsx) — pre-fills the task text and remembers which project
@@ -39,6 +44,7 @@ function TaskBreakdown() {
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (task.trim()) {
+      sentRef.current = false;
       run(task.trim());
     }
   }
@@ -56,6 +62,8 @@ function TaskBreakdown() {
   // the task otherwise. Small and "now" by default, matching Task Breakdown's own
   // framing — these are "small, concrete, startable steps" you just asked for.
   function handleSendToEverythingPile() {
+    if (sentRef.current) return;
+    sentRef.current = true;
     const targetProjectId = origin ? origin.projectId : addProject(task.trim()).id;
     steps.forEach((step) => {
       addTask({ title: step, projectId: targetProjectId, size: 'small', category: 'now' });

@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTaskStore } from '../../context/TaskStoreContext';
+import { useUndoableDelete } from '../../hooks/useUndoableDelete';
+import { UndoToastStack } from '../../components/UndoToastStack';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
 
@@ -26,6 +28,10 @@ function SideQuestLog() {
   const [entries, setEntries] = useState<SidequestEntry[]>(loadEntries);
   const [text, setText] = useState('');
   const { addTask } = useTaskStore();
+  // Guards against a fast double-click promoting the same entry twice — same shape
+  // as the guard in taskBreakdown/index.tsx and brainDumpSorter/index.tsx (a ref, not
+  // state, since two click handlers can run back-to-back before a re-render).
+  const promotedIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
@@ -46,13 +52,32 @@ function SideQuestLog() {
     setEntries((current) => current.filter((entry) => entry.id !== id));
   }
 
+  // "Done"/"Bin it" are genuinely destructive (the entry's text is just gone) with
+  // no existing safety net — soft-delete with a brief undo window. "Make it a task"
+  // below deliberately doesn't go through this: its content survives as a task in
+  // Everything Pile, so there's nothing to undo in the same sense.
+  const { pending: pendingDeletes, requestDelete, undo, isPending } = useUndoableDelete<SidequestEntry>(
+    (entry) => removeEntry(entry.id),
+  );
+
+  function handleDelete(entry: SidequestEntry) {
+    requestDelete(entry.id, entry, entry.text);
+  }
+
   // Promotes into the Shared Task Store (see TaskStoreContext) rather than the log
   // being a dead end — lands project-less ("Everything Else" in Everything Pile),
   // small and "later" by default since it wasn't urgent enough to just do on the spot.
   function promoteEntry(entry: SidequestEntry) {
+    if (promotedIdsRef.current.has(entry.id)) return;
+    promotedIdsRef.current.add(entry.id);
     addTask({ title: entry.text, projectId: undefined, size: 'small', category: 'later' });
     removeEntry(entry.id);
   }
+
+  // Pending-delete entries disappear from view immediately (the undo toast is the
+  // only remaining trace) — the actual removal only happens once the undo window
+  // elapses with no undo.
+  const visibleEntries = entries.filter((entry) => !isPending(entry.id));
 
   return (
     <div className="tool-panel">
@@ -76,11 +101,11 @@ function SideQuestLog() {
         </button>
       </form>
 
-      {entries.length === 0 ? (
+      {visibleEntries.length === 0 ? (
         <p className="task-empty">Nothing logged yet — add a stray thought whenever one pulls at you.</p>
       ) : (
         <ul className="sidequest-list">
-          {entries.map((entry) => (
+          {visibleEntries.map((entry) => (
             <li key={entry.id} className="sidequest-item">
               <p className="sidequest-item-text">{entry.text}</p>
               <div className="sidequest-item-controls">
@@ -88,7 +113,7 @@ function SideQuestLog() {
                   type="button"
                   className="copy-button"
                   aria-label={`Mark "${entry.text}" done`}
-                  onClick={() => removeEntry(entry.id)}
+                  onClick={() => handleDelete(entry)}
                 >
                   Done
                 </button>
@@ -104,7 +129,7 @@ function SideQuestLog() {
                   type="button"
                   className="copy-button"
                   aria-label={`Bin "${entry.text}"`}
-                  onClick={() => removeEntry(entry.id)}
+                  onClick={() => handleDelete(entry)}
                 >
                   Bin it
                 </button>
@@ -113,6 +138,11 @@ function SideQuestLog() {
           ))}
         </ul>
       )}
+
+      <UndoToastStack
+        items={pendingDeletes.map((entry) => ({ id: entry.id, label: entry.label }))}
+        onUndo={undo}
+      />
     </div>
   );
 }

@@ -4,7 +4,9 @@ A single-page web app that helps people with ADHD get things done.  It's built a
 the app.
 
 Day-to-day build/test/run commands are in [`OPERATE.md`](./OPERATE.md). This file covers
-architecture, dependencies, and deployment.
+architecture, dependencies, and deployment. Coding standards for this stack (React/
+TypeScript, Amplify Gen2, testing, security) are in
+[`CODING_GUIDELINES.md`](./CODING_GUIDELINES.md).
 
 ## Architecture
 
@@ -30,15 +32,16 @@ architecture, dependencies, and deployment.
 - **Tool framework** — every tool lives in `src/tools/<tool-id>/` and exports a
   `ToolDefinition` (`meta` + `Component`). `src/tools/registry.ts` is the single list the
   UI reads from. Adding a tool never requires touching `App.tsx`, `Home.tsx`, or routing.
-- **Home screen layout** — `Home.tsx` renders two tabs, **General Purpose** and
-  **Planning** (`ToolMeta.category`, see below), each its own `.tool-grid`
-  (`grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))`) filtered from
-  `registry.ts` in registry order — no manual per-tool ordering *within* a tab, just
-  the one required category field deciding which tab a tool lands in. "Planning" is
-  specifically "wired into the Shared Task Store" (Everything Pile itself, Task
-  Breakdown, Side Quest Log, Brain Dump Sorter); everything else is "General Purpose",
-  including tools that are arguably "about getting things done" (e.g. Remind Me) but
-  aren't actually part of that pipeline. Reflows from 1 column on mobile up to 4 on
+- **Home screen layout** — `Home.tsx` renders two tabs, currently labeled **Everyday
+  Helpers** and **Get Organized** (`ToolMeta.category`: `'general'`/`'planning'`, see
+  below), each its own `.tool-grid` (`grid-template-columns: repeat(auto-fit,
+  minmax(220px, 1fr))`) filtered from `registry.ts` in registry order — no manual
+  per-tool ordering *within* a tab, just the one required category field deciding
+  which tab a tool lands in. The `'planning'` category is specifically "wired into the
+  Shared Task Store" (Everything Pile itself, Task Breakdown, Side Quest Log, Brain
+  Dump Sorter); everything else is `'general'`, including tools that are arguably
+  "about getting things done" (e.g. Remind Me) but aren't actually part of that
+  pipeline. Reflows from 1 column on mobile up to 4 on
   desktop with no media queries. Tool screens (`ToolShell`) keep a narrower 720px
   reading-width cap for forms/text/AI output; only `.home` gets the wider (1100px)
   cap, since a card grid doesn't have the same long-line-length
@@ -63,7 +66,7 @@ architecture, dependencies, and deployment.
   `useAiTool.ts`'s `run()` — so every current and future tool is covered automatically,
   no per-tool logging code required. See `OPERATE.md`'s "Viewing usage logs" for how to
   actually read what it collects.
-- **Auth** (`feature/user-accounts` branch, not yet on `main`) — `amplify/auth/resource.ts`
+- **Auth** — `amplify/auth/resource.ts`
   defines Cognito email/password auth via `defineAuth`. `src/context/AuthContext.tsx`
   reflects Amplify's own persisted session into React (same Context+Provider+hook shape
   as `EnergyContext`/`RemindersContext`), and `src/components/AccountButton.tsx` is the
@@ -77,7 +80,7 @@ architecture, dependencies, and deployment.
   each needed the more specific `--amplify-components-*` tokens, not the general
   `--amplify-colors-*` ones, to actually follow dark mode (see
   `designs/user-personalization.md` for the full explanation of why).
-- **Per-user persistence** (same branch) — `Reminder`, `UserPreferences`, `Project`,
+- **Per-user persistence** — `Reminder`, `UserPreferences`, `Project`,
   and `Task` are owner-scoped `a.model()`s in `amplify/data/resource.ts`
   (`allow.owner()`, distinct from `runAiTool`/`logEvent`'s public API key auth).
   `RemindersContext`/`EnergyContext`/`TaskStoreContext` use them via

@@ -262,7 +262,17 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
         if (working.repeat.kind === 'none') {
           continue; // one-shot, already fired — drop it
         }
-        const nextFireAt = computeNextOccurrence(new Date(working.fireAt), working.repeat);
+        // Keep advancing until the next occurrence is actually in the future — a
+        // reminder missed for several days (app closed, computer asleep) would
+        // otherwise only step forward by one occurrence per check here, still land
+        // in the past, and fire again on the very next 15-second check (and the one
+        // after that) until it's caught up: a burst of duplicate "due" events
+        // roughly 15 seconds apart instead of one. One fired event per reminder per
+        // check, always, matching how a one-shot reminder's catch-up already works.
+        let nextFireAt = computeNextOccurrence(new Date(working.fireAt), working.repeat);
+        while (nextFireAt.getTime() <= now) {
+          nextFireAt = computeNextOccurrence(nextFireAt, working.repeat);
+        }
         working = { ...working, fireAt: nextFireAt.toISOString(), warnedForCurrentFireAt: false };
       }
 

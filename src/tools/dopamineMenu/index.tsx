@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useUndoableDelete } from '../../hooks/useUndoableDelete';
+import { UndoToastStack } from '../../components/UndoToastStack';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
 
@@ -57,9 +59,17 @@ function DopamineMenu() {
     setNewText('');
   }
 
-  function handleRemove(id: string) {
-    setItems((current) => current.filter((item) => item.id !== id));
-    setRevealedId((current) => (current === id ? null : current));
+  // Delete had no confirmation or undo — a misclick permanently lost an item with
+  // no way back. Soft-delete with a brief undo window instead.
+  const { pending: pendingDeletes, requestDelete, undo, isPending } = useUndoableDelete<DopamineItem>(
+    (item) => {
+      setItems((current) => current.filter((existing) => existing.id !== item.id));
+    },
+  );
+
+  function handleRemove(item: DopamineItem) {
+    requestDelete(item.id, item, item.text);
+    setRevealedId((current) => (current === item.id ? null : current));
   }
 
   function handleMove(id: string, direction: -1 | 1) {
@@ -74,17 +84,22 @@ function DopamineMenu() {
   }
 
   function handleSurprise() {
-    if (items.length === 0) return;
+    const eligible = items.filter((item) => !isPending(item.id));
+    if (eligible.length === 0) return;
     // Avoid re-showing the same thing twice in a row when there's a choice not to.
-    const candidates = items.length > 1 ? items.filter((item) => item.id !== revealedId) : items;
+    const candidates = eligible.length > 1 ? eligible.filter((item) => item.id !== revealedId) : eligible;
     const pick = candidates[Math.floor(Math.random() * candidates.length)];
     setRevealedId(pick.id);
   }
 
   const revealedItem = items.find((item) => item.id === revealedId) ?? null;
+  // Pending-delete items disappear from view immediately (the undo toast is the
+  // only remaining trace) — the actual removal only happens once the undo window
+  // elapses with no undo.
+  const visibleItems = items.filter((item) => !isPending(item.id));
   // Nothing to hide when the list is empty — force the editor open so there's
   // always a visible way to add the very first item.
-  const showEditor = editing || items.length === 0;
+  const showEditor = editing || visibleItems.length === 0;
 
   return (
     <div className="tool-panel">
@@ -96,11 +111,11 @@ function DopamineMenu() {
 
       <div className="dopamine-top-row">
         <div className="tool-result-actions">
-          <button type="button" onClick={handleSurprise} disabled={items.length === 0}>
+          <button type="button" onClick={handleSurprise} disabled={visibleItems.length === 0}>
             🎲 Surprise me
           </button>
         </div>
-        {items.length > 0 && (
+        {visibleItems.length > 0 && (
           <button
             type="button"
             className="copy-button"
@@ -133,11 +148,11 @@ function DopamineMenu() {
             </button>
           </form>
 
-          {items.length === 0 ? (
+          {visibleItems.length === 0 ? (
             <p className="task-empty">Nothing on the menu yet — add something above.</p>
           ) : (
             <ul className="dopamine-list">
-              {items.map((item, index) => (
+              {visibleItems.map((item, index) => (
                 <li key={item.id} className="dopamine-item">
                   <p className="dopamine-item-text">{item.text}</p>
                   <div className="dopamine-item-controls">
@@ -154,7 +169,7 @@ function DopamineMenu() {
                       type="button"
                       className="copy-button"
                       aria-label={`Move "${item.text}" down`}
-                      disabled={index === items.length - 1}
+                      disabled={index === visibleItems.length - 1}
                       onClick={() => handleMove(item.id, 1)}
                     >
                       ↓
@@ -163,7 +178,7 @@ function DopamineMenu() {
                       type="button"
                       className="copy-button"
                       aria-label={`Delete "${item.text}"`}
-                      onClick={() => handleRemove(item.id)}
+                      onClick={() => handleRemove(item)}
                     >
                       Delete
                     </button>
@@ -174,6 +189,11 @@ function DopamineMenu() {
           )}
         </>
       )}
+
+      <UndoToastStack
+        items={pendingDeletes.map((entry) => ({ id: entry.id, label: entry.label }))}
+        onUndo={undo}
+      />
     </div>
   );
 }

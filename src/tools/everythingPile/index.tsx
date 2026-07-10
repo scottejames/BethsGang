@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useTaskStore } from '../../context/TaskStoreContext';
 import type { Project, Task, TaskCategory, TaskSize } from '../../context/TaskStoreContext';
 import { useToolNavigation } from '../../context/ToolNavigationContext';
+import { useUndoableDelete } from '../../hooks/useUndoableDelete';
+import { UndoToastStack } from '../../components/UndoToastStack';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
 
@@ -136,6 +138,17 @@ function EverythingPile() {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [taskDraft, setTaskDraft] = useState<TaskEditDraft>({ title: '', size: 'small', projectId: undefined });
 
+  // Task delete is genuinely destructive with no existing safety net (unlike
+  // project delete, which detaches rather than destroys its tasks) — soft-delete
+  // with a brief undo window instead of an instant, unrecoverable removal.
+  const { pending: pendingDeletes, requestDelete, undo, isPending } = useUndoableDelete<Task>(
+    (task) => deleteTask(task.id),
+  );
+
+  function handleDeleteTask(task: Task) {
+    requestDelete(task.id, task, task.title);
+  }
+
   function handleAddProject(event: React.FormEvent) {
     event.preventDefault();
     const trimmed = newProjectName.trim();
@@ -225,18 +238,23 @@ function EverythingPile() {
     setExpandedGroupIds((current) => new Set(current).add(project.id));
   }
 
+  // Pending-delete tasks disappear from the tree immediately (the undo toast is the
+  // only remaining trace of them) — the actual TaskStoreContext delete only happens
+  // once the undo window elapses with no undo.
+  const visibleTasks = tasks.filter((task) => !isPending(task.id));
+
   const groups: TaskGroup[] = [
     {
       id: UNFILED_ID,
       name: UNFILED_NAME,
       project: undefined,
-      tasks: sortTasks(tasks.filter((task) => !task.projectId)),
+      tasks: sortTasks(visibleTasks.filter((task) => !task.projectId)),
     },
     ...projects.map((project) => ({
       id: project.id,
       name: project.name,
       project,
-      tasks: sortTasks(tasks.filter((task) => task.projectId === project.id)),
+      tasks: sortTasks(visibleTasks.filter((task) => task.projectId === project.id)),
     })),
   ];
 
@@ -438,7 +456,7 @@ function EverythingPile() {
                               >
                                 📁
                               </button>
-                              <button type="button" className="copy-button" onClick={() => deleteTask(task.id)}>
+                              <button type="button" className="copy-button" onClick={() => handleDeleteTask(task)}>
                                 Delete
                               </button>
                             </>
@@ -453,6 +471,11 @@ function EverythingPile() {
           );
         })}
       </div>
+
+      <UndoToastStack
+        items={pendingDeletes.map((entry) => ({ id: entry.id, label: entry.label }))}
+        onUndo={undo}
+      />
     </div>
   );
 }

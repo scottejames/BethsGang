@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import * as amplifyAuth from 'aws-amplify/auth';
@@ -176,6 +176,45 @@ describe('EverythingPile', () => {
 
     expect(within(group('Everything Else')).queryByText('cancel gym membership')).not.toBeInTheDocument();
     expect(within(group('Everything Else')).getByText('Nothing here.')).toBeInTheDocument();
+  });
+
+  it('deleting a task shows an undo toast, and Undo restores the task', () => {
+    renderTool();
+    addTaskTo('Everything Else', 'cancel gym membership', 'Now');
+
+    const item = within(group('Everything Else')).getByText('cancel gym membership').closest('li') as HTMLElement;
+    fireEvent.click(within(item).getByRole('button', { name: 'Delete' }));
+
+    expect(within(group('Everything Else')).queryByText('cancel gym membership')).not.toBeInTheDocument();
+    expect(screen.getByText('"cancel gym membership" deleted.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+
+    expect(within(group('Everything Else')).getByText('cancel gym membership')).toBeInTheDocument();
+    expect(screen.queryByText('"cancel gym membership" deleted.')).not.toBeInTheDocument();
+  });
+
+  it('a deleted task is actually removed once the undo window elapses with no undo', () => {
+    vi.useFakeTimers();
+    try {
+      renderTool();
+      addTaskTo('Everything Else', 'cancel gym membership', 'Now');
+
+      const item = within(group('Everything Else')).getByText('cancel gym membership').closest('li') as HTMLElement;
+      fireEvent.click(within(item).getByRole('button', { name: 'Delete' }));
+      expect(screen.getByText('"cancel gym membership" deleted.')).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(5000);
+      });
+
+      expect(screen.queryByText('"cancel gym membership" deleted.')).not.toBeInTheDocument();
+      // Re-expanding (a fresh render path, not just the already-filtered list) confirms
+      // the task is actually gone from the store, not just still hidden by the toast.
+      expect(within(group('Everything Else')).getByText('Nothing here.')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('deleting a project moves its tasks into Everything Else instead of losing them', () => {

@@ -10,8 +10,8 @@ interface HomeProps {
 }
 
 const TABS: { id: ToolCategory; label: string }[] = [
-  { id: 'general', label: 'General Purpose' },
-  { id: 'planning', label: 'Planning' },
+  { id: 'general', label: 'Everyday Helpers' },
+  { id: 'planning', label: 'Get Organized' },
 ];
 
 export function Home({ onSelectTool }: HomeProps) {
@@ -40,13 +40,16 @@ export function Home({ onSelectTool }: HomeProps) {
       </div>
       <span className="home-rainbow-bar" aria-hidden="true" />
 
-      <div className="home-tabs" role="tablist">
+      {/* Not role="tablist"/"tab" — that ARIA pattern implies arrow-key navigation
+          and an aria-controls-linked tabpanel, neither of which this simple
+          category filter implements. A labeled toggle-button group is the accurate,
+          simpler contract for what this actually is. */}
+      <div className="home-tabs" role="group" aria-label="Tool category">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
-            role="tab"
-            aria-selected={activeCategory === tab.id}
+            aria-pressed={activeCategory === tab.id}
             className={`home-tab${activeCategory === tab.id ? ' home-tab-active' : ''}`}
             onClick={() => setActiveCategory(tab.id)}
           >

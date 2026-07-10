@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import * as amplifyAuth from 'aws-amplify/auth';
@@ -117,6 +117,31 @@ describe('SideQuestLog', () => {
 
     expect(screen.queryByText('worry about nothing')).not.toBeInTheDocument();
     expect(screen.getByTestId('task-spy').textContent).toBe('');
+  });
+
+  it('Done shows an undo toast; Undo restores the entry, and it is only actually removed once the window elapses unnoticed', () => {
+    vi.useFakeTimers();
+    try {
+      renderTool();
+      logEntry('email the accountant');
+
+      fireEvent.click(screen.getByLabelText('Mark "email the accountant" done'));
+      expect(screen.queryByText('email the accountant')).not.toBeInTheDocument();
+      expect(screen.getByText('"email the accountant" deleted.')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+      expect(screen.getByText('email the accountant')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByLabelText('Mark "email the accountant" done'));
+      act(() => {
+        vi.advanceTimersByTime(5000);
+      });
+      expect(screen.queryByText('"email the accountant" deleted.')).not.toBeInTheDocument();
+      const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? '[]');
+      expect(stored.some((entry: { text: string }) => entry.text === 'email the accountant')).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('turning an entry into a task promotes it into the Shared Task Store, project-less, small and later', () => {

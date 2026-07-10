@@ -69,6 +69,28 @@ describe('parseReminderText', () => {
     expect(result.fireAt.getTime()).toBe(now.getTime() + 2 * 60 * 60 * 1000);
   });
 
+  it('fails with a specific reason for a daily repeat with no time given', () => {
+    const now = new Date('2026-07-08T08:00:00');
+    const result = parseReminderText('remind me every day to take meds', now);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(
+      'Couldn\'t work out what time to remind you each day — try adding one, like "every day at 9am".',
+    );
+  });
+
+  it('fails with the same specific reason for a weekdays repeat with no time given', () => {
+    const now = new Date('2026-07-08T08:00:00');
+    const result = parseReminderText('remind me every weekday to stand up', now);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(
+      'Couldn\'t work out what time to remind you each day — try adding one, like "every day at 9am".',
+    );
+  });
+
   it('parses a weekdays repeat with an ambiguous morning clock time', () => {
     // Asked at 8am, "at 9" should mean 9am (soonest), not 9pm.
     const now = new Date('2026-07-08T08:00:00');

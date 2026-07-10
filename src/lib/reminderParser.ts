@@ -229,7 +229,10 @@ export function parseReminderText(text: string, now: Date = new Date()): ParsedR
     const unitMs = repeat.unit === 'hours' ? 60 * 60 * 1000 : 60 * 1000;
     fireAt = new Date(now.getTime() + repeat.amount * unitMs);
   } else if (repeat.kind === 'daily' || repeat.kind === 'weekdays') {
-    fireAt = now;
+    return {
+      ok: false,
+      reason: "Couldn't work out what time to remind you each day — try adding one, like \"every day at 9am\".",
+    };
   } else {
     return { ok: false, reason: "Couldn't work out when to remind you — try including a time, like \"in 20 mins\" or \"at 5:30\"." };
   }
