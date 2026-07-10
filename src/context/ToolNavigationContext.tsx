@@ -19,7 +19,7 @@ interface ToolNavigationContextValue {
   pendingBreakdownRequest: TaskBreakdownRequest | null;
   requestTaskBreakdown: (request: TaskBreakdownRequest) => void;
   clearBreakdownRequest: () => void;
-  // Which of Home's two tabs was showing (see TABS in Home.tsx for their current
+  // Which of Home's tabs was showing (see TABS in Home.tsx for their current
   // labels). Lives here rather than as local state in Home.tsx specifically so it
   // survives Home unmounting when a tool opens — without this, going back from a
   // tool always landed back on whichever tab was first (Home's local state

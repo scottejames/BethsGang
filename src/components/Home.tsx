@@ -12,6 +12,7 @@ interface HomeProps {
 const TABS: { id: ToolCategory; label: string }[] = [
   { id: 'general', label: 'Everyday Helpers' },
   { id: 'planning', label: 'Get Organized' },
+  { id: 'study', label: 'Study Help' },
 ];
 
 export function Home({ onSelectTool }: HomeProps) {

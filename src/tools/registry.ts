@@ -11,6 +11,8 @@ import { everythingPileTool } from './everythingPile';
 import { dopamineMenuTool } from './dopamineMenu';
 import { sideQuestLogTool } from './sideQuestLog';
 import { brainDumpSorterTool } from './brainDumpSorter';
+import { essayPhraseBankTool } from './essayPhraseBank';
+import { assignmentBreakdownTool } from './assignmentBreakdown';
 
 // To add a new tool: create a folder under src/tools with a meta.ts + index.tsx,
 // then list it here. That's the entire integration surface for the UI.
@@ -27,6 +29,8 @@ export const tools: ToolDefinition[] = [
   dopamineMenuTool,
   sideQuestLogTool,
   brainDumpSorterTool,
+  essayPhraseBankTool,
+  assignmentBreakdownTool,
 ];
 
 export function getTool(id: string): ToolDefinition | undefined {

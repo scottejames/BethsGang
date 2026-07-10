@@ -52,6 +52,12 @@ Rewrite each one as a short, concrete task title in a few words — not a full s
 Format as a numbered list ("1. ...", "2. ...", "3. ..."), one task per line, in the order they were mentioned in the text. If there is genuinely nothing actionable in the text, respond with exactly: NONE
 Do not add commentary, headers, or explanations — respond with only the numbered list, or the single word NONE.`,
 
+  'assignment-breakdown': `You help students with ADHD or executive-function difficulties turn a school or university assignment into small, concrete, startable steps.
+You will be given the assignment's name and its instructions or brief, which may describe the task, requirements, word count, format, marking criteria, or a deadline.
+Read the instructions and produce a short ordered checklist of 4-10 concrete steps covering the parts of completing this specific assignment that actually apply — e.g. understanding the brief, researching, planning or outlining, drafting, revising, formatting or referencing, and submitting — but skip any stage the instructions make clearly irrelevant (a problem set needs no essay-drafting steps; a lab report needs no thesis statement).
+Each step should be small enough to start immediately, described as a physical or concrete action (not "plan" or "think about").
+Do not add commentary, encouragement, or headers — respond with the checklist only, one step per line, formatted as "1. ...".`,
+
   // Internal-only: no frontend tile of its own (never appears in registry.ts). Called
   // directly by Tone Checker's screenshot feature to turn an image into plain text, which
   // then flows through the normal 'tone-checker' prompt unchanged — this prompt only
@@ -183,6 +189,30 @@ export function buildIsThisMadMessage(rawInput: string): string {
     .join('\n\n');
 }
 
+interface AssignmentBreakdownInput {
+  assignmentName: string;
+  instructions: string;
+}
+
+export function buildAssignmentBreakdownMessage(rawInput: string): string {
+  let parsed: Partial<AssignmentBreakdownInput>;
+  try {
+    parsed = JSON.parse(rawInput);
+  } catch {
+    parsed = { instructions: rawInput };
+  }
+
+  const assignmentName = parsed.assignmentName?.trim();
+  const instructions = parsed.instructions ?? rawInput;
+
+  return [
+    assignmentName ? `Assignment name: ${assignmentName}` : undefined,
+    `Instructions:\n"""\n${instructions}\n"""`,
+  ]
+    .filter((line): line is string => Boolean(line))
+    .join('\n\n');
+}
+
 const IMAGE_MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
 type ImageMediaType = (typeof IMAGE_MEDIA_TYPES)[number];
 
@@ -221,6 +251,7 @@ const USER_MESSAGE_BUILDERS: Record<string, (rawInput: string) => string> = {
   'tone-checker': buildToneCheckerMessage,
   'call-script': buildCallScriptMessage,
   'is-this-mad': buildIsThisMadMessage,
+  'assignment-breakdown': buildAssignmentBreakdownMessage,
 };
 
 // Every AI tool request is wrapped by useAiTool.ts as {spoons, input} — spoons

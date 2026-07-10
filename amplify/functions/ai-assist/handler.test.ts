@@ -11,6 +11,7 @@ process.env.ANTHROPIC_API_KEY = 'test-key-not-real';
 
 import { describe, expect, it } from 'vitest';
 import {
+  buildAssignmentBreakdownMessage,
   buildCallScriptMessage,
   buildEnergyInstruction,
   buildIsThisMadMessage,
@@ -170,6 +171,33 @@ describe('buildIsThisMadMessage', () => {
   it('falls back to treating a non-JSON string as the raw message', () => {
     const message = buildIsThisMadMessage('just a plain pasted message');
     expect(message).toContain('just a plain pasted message');
+  });
+});
+
+describe('buildAssignmentBreakdownMessage', () => {
+  it('includes the assignment name and instructions when both are provided', () => {
+    const raw = JSON.stringify({
+      assignmentName: 'Essay: The Causes of WWI',
+      instructions: '2000 words, due Friday, cite at least 5 sources.',
+    });
+
+    const message = buildAssignmentBreakdownMessage(raw);
+
+    expect(message).toContain('Essay: The Causes of WWI');
+    expect(message).toContain('2000 words, due Friday, cite at least 5 sources.');
+  });
+
+  it('omits the assignment name line when it is empty', () => {
+    const raw = JSON.stringify({ assignmentName: '', instructions: 'Solve problems 1-10.' });
+    const message = buildAssignmentBreakdownMessage(raw);
+
+    expect(message).toContain('Solve problems 1-10.');
+    expect(message).not.toContain('Assignment name');
+  });
+
+  it('falls back to treating a non-JSON string as the raw instructions', () => {
+    const message = buildAssignmentBreakdownMessage('just plain pasted instructions');
+    expect(message).toContain('just plain pasted instructions');
   });
 });
 

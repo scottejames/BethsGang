@@ -32,16 +32,17 @@ TypeScript, Amplify Gen2, testing, security) are in
 - **Tool framework** — every tool lives in `src/tools/<tool-id>/` and exports a
   `ToolDefinition` (`meta` + `Component`). `src/tools/registry.ts` is the single list the
   UI reads from. Adding a tool never requires touching `App.tsx`, `Home.tsx`, or routing.
-- **Home screen layout** — `Home.tsx` renders two tabs, currently labeled **Everyday
-  Helpers** and **Get Organized** (`ToolMeta.category`: `'general'`/`'planning'`, see
-  below), each its own `.tool-grid` (`grid-template-columns: repeat(auto-fit,
-  minmax(220px, 1fr))`) filtered from `registry.ts` in registry order — no manual
-  per-tool ordering *within* a tab, just the one required category field deciding
-  which tab a tool lands in. The `'planning'` category is specifically "wired into the
-  Shared Task Store" (Everything Pile itself, Task Breakdown, Side Quest Log, Brain
-  Dump Sorter); everything else is `'general'`, including tools that are arguably
-  "about getting things done" (e.g. Remind Me) but aren't actually part of that
-  pipeline. Reflows from 1 column on mobile up to 4 on
+- **Home screen layout** — `Home.tsx` renders three tabs, currently labeled **Everyday
+  Helpers**, **Get Organized**, and **Study Help** (`ToolMeta.category`:
+  `'general'`/`'planning'`/`'study'`, see below), each its own `.tool-grid`
+  (`grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))`) filtered from
+  `registry.ts` in registry order — no manual per-tool ordering *within* a tab, just
+  the one required category field deciding which tab a tool lands in. The `'planning'`
+  category is specifically "wired into the Shared Task Store" (Everything Pile itself,
+  Task Breakdown, Side Quest Log, Brain Dump Sorter); `'study'` is for school/essay-
+  writing tools (Essay Phrase Bank, Assignment Breakdown); everything else is `'general'`,
+  including tools that are arguably "about getting things done" (e.g. Remind Me) but
+  aren't actually part of the planning pipeline. Reflows from 1 column on mobile up to 4 on
   desktop with no media queries. Tool screens (`ToolShell`) keep a narrower 720px
   reading-width cap for forms/text/AI output; only `.home` gets the wider (1100px)
   cap, since a card grid doesn't have the same long-line-length
@@ -208,8 +209,8 @@ gets added later.
 ## Adding a new tool
 
 1. Create `src/tools/<tool-id>/meta.ts` exporting a `ToolMeta` (id, name, tagline, icon,
-   and `category: 'planning' | 'general'` — see "Home screen layout" below for what
-   decides which one).
+   and `category: 'planning' | 'general' | 'study'` — see "Home screen layout" below
+   for what decides which one).
 2. Create `src/tools/<tool-id>/index.tsx` exporting a `ToolDefinition` (`meta` + a React
    component). Use `useAiTool(meta.id)` from `src/hooks/useAiTool.ts` if the tool calls
    Claude.
@@ -219,7 +220,7 @@ gets added later.
 5. If the tool needs no AI at all, it can skip step 4 entirely and just do its own thing
    client-side.
 
-That's it — `Home.tsx` renders every tool from `registry.ts` into whichever of its two
+That's it — `Home.tsx` renders every tool from `registry.ts` into whichever of its
 tabs matches `meta.category` (see "Home screen layout" below); there's no separate
 per-tool ordering step within a tab to remember, just that one required field.
 
@@ -300,3 +301,14 @@ Ideas for future tools, and what's up next, are tracked in [`TODO.md`](./TODO.md
   `public/apple-touch-icon.png`) was supplied directly by the project owner. Processed
   from the original JPEG with a flood-fill script (background trimmed to transparency,
   not just cropped) and palette-quantized to keep file size down.
+- The Essay Phrase Bank tool (`src/tools/essayPhraseBank/phrases.ts`) is original text,
+  not copied from anywhere — but its category list (and the general kind of thing each
+  category covers, e.g. hedging a claim, conceding a counterargument) took inspiration
+  from how existing academic-writing guides carve up the same territory:
+  [Academic Phrasebank](https://www.phrasebank.manchester.ac.uk/) (University of
+  Manchester), [Transitional Devices](https://owl.purdue.edu/owl/general_writing/mechanics/transitions_and_transitional_devices/transitional_devices.html)
+  (Purdue OWL), and [UEfAP](https://uefap.org/) (Andy Gillett). None of their text is
+  reproduced here — Purdue OWL's own terms, for instance, say their material "may not
+  be published, reproduced, broadcast, rewritten, or redistributed without permission,"
+  and Manchester's Phrasebank is for individual use in your own writing, not for
+  republishing in another tool — so every phrase in this tool was written fresh for it.

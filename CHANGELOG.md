@@ -1374,3 +1374,65 @@ All notable changes to this project are documented here.
     session via `npm install --no-save` — not a new committed project dependency)
     driving the real dev server with the AppSync call intercepted for the
     double-click repro, same approach already used elsewhere in this project.
+
+### Added
+
+- **Home split into a third tab: "Study Help"**, and a new **Essay Phrase Bank**
+  tool within it — requested directly, to help with essay writing. `ToolCategory`
+  gained a third value, `'study'` (`src/tools/types.ts`), alongside the existing
+  `'planning'`/`'general'`; `Home.tsx`'s `TABS` array gained the matching entry.
+  Essay Phrase Bank itself is entirely client-side and deterministic (no AI Lambda
+  call — per standing preference for time/correctness-critical, reference-style
+  content over an AI round-trip): browse ~19 categories of sentence-starter
+  phrases (opening an essay, giving an example, being critical of a source,
+  conceding a counterargument, hedging a claim, concluding, etc.), or search
+  across all of them, then copy a phrase to fill in the blanks of. Built and
+  verified on a `study-help-tool` branch (a bug-fix pass was running concurrently
+  on `main`'s working directory, so this used a separate branch to avoid
+  colliding with in-progress uncommitted files there).
+  - Every phrase is original text, not copied from anywhere — see README.md's
+    "Assets" section for why (several of the existing academic-writing-phrase
+    resources explicitly prohibit redistributing their material) and which
+    sources' category structure (not text) it took inspiration from.
+  - Verified with a new `index.test.tsx` (default category, switching categories,
+    searching across all categories, no-results state, clipboard copy) and by
+    driving the real running app with Playwright — including granting the headless
+    browser clipboard permissions, since the copy button's `navigator.clipboard`
+    call otherwise silently no-ops without them.
+- **Expanded Essay Phrase Bank's phrase set** — the initial set felt limiting;
+  researched how other academic-writing guides (Academic Phrasebank, Purdue OWL's
+  transitional devices, UEfAP) structure their categories for ideas on what was
+  missing, then wrote original phrases to fill the gaps rather than reusing any
+  of their text. Added 7 new categories (defining a term, outlining essay
+  structure, quantifying evidence, conceding a counterargument, emphasizing a
+  point, generalizing, restating an idea differently) and 2-3 more phrases to
+  most of the original 12, without changing any existing category's `id` or
+  first phrase (both of which `index.test.tsx` depends on).
+- **Assignment Breakdown** tool, added to the Study Help tab — requested directly.
+  Takes an assignment name plus its instructions/brief, and (AI-backed, unlike
+  Essay Phrase Bank) returns a short ordered checklist of concrete steps, tailored
+  to school/university assignments specifically rather than generic tasks —
+  covers understanding the brief, researching, outlining, drafting, revising,
+  formatting/referencing, and submitting where each actually applies, skipping
+  stages an assignment's own instructions rule out (e.g. no drafting steps for a
+  problem set). Once steps come back, a button sends them straight into
+  Everything Pile as their own new project, named after the assignment.
+  - `SYSTEM_PROMPTS['assignment-breakdown']` and a new `buildAssignmentBreakdownMessage`
+    (`amplify/functions/ai-assist/handler.ts`) follow the existing two-field JSON
+    payload pattern (see Reply Starter/Call Script) rather than changing the
+    shared `runAiTool(toolId, input)` schema.
+  - `handleSendToEverythingPile` always creates a brand new project via
+    `addProject(assignmentName)` — unlike Task Breakdown, this tool has no
+    "handoff from an existing Everything Pile project" origin to send steps back
+    into instead, since an assignment breakdown always starts fresh from a brief.
+    Reuses Task Breakdown's one-shot `sentRef` guard against a fast double-click
+    creating duplicate projects (see the double-click QA fix earlier in this
+    file) — new code, not shared code, since neither tool component imports from
+    the other.
+  - Verified with new tests in `handler.test.ts` (the message builder) and
+    `assignmentBreakdown/index.test.tsx` (submit-button gating, step parsing,
+    payload shape sent to the AI, and the Everything Pile handoff creating a
+    correctly-named project holding the steps) and by driving the real running
+    app end to end with Playwright — including the actual GraphQL `runAiTool`
+    call, network-mocked (same approach as the earlier double-click QA pass) so
+    the check never hits the real Anthropic-backed Lambda.
