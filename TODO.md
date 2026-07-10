@@ -256,6 +256,21 @@ mechanics — most of these are just a new system prompt away.
       and verified against the real running app with Playwright, AppSync intercepted,
       confirming sent tasks land in Everything Pile with the edited text and right
       size/category.
+- [x] **Cook's Corner** — requested directly: list what's in the fridge, get a
+      handful of dinner ideas built around it (dry-store staples like rice/pasta
+      assumed, no need to list them), say which one sounds good, get the full
+      recipe back — with a "(Shop: ...)" note on either the idea or the recipe
+      when it would genuinely need just a couple of simple extras (cream, a
+      lemon). AI-backed, reusing Essay Structure Planner's exact revision pattern:
+      one `SYSTEM_PROMPTS['cooks-corner']` entry handles both the first-pass
+      meal-ideas request and the follow-up (previous output sent back as
+      `currentMealIdeas` + the user's `feedback`), with the system prompt itself
+      deciding whether feedback means "elaborate this one into a recipe" or
+      "revise the list of ideas" — no separate tool or endpoint needed for the
+      two response shapes, told apart client-side by whether a `Recipe:` line is
+      present. Covered by `handler.test.ts` (both message shapes) and
+      `cooksCorner/index.test.tsx` (submit gating, meal-idea/shop-note parsing,
+      the revision payload, feedback field clearing, and recipe rendering).
 
 ## Later / stretch ideas
 

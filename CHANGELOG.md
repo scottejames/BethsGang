@@ -1539,3 +1539,26 @@ All notable changes to this project are documented here.
     entry 7 minutes from real wall-clock time and confirming the alert banner
     appeared globally, including on the Home screen with Timetable itself closed,
     in both light and dark theme.
+
+- **Cook's Corner** tool — describe what's in the fridge, get a handful of dinner
+  ideas built around it, then say which one sounds good to get the full recipe.
+  Assumes access to a regular dry store of non-perishable staples (rice, pasta,
+  flour, oil, tinned tomatoes, onions, garlic, dried herbs/spices) without the
+  user needing to list them, and will flag a meal idea with a "(Shop: ...)" note
+  when it would genuinely need just one or two simple extras (e.g. cream, a
+  lemon) rather than proposing anything that needs a real shopping list.
+  - Follows Essay Structure Planner's revision pattern exactly: the same
+    `cooks-corner` AI call is reused for both the first-pass meal-ideas request
+    and the follow-up, sending the previous output back as `currentMealIdeas`
+    alongside the user's `feedback`. The system prompt (not the frontend) decides
+    what the feedback means — naming a meal ("the chicken piccata sounds good")
+    returns a full `Recipe:`/`Ingredients:`/`Method:`/`Shop:` block for just that
+    meal, while anything else (more variety, ruling out an ingredient) is treated
+    as instructions to revise the meal-ideas list itself. One `runAiTool` call,
+    two possible response shapes, told apart client-side by whether the response
+    contains a `Recipe:` line.
+  - Verified with `handler.test.ts` (`buildCooksCornerMessage`'s first-pass vs.
+    revision message shapes) and `cooksCorner/index.test.tsx` (submit gating, the
+    parsed meal-ideas list including its optional shop note, the revision payload
+    sent to the AI, the feedback field clearing after an update, and the parsed
+    recipe rendering).
