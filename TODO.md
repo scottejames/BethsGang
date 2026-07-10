@@ -256,11 +256,22 @@ mechanics — most of these are just a new system prompt away.
       and verified against the real running app with Playwright, AppSync intercepted,
       confirming sent tasks land in Everything Pile with the edited text and right
       size/category.
+- [x] **How Long Will This Take?** (was "How Long Will This Actually Take" below) —
+      time-blindness estimator, Everyday Helpers tab. Describe a task in a sentence;
+      get back a realistic estimate, a buffer (with a short concrete reason why),
+      and a single rounded total to actually block off — three structured fields,
+      same `dl`/`tool-result-fields` pattern as Call Script/Tone Checker. AI-backed:
+      new `SYSTEM_PROMPTS['time-estimator']` entry, no `USER_MESSAGE_BUILDERS`
+      needed (plain task text passed straight through, like Task Breakdown).
+      Covered by `src/tools/timeEstimator/index.test.tsx` (submit gating, the three
+      fields rendering, the raw-string payload actually sent, and the plain-text
+      fallback for an off-format response) and verified against the real running
+      app with Playwright, AppSync intercepted.
 
 ## Later / stretch ideas
 
-- [ ] **How Long Will This Actually Take** — time-blindness estimator: describe a task,
-      get a realistic time estimate plus a buffer.
+~~- [ ] **How Long Will This Actually Take**~~ — shipped as **How Long Will This
+      Take?**, Everyday Helpers tab (see Shipped below).
 ~~- [ ] **Brain Dump Sorter**~~ — shipped, see Shipped below (built to a simpler,
       directly-requested spec — select/edit/send to Everything Pile rather than the
       four-way Do Now/Someday/Reference/Not Actually Yours split originally sketched

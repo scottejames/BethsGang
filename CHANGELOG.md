@@ -1539,3 +1539,23 @@ All notable changes to this project are documented here.
     entry 7 minutes from real wall-clock time and confirming the alert banner
     appeared globally, including on the Home screen with Timetable itself closed,
     in both light and dark theme.
+
+- **How Long Will This Take?** tool, added to the Everyday Helpers tab — closes the
+  "How Long Will This Actually Take" idea from `TODO.md`'s backlog, requested
+  directly. Describe a task in a sentence; get back a realistic time estimate, a
+  buffer (with a short concrete reason why, e.g. "the post office queue is
+  unpredictable"), and a single rounded total to actually block off — three
+  structured fields (`Realistic estimate` / `Buffer` / `Block off`), the same
+  `dl`/`.tool-result-fields` shape already used by Call Script and Tone Checker.
+  - AI-backed via a new `SYSTEM_PROMPTS['time-estimator']` entry — no
+    `USER_MESSAGE_BUILDERS` needed, since the input is just the task description
+    passed straight through (same shape as Task Breakdown). The prompt explicitly
+    asks for the overhead people typically forget (setup, travel, minor snags),
+    not the optimistic best case, since underestimating is the actual failure mode
+    this tool exists to correct.
+  - Verified with `timeEstimator/index.test.tsx` (submit-button gating, the three
+    fields rendering with the exact labels, the raw task string sent as the
+    payload — unwrapped, not JSON — and the plain-text fallback for a response
+    that doesn't match the expected format) and by driving the real running app
+    with Playwright, AppSync intercepted so the check never hits the real
+    Anthropic-backed Lambda.
