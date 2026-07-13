@@ -282,6 +282,36 @@ frontend `JSON.stringify` a small payload into `input`, and register a parser fo
 `toolId` in `USER_MESSAGE_BUILDERS` in `ai-assist/handler.ts` to turn it into the actual
 prompt. See `src/tools/replyStarter/` and its entry in `USER_MESSAGE_BUILDERS` for the
 pattern. Tools that don't register a builder just get `input` passed straight through.
+`parseWithFallback`/`joinLabeledLines` (top of `ai-assist/handler.ts`) are the shared
+try-JSON-else-fall-back-to-one-field and filter-and-join-labeled-lines steps every
+existing `buildXMessage` uses — reach for those instead of writing the try/catch and
+`.filter(Boolean).join('\n\n')` by hand again.
+
+A handful of shared frontend helpers exist specifically so a new tool doesn't need to
+reinvent a pattern that already has several instances in the codebase — reach for these
+before copying an existing tool's version of the same logic:
+- `src/lib/parseLabeledOutput.ts` (`makeLabelGetter`/`getBulletList`) — for a tool whose
+  AI response is a fixed set of `Label: value` lines (Tone Checker, Call Script, Is This
+  Mad?, Time Estimator all use this).
+- `src/lib/parseNumberedList.ts` — for a tool whose AI response is a numbered list; splits
+  on a lookahead for the *next* numbered item rather than by line, so a multi-line item
+  doesn't get silently split in two.
+- `src/components/StructuredResult.tsx` — pairs with either of the above: renders a `<dl>`
+  of fields if any parsed, or the raw output as a plain-text fallback if none did.
+- `src/hooks/useOnceGuard.ts` — the ref-based (not state-based) guard against a fast
+  double-click firing a one-shot action (e.g. "Send to Everything Pile") twice.
+- `src/hooks/useCopyFeedback.ts` — copy-to-clipboard with a reverting "Copied" label.
+- `src/lib/localStorage.ts` (`readStored<T>`) — a `localStorage`-backed tool's read of a
+  JSON array, falling back to `[]` on anything missing or malformed.
+
+A signed-in/signed-out context (see "Per-user persistence" above) additionally has
+`src/hooks/useSignedOutMirror.ts` for the mirror-to-`localStorage`-while-signed-out /
+revert-on-sign-out effect every one of them needs — see `RemindersContext.tsx`,
+`TaskStoreContext.tsx`, or `TimetableContext.tsx` for how it's wired in. The
+`observeQuery` subscription and first-sign-in migration effects are deliberately *not*
+behind a shared hook yet — each context's model is different enough that a generic
+version would need real per-model configuration, and three copies of that specific part
+wasn't yet a strong enough case to build it ahead of time.
 
 Tools are normally mounted/unmounted as you navigate — fine for stateless tools, but wrong
 for anything that needs to keep running in the background (e.g. Distract Me's audio

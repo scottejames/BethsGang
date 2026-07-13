@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAiTool } from '../../hooks/useAiTool';
 import { useTaskStore } from '../../context/TaskStoreContext';
+import { useOnceGuard } from '../../hooks/useOnceGuard';
+import { parseNumberedList } from '../../lib/parseNumberedList';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
 
@@ -8,10 +10,6 @@ interface DraftTask {
   id: string;
   text: string;
   included: boolean;
-}
-
-function cleanStep(step: string): string {
-  return step.replace(/^\d+\.\s*/, '');
 }
 
 // The Web Speech API has no dedicated entry in TypeScript's bundled DOM lib (only a
@@ -56,10 +54,10 @@ function BrainDumpSorter() {
   const { output, loading, error, run } = useAiTool(meta.id);
   const { addTask } = useTaskStore();
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
-  // Guards against a fast double-click sending the same batch twice — see the
-  // identical guard (and its comment) in taskBreakdown/index.tsx for why this needs
-  // to be a ref rather than a state/draftTasks-null check.
-  const sentRef = useRef(false);
+  // Guards against a fast double-click sending the same batch twice — see
+  // useOnceGuard.ts for why this needs to be a ref rather than a state/
+  // draftTasks-null check.
+  const sentGuard = useOnceGuard();
 
   const speechRecognitionSupported = Boolean(getSpeechRecognitionConstructor());
 
@@ -75,20 +73,23 @@ function BrainDumpSorter() {
   // from a previous brain dump, rather than the two piling up together.
   useEffect(() => {
     if (output === null) return;
-    sentRef.current = false;
+    sentGuard.reset();
     setSentMessage(null);
     if (output.trim().toUpperCase() === 'NONE') {
       setDraftTasks([]);
       return;
     }
-    const parsed = output
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map(cleanStep)
-      .filter(Boolean)
-      .map((taskText) => ({ id: crypto.randomUUID(), text: taskText, included: true }));
+    const parsed = parseNumberedList(output).map((taskText) => ({
+      id: crypto.randomUUID(),
+      text: taskText,
+      included: true,
+    }));
     setDraftTasks(parsed);
+    // sentGuard is deliberately omitted: it's a new object identity every render (see
+    // useOnceGuard.ts), so listing it would rerun this effect on every render — right
+    // after handleSend's markFired() triggers one via its own setState, which would
+    // reset the guard immediately after it fires and reopen the double-send race.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [output]);
 
   function handleSubmit(event: React.FormEvent) {
@@ -130,8 +131,8 @@ function BrainDumpSorter() {
   }
 
   function handleSend() {
-    if (!draftTasks || sentRef.current) return;
-    sentRef.current = true;
+    if (!draftTasks || sentGuard.hasFired()) return;
+    sentGuard.markFired();
     const toSend = draftTasks.filter((draft) => draft.included && draft.text.trim());
     toSend.forEach((draft) => {
       addTask({ title: draft.text.trim(), projectId: undefined, size: 'small', category: 'later' });

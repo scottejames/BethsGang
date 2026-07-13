@@ -115,10 +115,256 @@ interface TaskGroup {
   tasks: Task[];
 }
 
+// Pure — no hooks inside, just a computation over the current projects/tasks. Kept as
+// a plain function rather than a component or a "useX" hook since it holds no state of
+// its own.
+function buildTaskGroups(projects: Project[], visibleTasks: Task[]): TaskGroup[] {
+  return [
+    {
+      id: UNFILED_ID,
+      name: UNFILED_NAME,
+      project: undefined,
+      tasks: sortTasks(visibleTasks.filter((task) => !task.projectId)),
+    },
+    ...projects.map((project) => ({
+      id: project.id,
+      name: project.name,
+      project,
+      tasks: sortTasks(visibleTasks.filter((task) => task.projectId === project.id)),
+    })),
+  ];
+}
+
+interface TaskGroupHeaderProps {
+  group: TaskGroup;
+  collapsed: boolean;
+  onToggleExpanded: () => void;
+  isRenaming: boolean;
+  draftName: string;
+  onDraftNameChange: (value: string) => void;
+  onSaveRename: (event: React.FormEvent) => void;
+  onCancelRename: () => void;
+  onStartRename: () => void;
+  onBreakdown: () => void;
+  onProjectToTask: () => void;
+  onDelete: () => void;
+}
+
+// The task-group row: either the rename form, or the expand/collapse toggle plus (for
+// a real project, not the synthetic Everything Else bucket) the break-down/convert-to-
+// task/rename/delete buttons.
+function TaskGroupHeader({
+  group,
+  collapsed,
+  onToggleExpanded,
+  isRenaming,
+  draftName,
+  onDraftNameChange,
+  onSaveRename,
+  onCancelRename,
+  onStartRename,
+  onBreakdown,
+  onProjectToTask,
+  onDelete,
+}: TaskGroupHeaderProps) {
+  if (isRenaming) {
+    return (
+      <form onSubmit={onSaveRename} className="task-group-rename-form">
+        <input
+          type="text"
+          value={draftName}
+          onChange={(event) => onDraftNameChange(event.target.value)}
+          aria-label={`Rename ${group.name}`}
+          autoFocus
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') onCancelRename();
+          }}
+        />
+        <button type="submit" disabled={!draftName.trim()}>
+          Save
+        </button>
+        <button type="button" onClick={onCancelRename}>
+          Cancel
+        </button>
+      </form>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className="task-group-toggle"
+        aria-expanded={!collapsed}
+        aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${group.name}`}
+        onClick={onToggleExpanded}
+      >
+        <span aria-hidden="true">{collapsed ? '▸' : '▾'}</span>
+        <span className="task-group-name">{group.name}</span>
+        <span className="task-group-count">{group.tasks.length}</span>
+      </button>
+      {group.project && (
+        <>
+          <button
+            type="button"
+            className="task-group-edit"
+            aria-label={`Break down project ${group.name}`}
+            title="Break down with Task Breakdown"
+            onClick={onBreakdown}
+          >
+            🧩
+          </button>
+          {group.tasks.length === 0 && (
+            <button
+              type="button"
+              className="task-group-edit"
+              aria-label={`Turn project "${group.name}" into a task`}
+              title="Turn into a task in Everything Else"
+              onClick={onProjectToTask}
+            >
+              📤
+            </button>
+          )}
+          <button
+            type="button"
+            className="task-group-edit"
+            aria-label={`Rename project ${group.name}`}
+            onClick={onStartRename}
+          >
+            ✎
+          </button>
+          <button
+            type="button"
+            className="task-group-delete"
+            aria-label={`Delete project ${group.name}`}
+            onClick={onDelete}
+          >
+            ×
+          </button>
+        </>
+      )}
+    </>
+  );
+}
+
 interface TaskEditDraft {
   title: string;
   size: TaskSize;
   projectId: string | undefined;
+}
+
+interface TaskListItemProps {
+  task: Task;
+  projects: Project[];
+  isEditing: boolean;
+  draft: TaskEditDraft;
+  onDraftChange: (patch: Partial<TaskEditDraft>) => void;
+  onStartEdit: () => void;
+  onSaveEdit: (event: React.FormEvent) => void;
+  onCancelEdit: () => void;
+  onToggleDone: (done: boolean) => void;
+  onCategoryChange: (category: TaskCategory) => void;
+  onTaskToProject: () => void;
+  onDelete: () => void;
+}
+
+// One row in a task-group's list: either its inline edit form, or its display row
+// (checkbox, title, category, and the edit/turn-into-project/delete actions).
+function TaskListItem({
+  task,
+  projects,
+  isEditing,
+  draft,
+  onDraftChange,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
+  onToggleDone,
+  onCategoryChange,
+  onTaskToProject,
+  onDelete,
+}: TaskListItemProps) {
+  return (
+    <li className={`task-item${task.done ? ' task-item-done' : ''}`}>
+      {isEditing ? (
+        <form onSubmit={onSaveEdit} className="task-edit-form">
+          <input
+            type="text"
+            value={draft.title}
+            onChange={(event) => onDraftChange({ title: event.target.value })}
+            aria-label="Edit task title"
+            autoFocus
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') onCancelEdit();
+            }}
+          />
+          <SizeToggle value={draft.size} onChange={(size) => onDraftChange({ size })} />
+          <select
+            value={draft.projectId ?? UNFILED_ID}
+            aria-label="Project"
+            onChange={(event) =>
+              onDraftChange({ projectId: event.target.value === UNFILED_ID ? undefined : event.target.value })
+            }
+          >
+            <option value={UNFILED_ID}>{UNFILED_NAME}</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+          <button type="submit" disabled={!draft.title.trim()}>
+            Save
+          </button>
+          <button type="button" onClick={onCancelEdit}>
+            Cancel
+          </button>
+        </form>
+      ) : (
+        <>
+          <input
+            type="checkbox"
+            checked={task.done}
+            aria-label={`Mark "${task.title}" done`}
+            onChange={(event) => onToggleDone(event.target.checked)}
+          />
+          <p className="task-item-title">
+            <span className="size-badge" aria-label={`Size: ${task.size}`}>
+              {SIZE_LABELS[task.size]}
+            </span>
+            {task.title}
+          </p>
+          <select
+            className={`category-tag category-tag-${task.category}`}
+            value={task.category}
+            aria-label={`Move "${task.title}" to a different category`}
+            onChange={(event) => onCategoryChange(event.target.value as TaskCategory)}
+          >
+            {CATEGORY_ORDER.map((value) => (
+              <option key={value} value={value}>
+                {CATEGORY_LABELS[value]}
+              </option>
+            ))}
+          </select>
+          <button type="button" className="task-item-edit" aria-label={`Edit "${task.title}"`} onClick={onStartEdit}>
+            ✎
+          </button>
+          <button
+            type="button"
+            className="task-item-edit"
+            aria-label={`Turn "${task.title}" into a project`}
+            title="Turn into its own project"
+            onClick={onTaskToProject}
+          >
+            📁
+          </button>
+          <button type="button" className="copy-button" onClick={onDelete}>
+            Delete
+          </button>
+        </>
+      )}
+    </li>
+  );
 }
 
 function EverythingPile() {
@@ -242,21 +488,7 @@ function EverythingPile() {
   // only remaining trace of them) — the actual TaskStoreContext delete only happens
   // once the undo window elapses with no undo.
   const visibleTasks = tasks.filter((task) => !isPending(task.id));
-
-  const groups: TaskGroup[] = [
-    {
-      id: UNFILED_ID,
-      name: UNFILED_NAME,
-      project: undefined,
-      tasks: sortTasks(visibleTasks.filter((task) => !task.projectId)),
-    },
-    ...projects.map((project) => ({
-      id: project.id,
-      name: project.name,
-      project,
-      tasks: sortTasks(visibleTasks.filter((task) => task.projectId === project.id)),
-    })),
-  ];
+  const groups = buildTaskGroups(projects, visibleTasks);
 
   return (
     <div className="tool-panel">
@@ -288,80 +520,20 @@ function EverythingPile() {
           return (
             <div key={group.id} className="task-group">
               <div className="task-group-header">
-                {isRenamingThisGroup ? (
-                  <form onSubmit={saveProjectName} className="task-group-rename-form">
-                    <input
-                      type="text"
-                      value={projectDraftName}
-                      onChange={(event) => setProjectDraftName(event.target.value)}
-                      aria-label={`Rename ${group.name}`}
-                      autoFocus
-                      onKeyDown={(event) => {
-                        if (event.key === 'Escape') setEditingProjectId(null);
-                      }}
-                    />
-                    <button type="submit" disabled={!projectDraftName.trim()}>
-                      Save
-                    </button>
-                    <button type="button" onClick={() => setEditingProjectId(null)}>
-                      Cancel
-                    </button>
-                  </form>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      className="task-group-toggle"
-                      aria-expanded={!collapsed}
-                      aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${group.name}`}
-                      onClick={() => toggleExpanded(group.id)}
-                    >
-                      <span aria-hidden="true">{collapsed ? '▸' : '▾'}</span>
-                      <span className="task-group-name">{group.name}</span>
-                      <span className="task-group-count">{group.tasks.length}</span>
-                    </button>
-                    {group.project && (
-                      <>
-                        <button
-                          type="button"
-                          className="task-group-edit"
-                          aria-label={`Break down project ${group.name}`}
-                          title="Break down with Task Breakdown"
-                          onClick={() => handleBreakdown(group.project!)}
-                        >
-                          🧩
-                        </button>
-                        {group.tasks.length === 0 && (
-                          <button
-                            type="button"
-                            className="task-group-edit"
-                            aria-label={`Turn project "${group.name}" into a task`}
-                            title="Turn into a task in Everything Else"
-                            onClick={() => handleProjectToTask(group.project!)}
-                          >
-                            📤
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="task-group-edit"
-                          aria-label={`Rename project ${group.name}`}
-                          onClick={() => startEditingProject(group.project!)}
-                        >
-                          ✎
-                        </button>
-                        <button
-                          type="button"
-                          className="task-group-delete"
-                          aria-label={`Delete project ${group.name}`}
-                          onClick={() => handleDeleteProject(group.project!)}
-                        >
-                          ×
-                        </button>
-                      </>
-                    )}
-                  </>
-                )}
+                <TaskGroupHeader
+                  group={group}
+                  collapsed={collapsed}
+                  onToggleExpanded={() => toggleExpanded(group.id)}
+                  isRenaming={isRenamingThisGroup}
+                  draftName={projectDraftName}
+                  onDraftNameChange={setProjectDraftName}
+                  onSaveRename={saveProjectName}
+                  onCancelRename={() => setEditingProjectId(null)}
+                  onStartRename={() => group.project && startEditingProject(group.project)}
+                  onBreakdown={() => group.project && handleBreakdown(group.project)}
+                  onProjectToTask={() => group.project && handleProjectToTask(group.project)}
+                  onDelete={() => group.project && handleDeleteProject(group.project)}
+                />
               </div>
 
               {!collapsed && (
@@ -372,96 +544,21 @@ function EverythingPile() {
                   ) : (
                     <ul className="task-list">
                       {group.tasks.map((task) => (
-                        <li key={task.id} className={`task-item${task.done ? ' task-item-done' : ''}`}>
-                          {editingTaskId === task.id ? (
-                            <form onSubmit={saveTaskEdit} className="task-edit-form">
-                              <input
-                                type="text"
-                                value={taskDraft.title}
-                                onChange={(event) => setTaskDraft((draft) => ({ ...draft, title: event.target.value }))}
-                                aria-label="Edit task title"
-                                autoFocus
-                                onKeyDown={(event) => {
-                                  if (event.key === 'Escape') setEditingTaskId(null);
-                                }}
-                              />
-                              <SizeToggle
-                                value={taskDraft.size}
-                                onChange={(size) => setTaskDraft((draft) => ({ ...draft, size }))}
-                              />
-                              <select
-                                value={taskDraft.projectId ?? UNFILED_ID}
-                                aria-label="Project"
-                                onChange={(event) =>
-                                  setTaskDraft((draft) => ({
-                                    ...draft,
-                                    projectId: event.target.value === UNFILED_ID ? undefined : event.target.value,
-                                  }))
-                                }
-                              >
-                                <option value={UNFILED_ID}>{UNFILED_NAME}</option>
-                                {projects.map((project) => (
-                                  <option key={project.id} value={project.id}>
-                                    {project.name}
-                                  </option>
-                                ))}
-                              </select>
-                              <button type="submit" disabled={!taskDraft.title.trim()}>
-                                Save
-                              </button>
-                              <button type="button" onClick={() => setEditingTaskId(null)}>
-                                Cancel
-                              </button>
-                            </form>
-                          ) : (
-                            <>
-                              <input
-                                type="checkbox"
-                                checked={task.done}
-                                aria-label={`Mark "${task.title}" done`}
-                                onChange={(event) => updateTask(task.id, { done: event.target.checked })}
-                              />
-                              <p className="task-item-title">
-                                <span className="size-badge" aria-label={`Size: ${task.size}`}>
-                                  {SIZE_LABELS[task.size]}
-                                </span>
-                                {task.title}
-                              </p>
-                              <select
-                                className={`category-tag category-tag-${task.category}`}
-                                value={task.category}
-                                aria-label={`Move "${task.title}" to a different category`}
-                                onChange={(event) => updateTask(task.id, { category: event.target.value as TaskCategory })}
-                              >
-                                {CATEGORY_ORDER.map((value) => (
-                                  <option key={value} value={value}>
-                                    {CATEGORY_LABELS[value]}
-                                  </option>
-                                ))}
-                              </select>
-                              <button
-                                type="button"
-                                className="task-item-edit"
-                                aria-label={`Edit "${task.title}"`}
-                                onClick={() => startEditingTask(task)}
-                              >
-                                ✎
-                              </button>
-                              <button
-                                type="button"
-                                className="task-item-edit"
-                                aria-label={`Turn "${task.title}" into a project`}
-                                title="Turn into its own project"
-                                onClick={() => handleTaskToProject(task)}
-                              >
-                                📁
-                              </button>
-                              <button type="button" className="copy-button" onClick={() => handleDeleteTask(task)}>
-                                Delete
-                              </button>
-                            </>
-                          )}
-                        </li>
+                        <TaskListItem
+                          key={task.id}
+                          task={task}
+                          projects={projects}
+                          isEditing={editingTaskId === task.id}
+                          draft={taskDraft}
+                          onDraftChange={(patch) => setTaskDraft((draft) => ({ ...draft, ...patch }))}
+                          onStartEdit={() => startEditingTask(task)}
+                          onSaveEdit={saveTaskEdit}
+                          onCancelEdit={() => setEditingTaskId(null)}
+                          onToggleDone={(done) => updateTask(task.id, { done })}
+                          onCategoryChange={(category) => updateTask(task.id, { category })}
+                          onTaskToProject={() => handleTaskToProject(task)}
+                          onDelete={() => handleDeleteTask(task)}
+                        />
                       ))}
                     </ul>
                   )}

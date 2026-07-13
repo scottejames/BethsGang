@@ -1,11 +1,8 @@
-import { SOUNDS, useDistractMe } from '../context/DistractMeContext';
+import { useDistractMe } from '../context/DistractMeContext';
 
 export function NowPlayingBar() {
-  const { activeSoundId, volume, stop, setVolume } = useDistractMe();
+  const { activeSound: sound, volume, stop, setVolume } = useDistractMe();
 
-  if (!activeSoundId) return null;
-
-  const sound = SOUNDS.find((candidate) => candidate.id === activeSoundId);
   if (!sound) return null;
 
   return (

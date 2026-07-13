@@ -397,4 +397,55 @@ describe('RemindersContext (signed in)', () => {
 
     await waitFor(() => expect(result.current.reminders).toHaveLength(0));
   });
+
+  it('a pre-existing local reminder reappears intact after sign-out, with no account data mixed in', async () => {
+    // Every existing sign-out test above only asserts the account's reminder
+    // disappears. This asserts the actual pre-sign-in local content — not an empty
+    // list, and not the account's reminder — is what's showing afterward.
+    const localReminder = {
+      id: 'local-1',
+      message: 'local-only reminder',
+      fireAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      warnedForCurrentFireAt: false,
+      repeat: { kind: 'none' as const },
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify([localReminder]));
+    // Already migrated on this device — otherwise mounting signed-in would upload the
+    // local seed reminder above, which isn't what this test is checking.
+    window.localStorage.setItem(MIGRATION_FLAG_KEY, 'true');
+
+    let hubCallback: ((event: { payload: { event: string } }) => void) | undefined;
+    vi.mocked(Hub.listen).mockImplementation((_channel, callback) => {
+      hubCallback = callback as typeof hubCallback;
+      return vi.fn();
+    });
+
+    const { result } = renderHook(() => useReminders(), { wrapper });
+    await waitFor(() => expect(client.models.Reminder.observeQuery).toHaveBeenCalled());
+    // The account's backend data is entirely different from what's sitting locally.
+    act(() =>
+      observeQueryNext?.({
+        items: [
+          {
+            id: 'acct-1',
+            message: 'account reminder',
+            fireAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+            warnBeforeMinutes: null,
+            warnedForCurrentFireAt: false,
+            repeat: JSON.stringify({ kind: 'none' }),
+          },
+        ],
+      }),
+    );
+    expect(result.current.reminders.map((reminder) => reminder.message)).toEqual(['account reminder']);
+
+    vi.mocked(amplifyAuth.getCurrentUser).mockRejectedValue(new Error('not signed in'));
+    act(() => {
+      hubCallback?.({ payload: { event: 'signedOut' } });
+    });
+
+    await waitFor(() =>
+      expect(result.current.reminders.map((reminder) => reminder.message)).toEqual(['local-only reminder']),
+    );
+  });
 });

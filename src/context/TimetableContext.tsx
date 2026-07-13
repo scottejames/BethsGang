@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { client } from '../lib/dataClient';
+import { readStored } from '../lib/localStorage';
+import { useSignedOutMirror } from '../hooks/useSignedOutMirror';
 
 // Monday-first order, matching how a school week is actually laid out — used both as
 // the canonical iteration order for rendering and as the source of truth for
@@ -42,14 +44,7 @@ const CHECK_INTERVAL_MS = 30_000;
 const DEFAULT_ALERT_MINUTES = 15;
 
 function readStoredEntries(): TimetableEntry[] {
-  try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (!stored) return [];
-    const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  return readStored<TimetableEntry>(STORAGE_KEY);
 }
 
 // AWSTime (the backend scalar) requires seconds; this app's UI only ever deals in
@@ -133,7 +128,6 @@ export function TimetableProvider({ children }: { children: ReactNode }) {
   entriesRef.current = entries;
   const isSignedInRef = useRef(isSignedIn);
   isSignedInRef.current = isSignedIn;
-  const wasSignedIn = useRef(isSignedIn);
   const hasCheckedOnMount = useRef(false);
   // Which entry+day combinations have already alerted — in-memory only, not
   // persisted. Naturally "resets" every day since the date is part of the key, the
@@ -143,22 +137,13 @@ export function TimetableProvider({ children }: { children: ReactNode }) {
   // reminder that would otherwise never fire its warning again.
   const firedToday = useRef<Record<string, true>>({});
 
-  // Same signed-out-mirror / signed-out-revert shape as RemindersContext.tsx — see its
-  // comment on the equivalent effect for the exact race this single-effect handling
-  // avoids.
-  useEffect(() => {
-    const justSignedOut = wasSignedIn.current && !isSignedIn;
-    wasSignedIn.current = isSignedIn;
-    if (justSignedOut) {
-      const local = readStoredEntries();
-      entriesRef.current = local;
-      setEntries(local);
-      return;
-    }
-    if (!isSignedIn) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-    }
-  }, [entries, isSignedIn]);
+  // See useSignedOutMirror.ts for the signed-out-mirror / signed-out-revert shape.
+  // `entriesRef` is kept in sync on revert too, since checkAlerts() below reads it, not
+  // `entries` directly.
+  useSignedOutMirror(entries, isSignedIn, STORAGE_KEY, readStoredEntries, (local) => {
+    entriesRef.current = local;
+    setEntries(local);
+  });
 
   useEffect(() => {
     if (!isSignedIn) return;

@@ -1,7 +1,9 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { client } from '../lib/dataClient';
+import { readStored } from '../lib/localStorage';
+import { useSignedOutMirror } from '../hooks/useSignedOutMirror';
 
 export interface Project {
   id: string;
@@ -28,17 +30,6 @@ export interface Task {
 const PROJECTS_STORAGE_KEY = 'beths-gang:projects';
 const TASKS_STORAGE_KEY = 'beths-gang:tasks';
 const MIGRATION_FLAG_KEY = 'beths-gang:tasks-migrated';
-
-function readStored<T>(key: string): T[] {
-  try {
-    const stored = window.localStorage.getItem(key);
-    if (!stored) return [];
-    const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
 
 function toBackendProjectInput(project: Project) {
   return { id: project.id, name: project.name, createdAt: project.createdAt };
@@ -90,6 +81,16 @@ export interface AddTaskInput {
   category: TaskCategory;
 }
 
+export type TaskUpdatePatch = Partial<Pick<Task, 'title' | 'projectId' | 'size' | 'category' | 'done'>>;
+
+// `projectId` needs an explicit `null` to clear it on the backend — omitting the key
+// entirely (what `patch.projectId` being `undefined` would send) just leaves the
+// existing value untouched instead.
+function toTaskUpdatePatch(id: string, patch: TaskUpdatePatch) {
+  const { projectId, ...rest } = patch;
+  return { id, ...rest, ...('projectId' in patch ? { projectId: projectId ?? null } : {}) };
+}
+
 interface TaskStoreContextValue {
   projects: Project[];
   tasks: Task[];
@@ -104,7 +105,7 @@ interface TaskStoreContextValue {
   addTask: (input: AddTaskInput) => void;
   // `projectId: undefined` moves a task to standalone/Unfiled — same mechanism used to
   // move it between projects, since both are just changing which project (if any) owns it.
-  updateTask: (id: string, patch: Partial<Pick<Task, 'title' | 'projectId' | 'size' | 'category' | 'done'>>) => void;
+  updateTask: (id: string, patch: TaskUpdatePatch) => void;
   deleteTask: (id: string) => void;
 }
 
@@ -121,29 +122,14 @@ export function TaskStoreProvider({ children }: { children: ReactNode }) {
   const { isSignedIn } = useAuth();
   const [projects, setProjects] = useState<Project[]>(() => readStored<Project>(PROJECTS_STORAGE_KEY));
   const [tasks, setTasks] = useState<Task[]>(() => readStored<Task>(TASKS_STORAGE_KEY));
-  const wasSignedIn = useRef(isSignedIn);
 
   // Only mirrors to localStorage while signed out — while signed in, `projects`/`tasks`
-  // are driven by the observeQuery subscriptions below, and that's account data. It
-  // must NOT leak into localStorage, or it would still be visible after signing out
-  // (see RemindersContext's identical reasoning, found via the same real bug there).
-  //
-  // The sign-out transition itself is handled in this same effect as the write,
-  // deliberately not as two separate effects — see RemindersContext.tsx's comment on
-  // its equivalent effect for the exact race this avoids.
-  useEffect(() => {
-    const justSignedOut = wasSignedIn.current && !isSignedIn;
-    wasSignedIn.current = isSignedIn;
-    if (justSignedOut) {
-      setProjects(readStored<Project>(PROJECTS_STORAGE_KEY));
-      setTasks(readStored<Task>(TASKS_STORAGE_KEY));
-      return; // this render's projects/tasks are stale account data — don't write them
-    }
-    if (!isSignedIn) {
-      window.localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
-      window.localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasks));
-    }
-  }, [projects, tasks, isSignedIn]);
+  // are driven by the observeQuery subscriptions below, and that's account data (see
+  // useSignedOutMirror.ts for why it must not leak into localStorage, and for the
+  // single-effect shape). Projects and tasks mirror independently since neither's
+  // revert depends on the other.
+  useSignedOutMirror(projects, isSignedIn, PROJECTS_STORAGE_KEY, () => readStored<Project>(PROJECTS_STORAGE_KEY), setProjects);
+  useSignedOutMirror(tasks, isSignedIn, TASKS_STORAGE_KEY, () => readStored<Task>(TASKS_STORAGE_KEY), setTasks);
 
   // Signed in: Projects/Tasks live in the backend. observeQuery emits the current set
   // immediately, then live updates — same "added on phone, appears on laptop" effect
@@ -265,18 +251,12 @@ export function TaskStoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function updateTask(id: string, patch: Partial<Pick<Task, 'title' | 'projectId' | 'size' | 'category' | 'done'>>) {
+  function updateTask(id: string, patch: TaskUpdatePatch) {
     setTasks((current) => current.map((task) => (task.id === id ? { ...task, ...patch } : task)));
     if (isSignedIn) {
-      const { projectId, ...rest } = patch;
-      client.models.Task
-        // `projectId` needs an explicit `null` to clear it on the backend — omitting
-        // the key entirely (what `patch.projectId` being `undefined` would send) just
-        // leaves the existing value untouched instead.
-        .update({ id, ...rest, ...('projectId' in patch ? { projectId: projectId ?? null } : {}) })
-        .catch((error: unknown) => {
-          console.error('Failed to update task', error);
-        });
+      client.models.Task.update(toTaskUpdatePatch(id, patch)).catch((error: unknown) => {
+        console.error('Failed to update task', error);
+      });
     }
   }
 

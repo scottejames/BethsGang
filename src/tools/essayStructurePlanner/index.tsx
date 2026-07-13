@@ -1,13 +1,11 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useAiTool } from '../../hooks/useAiTool';
 import { useTaskStore } from '../../context/TaskStoreContext';
 import { useToolNavigation } from '../../context/ToolNavigationContext';
+import { useOnceGuard } from '../../hooks/useOnceGuard';
+import { parseNumberedList } from '../../lib/parseNumberedList';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
-
-function cleanHeading(line: string): string {
-  return line.replace(/^\d+\.\s*/, '');
-}
 
 interface EssayStructurePayload {
   title: string;
@@ -24,14 +22,15 @@ function EssayStructurePlanner() {
   const { addProject, addTask } = useTaskStore();
   const { navigateToTool } = useToolNavigation();
   // Same one-shot guard as Assignment Breakdown/Task Breakdown's — blocks a fast
-  // double-click on "Send to Everything Pile" from creating duplicate projects.
-  const sentRef = useRef(false);
+  // double-click on "Send to Everything Pile" from creating duplicate projects. See
+  // useOnceGuard.ts.
+  const sentGuard = useOnceGuard();
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!title.trim() || !description.trim()) return;
 
-    sentRef.current = false;
+    sentGuard.reset();
     const payload: EssayStructurePayload = { title: title.trim(), description: description.trim() };
     run(JSON.stringify(payload));
   }
@@ -53,17 +52,11 @@ function EssayStructurePlanner() {
     run(JSON.stringify(payload)).then(() => setFeedback(''));
   }
 
-  const headings = output
-    ? output
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map(cleanHeading)
-    : [];
+  const headings = output ? parseNumberedList(output) : [];
 
   function handleSendToEverythingPile() {
-    if (sentRef.current) return;
-    sentRef.current = true;
+    if (sentGuard.hasFired()) return;
+    sentGuard.markFired();
     const project = addProject(title.trim());
     headings.forEach((heading) => {
       addTask({ title: heading, projectId: project.id, size: 'small', category: 'now' });

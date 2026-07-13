@@ -1,13 +1,11 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useAiTool } from '../../hooks/useAiTool';
 import { useTaskStore } from '../../context/TaskStoreContext';
 import { useToolNavigation } from '../../context/ToolNavigationContext';
+import { useOnceGuard } from '../../hooks/useOnceGuard';
+import { parseNumberedList } from '../../lib/parseNumberedList';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
-
-function cleanStep(step: string): string {
-  return step.replace(/^\d+\.\s*/, '');
-}
 
 interface AssignmentBreakdownPayload {
   assignmentName: string;
@@ -22,14 +20,15 @@ function AssignmentBreakdown() {
   const { navigateToTool } = useToolNavigation();
   // Same one-shot guard as Task Breakdown's — a fast double-click on "Send to
   // Everything Pile" would otherwise create two duplicate projects, since two click
-  // handlers can run back-to-back before React re-renders with a disabled button.
-  const sentRef = useRef(false);
+  // handlers can run back-to-back before React re-renders with a disabled button. See
+  // useOnceGuard.ts.
+  const sentGuard = useOnceGuard();
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!assignmentName.trim() || !instructions.trim()) return;
 
-    sentRef.current = false;
+    sentGuard.reset();
     const payload: AssignmentBreakdownPayload = {
       assignmentName: assignmentName.trim(),
       instructions: instructions.trim(),
@@ -37,20 +36,14 @@ function AssignmentBreakdown() {
     run(JSON.stringify(payload));
   }
 
-  const steps = output
-    ? output
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map(cleanStep)
-    : [];
+  const steps = output ? parseNumberedList(output) : [];
 
   // Always a new project named after the assignment — unlike Task Breakdown, this
   // tool has no "handoff from Everything Pile" origin to send steps back into
   // instead, since an assignment breakdown always starts fresh from a brief.
   function handleSendToEverythingPile() {
-    if (sentRef.current) return;
-    sentRef.current = true;
+    if (sentGuard.hasFired()) return;
+    sentGuard.markFired();
     const project = addProject(assignmentName.trim());
     steps.forEach((step) => {
       addTask({ title: step, projectId: project.id, size: 'small', category: 'now' });

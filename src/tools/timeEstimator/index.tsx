@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useAiTool } from '../../hooks/useAiTool';
+import { makeLabelGetter } from '../../lib/parseLabeledOutput';
+import { StructuredResult } from '../../components/StructuredResult';
+import type { StructuredField } from '../../components/StructuredResult';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
 
 function parseResult(output: string) {
-  const lines = output.split('\n').map((line) => line.trim());
-  const get = (label: string) =>
-    lines.find((line) => line.toLowerCase().startsWith(label.toLowerCase()))?.slice(label.length).trim();
+  const get = makeLabelGetter(output);
 
   return {
     estimate: get('Realistic estimate:'),
@@ -27,7 +28,11 @@ function TimeEstimator() {
   }
 
   const result = output ? parseResult(output) : null;
-  const hasResult = result && (result.estimate || result.buffer || result.blockOff);
+  const fields = [
+    result?.estimate && ({ label: 'Realistic estimate', value: result.estimate } as StructuredField),
+    result?.buffer && ({ label: 'Buffer', value: result.buffer } as StructuredField),
+    result?.blockOff && ({ label: 'Block off', value: result.blockOff } as StructuredField),
+  ].filter((field): field is StructuredField => Boolean(field));
 
   return (
     <div className="tool-panel">
@@ -51,29 +56,7 @@ function TimeEstimator() {
 
       {error && <p className="tool-error">{error}</p>}
 
-      {hasResult && (
-        <dl className="tool-result-fields">
-          {result?.estimate && (
-            <>
-              <dt>Realistic estimate</dt>
-              <dd>{result.estimate}</dd>
-            </>
-          )}
-          {result?.buffer && (
-            <>
-              <dt>Buffer</dt>
-              <dd>{result.buffer}</dd>
-            </>
-          )}
-          {result?.blockOff && (
-            <>
-              <dt>Block off</dt>
-              <dd>{result.blockOff}</dd>
-            </>
-          )}
-        </dl>
-      )}
-      {output && !hasResult && <p className="tool-result-plain">{output}</p>}
+      <StructuredResult fields={fields} rawOutput={output} />
     </div>
   );
 }

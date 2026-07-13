@@ -20,6 +20,9 @@ export const SOUNDS: SoundOption[] = [
 
 interface DistractMeContextValue {
   activeSoundId: SoundId | null;
+  // The resolved SoundOption for activeSoundId, so a consumer that just wants to
+  // display the active sound (see NowPlayingBar.tsx) doesn't need its own SOUNDS.find.
+  activeSound: SoundOption | null;
   volume: number;
   play: (soundId: SoundId) => void;
   stop: () => void;
@@ -74,8 +77,10 @@ export function DistractMeProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const activeSound = SOUNDS.find((candidate) => candidate.id === activeSoundId) ?? null;
+
   return (
-    <DistractMeContext.Provider value={{ activeSoundId, volume, play, stop, setVolume }}>
+    <DistractMeContext.Provider value={{ activeSoundId, activeSound, volume, play, stop, setVolume }}>
       {children}
     </DistractMeContext.Provider>
   );

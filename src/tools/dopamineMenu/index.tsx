@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useUndoableDelete } from '../../hooks/useUndoableDelete';
 import { UndoToastStack } from '../../components/UndoToastStack';
+import { readStored } from '../../lib/localStorage';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
 
@@ -26,19 +27,13 @@ const DEFAULT_ITEMS = [
 ];
 
 function loadItems(): DopamineItem[] {
-  try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    // A missing key means "never initialized" (seed the defaults). A present-but-
-    // empty array means the user deliberately cleared their list — respect that,
-    // don't silently bring the defaults back.
-    if (stored === null) {
-      return DEFAULT_ITEMS.map((text) => ({ id: crypto.randomUUID(), text }));
-    }
-    const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
+  // A missing key means "never initialized" (seed the defaults). A present-but-
+  // empty array means the user deliberately cleared their list — respect that,
+  // don't silently bring the defaults back.
+  if (window.localStorage.getItem(STORAGE_KEY) === null) {
+    return DEFAULT_ITEMS.map((text) => ({ id: crypto.randomUUID(), text }));
   }
+  return readStored<DopamineItem>(STORAGE_KEY);
 }
 
 function DopamineMenu() {

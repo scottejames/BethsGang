@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useAiTool } from '../../hooks/useAiTool';
+import { StructuredResult } from '../../components/StructuredResult';
+import type { StructuredField } from '../../components/StructuredResult';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
 
@@ -180,43 +182,40 @@ function CooksCorner() {
         </ol>
       )}
 
-      {recipes.map((recipe, index) => (
-        <div className="recipe-card" key={index}>
-          <h3 className="recipe-name">{recipe.name}</h3>
-          <dl className="tool-result-fields">
-            {recipe.ingredients.length > 0 && (
-              <>
-                <dt>Ingredients</dt>
-                <dd>
-                  <ul className="tool-result-fields-list">
-                    {recipe.ingredients.map((ingredient, ingredientIndex) => (
-                      <li key={ingredientIndex}>{ingredient}</li>
-                    ))}
-                  </ul>
-                </dd>
-              </>
-            )}
-            {recipe.method.length > 0 && (
-              <>
-                <dt>Method</dt>
-                <dd>
-                  <ol className="tool-result-fields-list">
-                    {recipe.method.map((step, stepIndex) => (
-                      <li key={stepIndex}>{step}</li>
-                    ))}
-                  </ol>
-                </dd>
-              </>
-            )}
-            {recipe.shop && (
-              <>
-                <dt>Shop</dt>
-                <dd>{recipe.shop}</dd>
-              </>
-            )}
-          </dl>
-        </div>
-      ))}
+      {recipes.map((recipe, index) => {
+        const fields = [
+          recipe.ingredients.length > 0 &&
+            ({
+              label: 'Ingredients',
+              value: (
+                <ul className="tool-result-fields-list">
+                  {recipe.ingredients.map((ingredient, ingredientIndex) => (
+                    <li key={ingredientIndex}>{ingredient}</li>
+                  ))}
+                </ul>
+              ),
+            } as StructuredField),
+          recipe.method.length > 0 &&
+            ({
+              label: 'Method',
+              value: (
+                <ol className="tool-result-fields-list">
+                  {recipe.method.map((step, stepIndex) => (
+                    <li key={stepIndex}>{step}</li>
+                  ))}
+                </ol>
+              ),
+            } as StructuredField),
+          recipe.shop && ({ label: 'Shop', value: recipe.shop } as StructuredField),
+        ].filter((field): field is StructuredField => Boolean(field));
+
+        return (
+          <div className="recipe-card" key={index}>
+            <h3 className="recipe-name">{recipe.name}</h3>
+            <StructuredResult fields={fields} rawOutput={null} />
+          </div>
+        );
+      })}
 
       {output && !hasStructuredResult && <p className="tool-result-plain">{output}</p>}
 

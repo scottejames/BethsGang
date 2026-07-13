@@ -119,27 +119,37 @@ const VERBOSITY_LABELS: Record<NonNullable<ReplyStarterInput['verbosity']>, stri
   long: 'Long — a short paragraph per draft',
 };
 
-export function buildReplyStarterMessage(rawInput: string): string {
-  let parsed: Partial<ReplyStarterInput>;
+// Every buildXMessage function below sends structured JSON from the frontend that
+// needs turning back into a plain-text message for Claude — parse the JSON (falling
+// back to treating the whole raw string as one particular field, for tools that also
+// accept a bare string), then assemble a handful of labeled lines, skipping any that
+// are absent. This shape is identical across tools; only the fields and labels differ.
+function parseWithFallback<T>(rawInput: string, makeFallback: (raw: string) => Partial<T>): Partial<T> {
   try {
-    parsed = JSON.parse(rawInput);
+    return JSON.parse(rawInput);
   } catch {
-    parsed = { message: rawInput };
+    return makeFallback(rawInput);
   }
+}
+
+function joinLabeledLines(lines: (string | undefined)[]): string {
+  return lines.filter((line): line is string => Boolean(line)).join('\n\n');
+}
+
+export function buildReplyStarterMessage(rawInput: string): string {
+  const parsed = parseWithFallback<ReplyStarterInput>(rawInput, (raw) => ({ message: raw }));
 
   const message = parsed.message ?? rawInput;
   const tone = parsed.tone && TONE_LABELS[parsed.tone] ? parsed.tone : 'neutral';
   const verbosity = parsed.verbosity && VERBOSITY_LABELS[parsed.verbosity] ? parsed.verbosity : 'medium';
   const intent = parsed.intent?.trim();
 
-  return [
+  return joinLabeledLines([
     `Message to reply to:\n"""\n${message}\n"""`,
     `Desired tone: ${TONE_LABELS[tone]}`,
     `Desired length: ${VERBOSITY_LABELS[verbosity]}`,
     intent ? `Desired intent for the reply: ${intent}` : undefined,
-  ]
-    .filter((line): line is string => Boolean(line))
-    .join('\n\n');
+  ]);
 }
 
 interface ToneCheckerInput {
@@ -148,22 +158,15 @@ interface ToneCheckerInput {
 }
 
 export function buildToneCheckerMessage(rawInput: string): string {
-  let parsed: Partial<ToneCheckerInput>;
-  try {
-    parsed = JSON.parse(rawInput);
-  } catch {
-    parsed = { message: rawInput };
-  }
+  const parsed = parseWithFallback<ToneCheckerInput>(rawInput, (raw) => ({ message: raw }));
 
   const message = parsed.message ?? rawInput;
   const context = parsed.context?.trim();
 
-  return [
+  return joinLabeledLines([
     `Message to check:\n"""\n${message}\n"""`,
     context ? `Context for the situation: ${context}` : undefined,
-  ]
-    .filter((line): line is string => Boolean(line))
-    .join('\n\n');
+  ]);
 }
 
 interface CallScriptInput {
@@ -173,24 +176,17 @@ interface CallScriptInput {
 }
 
 export function buildCallScriptMessage(rawInput: string): string {
-  let parsed: Partial<CallScriptInput>;
-  try {
-    parsed = JSON.parse(rawInput);
-  } catch {
-    parsed = { message: rawInput };
-  }
+  const parsed = parseWithFallback<CallScriptInput>(rawInput, (raw) => ({ message: raw }));
 
   const message = parsed.message ?? rawInput;
   const tone = parsed.tone && TONE_LABELS[parsed.tone] ? parsed.tone : 'neutral';
   const about = parsed.about?.trim();
 
-  return [
+  return joinLabeledLines([
     `What the call needs to accomplish:\n"""\n${message}\n"""`,
     `Desired tone: ${TONE_LABELS[tone]}`,
     about ? `Who the call is to: ${about}` : undefined,
-  ]
-    .filter((line): line is string => Boolean(line))
-    .join('\n\n');
+  ]);
 }
 
 interface IsThisMadInput {
@@ -199,22 +195,15 @@ interface IsThisMadInput {
 }
 
 export function buildIsThisMadMessage(rawInput: string): string {
-  let parsed: Partial<IsThisMadInput>;
-  try {
-    parsed = JSON.parse(rawInput);
-  } catch {
-    parsed = { message: rawInput };
-  }
+  const parsed = parseWithFallback<IsThisMadInput>(rawInput, (raw) => ({ message: raw }));
 
   const message = parsed.message ?? rawInput;
   const context = parsed.context?.trim();
 
-  return [
+  return joinLabeledLines([
     `Message they sent:\n"""\n${message}\n"""`,
     context ? `Context for the situation: ${context}` : undefined,
-  ]
-    .filter((line): line is string => Boolean(line))
-    .join('\n\n');
+  ]);
 }
 
 interface AssignmentBreakdownInput {
@@ -223,22 +212,15 @@ interface AssignmentBreakdownInput {
 }
 
 export function buildAssignmentBreakdownMessage(rawInput: string): string {
-  let parsed: Partial<AssignmentBreakdownInput>;
-  try {
-    parsed = JSON.parse(rawInput);
-  } catch {
-    parsed = { instructions: rawInput };
-  }
+  const parsed = parseWithFallback<AssignmentBreakdownInput>(rawInput, (raw) => ({ instructions: raw }));
 
   const assignmentName = parsed.assignmentName?.trim();
   const instructions = parsed.instructions ?? rawInput;
 
-  return [
+  return joinLabeledLines([
     assignmentName ? `Assignment name: ${assignmentName}` : undefined,
     `Instructions:\n"""\n${instructions}\n"""`,
-  ]
-    .filter((line): line is string => Boolean(line))
-    .join('\n\n');
+  ]);
 }
 
 interface EssayStructureInput {
@@ -252,26 +234,19 @@ interface EssayStructureInput {
 }
 
 export function buildEssayStructureMessage(rawInput: string): string {
-  let parsed: Partial<EssayStructureInput>;
-  try {
-    parsed = JSON.parse(rawInput);
-  } catch {
-    parsed = { description: rawInput };
-  }
+  const parsed = parseWithFallback<EssayStructureInput>(rawInput, (raw) => ({ description: raw }));
 
   const title = parsed.title?.trim();
   const description = parsed.description ?? rawInput;
   const currentStructure = parsed.currentStructure?.trim();
   const feedback = parsed.feedback?.trim();
 
-  return [
+  return joinLabeledLines([
     title ? `Essay title: ${title}` : undefined,
     `Assignment description:\n"""\n${description}\n"""`,
     currentStructure ? `Current structure:\n"""\n${currentStructure}\n"""` : undefined,
     feedback ? `Feedback to address:\n"""\n${feedback}\n"""` : undefined,
-  ]
-    .filter((line): line is string => Boolean(line))
-    .join('\n\n');
+  ]);
 }
 
 interface CooksCornerInput {
@@ -292,12 +267,7 @@ interface CooksCornerInput {
 }
 
 export function buildCooksCornerMessage(rawInput: string): string {
-  let parsed: Partial<CooksCornerInput>;
-  try {
-    parsed = JSON.parse(rawInput);
-  } catch {
-    parsed = { fridgeItems: rawInput };
-  }
+  const parsed = parseWithFallback<CooksCornerInput>(rawInput, (raw) => ({ fridgeItems: raw }));
 
   const fridgeItems = parsed.fridgeItems?.trim();
   const currentMealIdeas = parsed.currentMealIdeas?.trim();
@@ -308,13 +278,11 @@ export function buildCooksCornerMessage(rawInput: string): string {
       ? 'No specific fridge items given — the user hit "YOLO" and wants simple meals from common everyday basics instead (see the system prompt for what to assume). Do not invent a specific fridge inventory.'
       : `Items in the fridge:\n"""\n${fridgeItems}\n"""`;
 
-  return [
+  return joinLabeledLines([
     fridgeLine,
     currentMealIdeas ? `Current meal ideas:\n"""\n${currentMealIdeas}\n"""` : undefined,
     feedback ? `Feedback:\n"""\n${feedback}\n"""` : undefined,
-  ]
-    .filter((line): line is string => Boolean(line))
-    .join('\n\n');
+  ]);
 }
 
 const IMAGE_MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;

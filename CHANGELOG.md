@@ -1653,3 +1653,85 @@ All notable changes to this project are documented here.
     exactly `{"yolo":true}` with no `fridgeItems` key, and that a YOLO result
     could be followed up with feedback through to a full recipe. Zero console
     errors throughout.
+
+## 2026-07-13
+
+### Changed
+
+- Worked through all 13 findings in `CODE_SMELLS.md` (a fresh code-smell review of the
+  whole codebase against `CODING_GUIDELINES.md`, done immediately before this pass —
+  four tools/features shipped since the prior 2026-07-10 review had each independently
+  reintroduced patterns that review had already flagged as duplicated). Pure
+  simplification/deduplication — no user-facing behavior changed except one deliberate
+  fix noted below. Verified throughout with `npm run verify` (lint + Amplify typecheck +
+  build + full test suite) staying green, plus each individual tool/context's own test
+  file passing unchanged.
+  - **Shared parsing/rendering helpers**, replacing hand-rolled copies in 4-7 places
+    each: `src/lib/parseLabeledOutput.ts` (`makeLabelGetter`/`getBulletList`, used by
+    Tone Checker, Call Script, Is This Mad?, Time Estimator), `src/lib/parseNumberedList.ts`
+    (Task Breakdown, Brain Dump Sorter, Assignment Breakdown, Essay Structure Planner,
+    Reply Starter), `src/components/StructuredResult.tsx` (the same five tools plus
+    Cook's Corner's recipe card), `src/lib/localStorage.ts` (`readStored<T>`, used by
+    `TaskStoreContext`, `RemindersContext`, `TimetableContext`, Side Quest Log, Dopamine
+    Menu), and `parseWithFallback`/`joinLabeledLines` in `ai-assist/handler.ts` (all
+    seven `buildXMessage` functions).
+  - **A real behavior fix, not just deduplication**: `parseNumberedList` splits on a
+    lookahead for the next numbered item rather than by line, so an AI response where a
+    step happens to span two lines no longer gets silently split into two separate
+    tasks — the bug Reply Starter's own parser had already avoided by accident; the
+    other four tools were still exposed to it. Added a regression test
+    (`parseNumberedList.test.ts`) reproducing the multi-line-step case.
+  - **`src/hooks/useOnceGuard.ts`** — the double-click "sent" guard, previously a
+    hand-rolled `useRef` in Task Breakdown, Brain Dump Sorter, Essay Structure Planner,
+    and Assignment Breakdown, each with its own copy of the "why a ref, not state"
+    comment. Side Quest Log's `Set`-based per-entry guard is a genuinely different shape
+    (guarding N independent items, not one batch) and was deliberately left alone.
+  - **`src/hooks/useSignedOutMirror.ts`** — the mirror-to-`localStorage`-while-signed-out
+    effect, now shared by `RemindersContext`, `TaskStoreContext`, and `TimetableContext`.
+    Timetable (shipped since the 2026-07-10 review) became the third context with this
+    exact shape — the condition that review itself named for revisiting the
+    "don't unify yet" call on the harder `observeQuery`/migration effects. Decided to
+    extract only this safely-shareable, model-agnostic part for now and leave the
+    `observeQuery` subscription and migration effects as three separate copies — each
+    context's underlying model is different enough (Reminders' firing loop, Task
+    Store's two models, Timetable's day-of-week grouping) that a generic version felt
+    like building ahead of a real need rather than responding to one.
+  - **`src/hooks/useCopyFeedback.ts`** — the copy-to-clipboard-with-a-reverting-"Copied"-
+    label pattern, previously duplicated between Essay Phrase Bank and Reply Starter.
+  - **`EverythingPile` decomposed** from one ~490-line component into `TaskGroupHeader`,
+    `TaskListItem`, and a pure `buildTaskGroups` computation, alongside the existing
+    `AddTaskRow`/`SizeToggle`. No markup, class name, or `aria-label` changed — confirmed
+    by the existing 22-test suite passing unmodified.
+  - Small opportunistic cleanups: `reminderParser.ts`'s three clock-idiom `.replace()`
+    calls ("half past five" etc.) now use the same data-driven pattern the file's
+    `WARN_PATTERNS`/`REPEAT_PATTERNS` already established; `TaskStoreContext.tsx`'s
+    `updateTask` patch-building extracted to a named `toTaskUpdatePatch` helper;
+    `DistractMeContext` now exposes the resolved `activeSound` object directly so
+    `NowPlayingBar.tsx` doesn't need its own `SOUNDS.find`; `ToolCard.tsx`'s repeated
+    `Boolean(badgeCount)` computed once.
+  - `CODE_SMELLS.md` and `README.md`'s "Adding a new tool" section updated — the latter
+    now points to each new shared helper so a future tool reaches for one instead of
+    writing a fifth/sixth copy of the same logic.
+  - **Extra verification pass, specifically on signed-in-vs-signed-out data storage**:
+    the `TaskStoreContext` split (one combined mirror effect covering both `projects`
+    and `tasks` → two independent `useSignedOutMirror` calls) is the one topology
+    change in this whole pass, so it got dedicated scrutiny against the exact race
+    documented in `designs/user-personalization.md`'s "What Phase 2 built" (a prior,
+    real bug: two separate effects for the mirror-write and the sign-out-revert let the
+    mirror effect write a moment's stale, still-signed-in account data to `localStorage`
+    before the revert effect read it back out). Added tests confirming the split didn't
+    reopen that: both arrays revert together on sign-out with neither leaking to
+    `localStorage`, and a change to one array's `localStorage` entry doesn't corrupt or
+    drop the other's already-persisted entry. Also closed a real gap in the *existing*
+    test suites for all three signed-in/out contexts (`Reminders`, `TaskStore`,
+    `Timetable`) — every prior sign-out test only asserted the *account's* data
+    disappeared; none asserted the device's own *pre-existing local* data actually
+    reappears intact (not empty, not mixed with account data), which is the other half
+    of the documented correctness requirement. Full `npm run verify` clean throughout
+    (238 tests, up from 233). One red herring investigated and ruled out: running these
+    context test files individually (not as part of the full suite) surfaces a React
+    "not wrapped in act()" console warning tied to `AuthContext`'s mocked async
+    `getCurrentUser()` — confirmed via bisection (old/new source × old/new tests) to be
+    a Vitest single-file worker-timing artifact, not caused by anything in this change:
+    it doesn't appear in the actual `npm test`/`npm run verify` run, and reproduces
+    identically on `sideQuestLog/index.test.tsx`, a file this pass didn't touch.

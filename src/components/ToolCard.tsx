@@ -7,9 +7,11 @@ interface ToolCardProps {
 }
 
 export function ToolCard({ meta, onSelect, badgeCount }: ToolCardProps) {
+  const hasBadge = Boolean(badgeCount);
+
   return (
     <button className="tool-card" onClick={() => onSelect(meta.id)}>
-      {Boolean(badgeCount) && (
+      {hasBadge && (
         <span className="tool-card-badge" aria-hidden="true">
           {badgeCount}
         </span>
@@ -19,7 +21,7 @@ export function ToolCard({ meta, onSelect, badgeCount }: ToolCardProps) {
       </span>
       <span className="tool-card-name">
         {meta.name}
-        {Boolean(badgeCount) && (
+        {hasBadge && (
           <span className="sr-only">, {badgeCount} active reminder{badgeCount === 1 ? '' : 's'}</span>
         )}
       </span>

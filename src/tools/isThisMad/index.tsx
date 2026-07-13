@@ -1,27 +1,19 @@
 import { useState } from 'react';
 import { useAiTool } from '../../hooks/useAiTool';
+import { getBulletList, makeLabelGetter } from '../../lib/parseLabeledOutput';
+import { StructuredResult } from '../../components/StructuredResult';
+import type { StructuredField } from '../../components/StructuredResult';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
 
 function parseResult(output: string) {
-  const lines = output.split('\n').map((line) => line.trim());
-  const get = (label: string) =>
-    lines.find((line) => line.toLowerCase().startsWith(label.toLowerCase()))?.slice(label.length).trim();
-
-  const asksIndex = lines.findIndex((line) => line.toLowerCase().startsWith('asks:'));
-  const asks =
-    asksIndex === -1
-      ? []
-      : lines
-          .slice(asksIndex + 1)
-          .filter((line) => line.startsWith('-'))
-          .map((line) => line.replace(/^-\s*/, ''));
+  const get = makeLabelGetter(output);
 
   return {
     tone: get('Tone:'),
     meaning: get('Most likely meaning:'),
     reassurance: get('Reassurance:'),
-    asks,
+    asks: getBulletList(output, 'asks:'),
   };
 }
 
@@ -37,8 +29,23 @@ function IsThisMad() {
   }
 
   const parsed = output ? parseResult(output) : null;
-  const hasStructuredResult =
-    parsed && (parsed.tone || parsed.meaning || parsed.reassurance || parsed.asks.length > 0);
+  const fields = [
+    parsed?.tone && ({ label: 'Tone', value: parsed.tone } as StructuredField),
+    parsed?.meaning && ({ label: 'Most likely meaning', value: parsed.meaning } as StructuredField),
+    parsed?.reassurance && ({ label: 'Reassurance', value: parsed.reassurance } as StructuredField),
+    parsed &&
+      parsed.asks.length > 0 &&
+      ({
+        label: 'Asks',
+        value: (
+          <ul className="tool-result-fields-list">
+            {parsed.asks.map((ask, index) => (
+              <li key={index}>{ask}</li>
+            ))}
+          </ul>
+        ),
+      } as StructuredField),
+  ].filter((field): field is StructuredField => Boolean(field));
 
   return (
     <div className="tool-panel">
@@ -76,41 +83,7 @@ function IsThisMad() {
 
       {error && <p className="tool-error">{error}</p>}
 
-      {hasStructuredResult && (
-        <dl className="tool-result-fields">
-          {parsed?.tone && (
-            <>
-              <dt>Tone</dt>
-              <dd>{parsed.tone}</dd>
-            </>
-          )}
-          {parsed?.meaning && (
-            <>
-              <dt>Most likely meaning</dt>
-              <dd>{parsed.meaning}</dd>
-            </>
-          )}
-          {parsed?.reassurance && (
-            <>
-              <dt>Reassurance</dt>
-              <dd>{parsed.reassurance}</dd>
-            </>
-          )}
-          {parsed && parsed.asks.length > 0 && (
-            <>
-              <dt>Asks</dt>
-              <dd>
-                <ul className="tool-result-fields-list">
-                  {parsed.asks.map((ask, index) => (
-                    <li key={index}>{ask}</li>
-                  ))}
-                </ul>
-              </dd>
-            </>
-          )}
-        </dl>
-      )}
-      {output && !hasStructuredResult && <p className="tool-result-plain">{output}</p>}
+      <StructuredResult fields={fields} rawOutput={output} />
     </div>
   );
 }

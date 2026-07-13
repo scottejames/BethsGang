@@ -368,4 +368,42 @@ describe('TimetableContext (signed in)', () => {
 
     await waitFor(() => expect(result.current.entries).toHaveLength(0));
   });
+
+  it('a pre-existing local entry reappears intact after sign-out, with no account data mixed in', async () => {
+    // Every existing sign-out test above only asserts the account's entry disappears.
+    // This asserts the actual pre-sign-in local content — not an empty list, and not
+    // the account's entry — is what's showing afterward.
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify([{ id: 'local-1', dayOfWeek: 'friday', startTime: '12:00', label: 'Local-only lesson' }]),
+    );
+    // Already migrated on this device — otherwise mounting signed-in would upload the
+    // local seed entry above, which isn't what this test is checking.
+    window.localStorage.setItem(MIGRATION_FLAG_KEY, 'true');
+
+    let hubCallback: ((event: { payload: { event: string } }) => void) | undefined;
+    vi.mocked(Hub.listen).mockImplementation((_channel, callback) => {
+      hubCallback = callback as typeof hubCallback;
+      return vi.fn();
+    });
+
+    const { result } = renderHook(() => useTimetable(), { wrapper });
+    await waitFor(() => expect(client.models.TimetableEntry.observeQuery).toHaveBeenCalled());
+    // The account's backend data is entirely different from what's sitting locally.
+    act(() =>
+      observeQueryNext?.({
+        items: [{ id: 'acct-1', dayOfWeek: 'monday', startTime: '09:00:00', label: 'Account lesson' }],
+      }),
+    );
+    expect(result.current.entries.map((entry) => entry.label)).toEqual(['Account lesson']);
+
+    vi.mocked(amplifyAuth.getCurrentUser).mockRejectedValue(new Error('not signed in'));
+    act(() => {
+      hubCallback?.({ payload: { event: 'signedOut' } });
+    });
+
+    await waitFor(() =>
+      expect(result.current.entries.map((entry) => entry.label)).toEqual(['Local-only lesson']),
+    );
+  });
 });

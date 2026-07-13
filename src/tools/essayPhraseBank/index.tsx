@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useCopyFeedback } from '../../hooks/useCopyFeedback';
 import { phraseCategories } from './phrases';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
@@ -6,7 +7,7 @@ import type { ToolDefinition } from '../types';
 function EssayPhraseBank() {
   const [activeCategoryId, setActiveCategoryId] = useState(phraseCategories[0].id);
   const [search, setSearch] = useState('');
-  const [copiedPhrase, setCopiedPhrase] = useState<string | null>(null);
+  const { copied: copiedPhrase, copy } = useCopyFeedback<string>();
 
   const trimmedSearch = search.trim().toLowerCase();
   // A search takes over the whole bank (every category), since "which category was
@@ -15,18 +16,6 @@ function EssayPhraseBank() {
   const visiblePhrases = trimmedSearch
     ? phraseCategories.flatMap((category) => category.phrases.filter((phrase) => phrase.toLowerCase().includes(trimmedSearch)))
     : phraseCategories.find((category) => category.id === activeCategoryId)?.phrases ?? [];
-
-  async function handleCopy(phrase: string) {
-    try {
-      await navigator.clipboard.writeText(phrase);
-      setCopiedPhrase(phrase);
-      setTimeout(() => {
-        setCopiedPhrase((current) => (current === phrase ? null : current));
-      }, 1500);
-    } catch {
-      // Clipboard access unavailable — the phrase is still visible to copy by hand.
-    }
-  }
 
   return (
     <div className="tool-panel">
@@ -75,7 +64,7 @@ function EssayPhraseBank() {
           {visiblePhrases.map((phrase, index) => (
             <li key={`${phrase}-${index}`} className="reply-item">
               <p>{phrase}</p>
-              <button type="button" className="copy-button" onClick={() => handleCopy(phrase)}>
+              <button type="button" className="copy-button" onClick={() => copy(phrase, phrase)}>
                 {copiedPhrase === phrase ? 'Copied' : 'Copy'}
               </button>
             </li>

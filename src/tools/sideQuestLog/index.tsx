@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTaskStore } from '../../context/TaskStoreContext';
 import { useUndoableDelete } from '../../hooks/useUndoableDelete';
 import { UndoToastStack } from '../../components/UndoToastStack';
+import { readStored } from '../../lib/localStorage';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
 
@@ -14,14 +15,7 @@ interface SidequestEntry {
 const STORAGE_KEY = 'beths-gang:sidequest-log';
 
 function loadEntries(): SidequestEntry[] {
-  try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (!stored) return [];
-    const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  return readStored<SidequestEntry>(STORAGE_KEY);
 }
 
 function SideQuestLog() {

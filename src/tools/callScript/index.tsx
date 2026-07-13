@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useAiTool } from '../../hooks/useAiTool';
+import { makeLabelGetter } from '../../lib/parseLabeledOutput';
+import { StructuredResult } from '../../components/StructuredResult';
+import type { StructuredField } from '../../components/StructuredResult';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
 
@@ -12,12 +15,7 @@ interface CallScriptPayload {
 }
 
 function parseScript(output: string) {
-  const lines = output.split('\n').map((line) => line.trim());
-  const get = (label: string) =>
-    lines
-      .find((line) => line.toLowerCase().startsWith(label.toLowerCase()))
-      ?.slice(label.length)
-      .trim();
+  const get = makeLabelGetter(output);
 
   return {
     opening: get('Opening:'),
@@ -46,7 +44,12 @@ function CallScript() {
   }
 
   const script = output ? parseScript(output) : null;
-  const hasScript = script && (script.opening || script.mainPoint || script.ifTheyAsk || script.closing);
+  const fields = [
+    script?.opening && ({ label: 'Opening', value: script.opening } as StructuredField),
+    script?.mainPoint && ({ label: 'Main point', value: script.mainPoint } as StructuredField),
+    script?.ifTheyAsk && ({ label: 'If they ask more', value: script.ifTheyAsk } as StructuredField),
+    script?.closing && ({ label: 'Closing', value: script.closing } as StructuredField),
+  ].filter((field): field is StructuredField => Boolean(field));
 
   return (
     <div className="tool-panel">
@@ -97,35 +100,7 @@ function CallScript() {
 
       {error && <p className="tool-error">{error}</p>}
 
-      {hasScript && (
-        <dl className="call-script-fields">
-          {script?.opening && (
-            <>
-              <dt>Opening</dt>
-              <dd>{script.opening}</dd>
-            </>
-          )}
-          {script?.mainPoint && (
-            <>
-              <dt>Main point</dt>
-              <dd>{script.mainPoint}</dd>
-            </>
-          )}
-          {script?.ifTheyAsk && (
-            <>
-              <dt>If they ask more</dt>
-              <dd>{script.ifTheyAsk}</dd>
-            </>
-          )}
-          {script?.closing && (
-            <>
-              <dt>Closing</dt>
-              <dd>{script.closing}</dd>
-            </>
-          )}
-        </dl>
-      )}
-      {output && !hasScript && <p className="tool-result-plain">{output}</p>}
+      <StructuredResult fields={fields} rawOutput={output} className="call-script-fields" />
     </div>
   );
 }

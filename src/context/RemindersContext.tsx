@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import type { RepeatRule } from '../lib/reminderParser';
 import { useAuth } from './AuthContext';
 import { client } from '../lib/dataClient';
+import { readStored } from '../lib/localStorage';
+import { useSignedOutMirror } from '../hooks/useSignedOutMirror';
 
 export type { RepeatRule };
 
@@ -28,14 +30,7 @@ const MIGRATION_FLAG_KEY = 'beths-gang:reminders-migrated';
 const CHECK_INTERVAL_MS = 15_000;
 
 function readStoredReminders(): Reminder[] {
-  try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (!stored) return [];
-    const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  return readStored<Reminder>(STORAGE_KEY);
 }
 
 // The backend model stores `repeat` as a JSON string (see amplify/data/resource.ts) —
@@ -163,35 +158,17 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
   remindersRef.current = reminders;
   const isSignedInRef = useRef(isSignedIn);
   isSignedInRef.current = isSignedIn;
-  const wasSignedIn = useRef(isSignedIn);
   const hasCheckedOnMount = useRef(false);
 
   // Only mirrors to localStorage while signed out — while signed in, `reminders` is
-  // driven by the observeQuery subscription below, and that's account data. It must
-  // NOT leak into localStorage, or it would still be visible after signing out (found
-  // via direct user testing: a reminder created while signed in was still shown after
-  // sign-out, which is wrong for data that belongs to the account, not the device).
-  //
-  // The sign-out transition itself is handled in the same effect as the write,
-  // deliberately not as two separate effects: on the render where `isSignedIn` flips
-  // to false, `reminders` in this closure is still the *stale*, still-signed-in value
-  // (React doesn't re-run this effect mid-flush after a sibling effect's setState) — a
-  // separate "mirror" effect would write that stale account data to localStorage
-  // before a separate "revert" effect got a chance to read it back out, defeating the
-  // whole point. Handling both in one effect avoids that race entirely.
-  useEffect(() => {
-    const justSignedOut = wasSignedIn.current && !isSignedIn;
-    wasSignedIn.current = isSignedIn;
-    if (justSignedOut) {
-      const local = readStoredReminders();
-      remindersRef.current = local;
-      setReminders(local);
-      return; // this render's `reminders` is stale account data — don't write it
-    }
-    if (!isSignedIn) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(reminders));
-    }
-  }, [reminders, isSignedIn]);
+  // driven by the observeQuery subscription below, and that's account data (see
+  // useSignedOutMirror.ts for why it must not leak into localStorage, and for the
+  // single-effect shape below). `remindersRef` is kept in sync on revert too, since
+  // checkReminders() below reads it, not `reminders` directly.
+  useSignedOutMirror(reminders, isSignedIn, STORAGE_KEY, readStoredReminders, (local) => {
+    remindersRef.current = local;
+    setReminders(local);
+  });
 
   // Signed in: reminders live in the backend. observeQuery emits the current set
   // immediately, then live updates — this is what makes "added on phone, appears on

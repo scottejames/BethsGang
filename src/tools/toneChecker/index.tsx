@@ -1,13 +1,14 @@
 import { useRef, useState } from 'react';
 import { useAiTool } from '../../hooks/useAiTool';
 import { captureImageForUpload, findImageInClipboard } from '../../lib/imageCapture';
+import { makeLabelGetter } from '../../lib/parseLabeledOutput';
+import { StructuredResult } from '../../components/StructuredResult';
+import type { StructuredField } from '../../components/StructuredResult';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
 
 function parseResult(output: string) {
-  const lines = output.split('\n').map((line) => line.trim());
-  const get = (label: string) =>
-    lines.find((line) => line.toLowerCase().startsWith(label.toLowerCase()))?.slice(label.length).trim();
+  const get = makeLabelGetter(output);
 
   return {
     tone: get('Tone:'),
@@ -59,7 +60,11 @@ function ToneChecker() {
   }
 
   const parsed = output ? parseResult(output) : null;
-  const hasStructuredResult = parsed && (parsed.tone || parsed.landsAs || parsed.suggestion);
+  const fields = [
+    parsed?.tone && ({ label: 'Tone', value: parsed.tone } as StructuredField),
+    parsed?.landsAs && ({ label: 'Likely to land as', value: parsed.landsAs } as StructuredField),
+    parsed?.suggestion && ({ label: 'Suggestion', value: parsed.suggestion } as StructuredField),
+  ].filter((field): field is StructuredField => Boolean(field));
   const busy = loading || extracting;
 
   return (
@@ -120,29 +125,7 @@ function ToneChecker() {
 
       {error && <p className="tool-error">{error}</p>}
 
-      {hasStructuredResult && (
-        <dl className="tool-result-fields">
-          {parsed?.tone && (
-            <>
-              <dt>Tone</dt>
-              <dd>{parsed.tone}</dd>
-            </>
-          )}
-          {parsed?.landsAs && (
-            <>
-              <dt>Likely to land as</dt>
-              <dd>{parsed.landsAs}</dd>
-            </>
-          )}
-          {parsed?.suggestion && (
-            <>
-              <dt>Suggestion</dt>
-              <dd>{parsed.suggestion}</dd>
-            </>
-          )}
-        </dl>
-      )}
-      {output && !hasStructuredResult && <p className="tool-result-plain">{output}</p>}
+      <StructuredResult fields={fields} rawOutput={output} />
     </div>
   );
 }

@@ -76,6 +76,21 @@ function wordToNumber(token: string): number | undefined {
   return NUMBER_WORDS[token.toLowerCase()];
 }
 
+// British clock idioms chrono doesn't recognise at all ("half past five", "quarter past
+// five", "quarter to five") — rewritten to plain "H:MM", which then flows through the
+// same ambiguous-hour resolution as any other bare clock time. Same data-driven
+// try-each-pattern shape as WARN_PATTERNS/REPEAT_PATTERNS above, rather than three
+// separate structurally-identical .replace() calls.
+const CLOCK_IDIOM_HOUR_PATTERN = `\\d{1,2}|${NUMBER_WORD_PATTERN}`;
+const CLOCK_IDIOMS: { regex: RegExp; toTime: (hour: number) => string }[] = [
+  { regex: new RegExp(`\\bhalf\\s+past\\s+(${CLOCK_IDIOM_HOUR_PATTERN})\\b`, 'gi'), toTime: (h) => `${h}:30` },
+  { regex: new RegExp(`\\bquarter\\s+past\\s+(${CLOCK_IDIOM_HOUR_PATTERN})\\b`, 'gi'), toTime: (h) => `${h}:15` },
+  {
+    regex: new RegExp(`\\bquarter\\s+to\\s+(${CLOCK_IDIOM_HOUR_PATTERN})\\b`, 'gi'),
+    toTime: (h) => `${h <= 1 ? 12 : h - 1}:45`,
+  },
+];
+
 // chrono-node handles plenty of casual duration/time phrasing natively ("in a couple of
 // hours", "in a few minutes", "half an hour", "noon") but a handful of common ones either
 // silently give the wrong answer or aren't recognised at all — rewritten here into a form
@@ -103,32 +118,12 @@ function normalizeDurationPhrases(text: string): string {
   // this, chrono matches just "an hour" (or worse, "a quarter" as a quarter-*year*).
   result = result.replace(/\b(?:a\s+)?quarter\s+(?:of\s+an?\s+)?hours?\b/gi, '15 minutes');
 
-  // British clock idioms chrono doesn't recognise at all ("half past five", "quarter
-  // past five", "quarter to five") — rewritten to plain "H:MM", which then flows through
-  // the same ambiguous-hour resolution as any other bare clock time.
-  const hourPattern = `\\d{1,2}|${NUMBER_WORD_PATTERN}`;
-  result = result.replace(
-    new RegExp(`\\bhalf\\s+past\\s+(${hourPattern})\\b`, 'gi'),
-    (whole, hour: string) => {
+  for (const { regex, toTime } of CLOCK_IDIOMS) {
+    result = result.replace(regex, (whole, hour: string) => {
       const h = wordToNumber(hour);
-      return h === undefined ? whole : `${h}:30`;
-    },
-  );
-  result = result.replace(
-    new RegExp(`\\bquarter\\s+past\\s+(${hourPattern})\\b`, 'gi'),
-    (whole, hour: string) => {
-      const h = wordToNumber(hour);
-      return h === undefined ? whole : `${h}:15`;
-    },
-  );
-  result = result.replace(
-    new RegExp(`\\bquarter\\s+to\\s+(${hourPattern})\\b`, 'gi'),
-    (whole, hour: string) => {
-      const h = wordToNumber(hour);
-      if (h === undefined) return whole;
-      return `${h <= 1 ? 12 : h - 1}:45`;
-    },
-  );
+      return h === undefined ? whole : toTime(h);
+    });
+  }
 
   return result;
 }

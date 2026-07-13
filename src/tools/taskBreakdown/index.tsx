@@ -1,13 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAiTool } from '../../hooks/useAiTool';
 import { useTaskStore } from '../../context/TaskStoreContext';
 import { useToolNavigation } from '../../context/ToolNavigationContext';
+import { useOnceGuard } from '../../hooks/useOnceGuard';
+import { parseNumberedList } from '../../lib/parseNumberedList';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
-
-function cleanStep(step: string): string {
-  return step.replace(/^\d+\.\s*/, '');
-}
 
 interface Origin {
   projectId: string;
@@ -20,11 +18,9 @@ function TaskBreakdown() {
   const { pendingBreakdownRequest, clearBreakdownRequest, navigateToTool } = useToolNavigation();
   const { addProject, addTask } = useTaskStore();
   const [origin, setOrigin] = useState<Origin | null>(null);
-  // Guards against a fast double-click sending the same breakdown twice — a ref
-  // (checked-and-set synchronously) rather than state, since two click handlers
-  // dispatched back-to-back can both run before React re-renders with a disabled
-  // button, and a state check would still see the stale pre-click value in that case.
-  const sentRef = useRef(false);
+  // Guards against a fast double-click sending the same breakdown twice — see
+  // useOnceGuard.ts for why this needs to be a ref rather than a state check.
+  const sentGuard = useOnceGuard();
 
   // One-shot pickup of a handoff from Everything Pile's "Break down" button (see
   // ToolNavigationContext.tsx) — pre-fills the task text and remembers which project
@@ -44,26 +40,20 @@ function TaskBreakdown() {
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (task.trim()) {
-      sentRef.current = false;
+      sentGuard.reset();
       run(task.trim());
     }
   }
 
-  const steps = output
-    ? output
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map(cleanStep)
-    : [];
+  const steps = output ? parseNumberedList(output) : [];
 
   // Sends this session's steps to Everything Pile: into the project this session
   // started from (if any — see the mount effect above), or a new project named after
   // the task otherwise. Small and "now" by default, matching Task Breakdown's own
   // framing — these are "small, concrete, startable steps" you just asked for.
   function handleSendToEverythingPile() {
-    if (sentRef.current) return;
-    sentRef.current = true;
+    if (sentGuard.hasFired()) return;
+    sentGuard.markFired();
     const targetProjectId = origin ? origin.projectId : addProject(task.trim()).id;
     steps.forEach((step) => {
       addTask({ title: step, projectId: targetProjectId, size: 'small', category: 'now' });

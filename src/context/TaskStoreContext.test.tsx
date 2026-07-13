@@ -213,6 +213,30 @@ describe('TaskStoreContext (signed out)', () => {
     expect(result.current.tasks[0].title).toBe('existing task');
   });
 
+  it('a task-only change does not corrupt or drop already-persisted projects (and vice versa)', () => {
+    // Projects and tasks are now mirrored to localStorage by two independent
+    // useSignedOutMirror instances (one per array) rather than one combined effect —
+    // this locks in that splitting them didn't make either one's write clobber or
+    // lose the other's already-persisted localStorage entry.
+    const { result } = renderHook(() => useTaskStore(), { wrapper });
+
+    act(() => result.current.addProject('Kitchen reno'));
+    const projectId = result.current.projects[0].id;
+    expect(JSON.parse(window.localStorage.getItem(PROJECTS_KEY) ?? '[]')).toHaveLength(1);
+    expect(JSON.parse(window.localStorage.getItem(TASKS_KEY) ?? '[]')).toHaveLength(0);
+
+    // A tasks-only change (projects array reference doesn't change) shouldn't touch,
+    // let alone lose, the already-written projects entry.
+    act(() => result.current.addTask({ title: 'grout tiles', size: 'small', category: 'now', projectId }));
+    expect(JSON.parse(window.localStorage.getItem(PROJECTS_KEY) ?? '[]')).toHaveLength(1);
+    expect(JSON.parse(window.localStorage.getItem(TASKS_KEY) ?? '[]')).toHaveLength(1);
+
+    // And the reverse: a projects-only change shouldn't touch the already-written task.
+    act(() => result.current.addProject('Side hustle'));
+    expect(JSON.parse(window.localStorage.getItem(PROJECTS_KEY) ?? '[]')).toHaveLength(2);
+    expect(JSON.parse(window.localStorage.getItem(TASKS_KEY) ?? '[]')).toHaveLength(1);
+  });
+
   it('never touches the backend while signed out', () => {
     const { result } = renderHook(() => useTaskStore(), { wrapper });
     act(() => {
@@ -451,5 +475,111 @@ describe('TaskStoreContext (signed in)', () => {
     });
 
     await waitFor(() => expect(result.current.projects).toHaveLength(0));
+  });
+
+  it('a project AND a task created in the same signed-in session both disappear together on sign-out, with neither leaking to localStorage', async () => {
+    // Projects and tasks each mirror via their own useSignedOutMirror instance now —
+    // this is the direct test that splitting the old single combined effect into two
+    // didn't reintroduce the "stale account data written to localStorage a moment
+    // before revert" race documented in designs/user-personalization.md, for either
+    // array, when both change in the same signed-in session.
+    let hubCallback: ((event: { payload: { event: string } }) => void) | undefined;
+    vi.mocked(Hub.listen).mockImplementation((_channel, callback) => {
+      hubCallback = callback as typeof hubCallback;
+      return vi.fn();
+    });
+
+    const { result } = renderHook(() => useTaskStore(), { wrapper });
+    await waitFor(() => expect(client.models.Project.observeQuery).toHaveBeenCalled());
+    act(() => projectObserveNext?.({ items: [] }));
+    act(() => taskObserveNext?.({ items: [] }));
+
+    act(() => {
+      const project = result.current.addProject('account-only project');
+      result.current.addTask({ title: 'account-only task', size: 'small', category: 'now', projectId: project.id });
+    });
+    expect(result.current.projects).toHaveLength(1);
+    expect(result.current.tasks).toHaveLength(1);
+    expect(JSON.parse(window.localStorage.getItem(PROJECTS_KEY) ?? '[]')).toEqual([]);
+    expect(JSON.parse(window.localStorage.getItem(TASKS_KEY) ?? '[]')).toEqual([]);
+
+    vi.mocked(amplifyAuth.getCurrentUser).mockRejectedValue(new Error('not signed in'));
+    act(() => {
+      hubCallback?.({ payload: { event: 'signedOut' } });
+    });
+
+    await waitFor(() => expect(result.current.projects).toHaveLength(0));
+    expect(result.current.tasks).toHaveLength(0);
+    // Still nothing account-related persisted after the revert settles.
+    expect(JSON.parse(window.localStorage.getItem(PROJECTS_KEY) ?? '[]')).toEqual([]);
+    expect(JSON.parse(window.localStorage.getItem(TASKS_KEY) ?? '[]')).toEqual([]);
+  });
+
+  it('pre-existing local projects and tasks reappear intact after sign-out, with no account data mixed in', async () => {
+    // The other half of "sign-out reverts to the device's own data": every existing
+    // sign-out test only asserted the account data disappeared. This asserts the
+    // actual pre-sign-in local content — not an empty list, and not the account's
+    // content — is what's showing afterward.
+    window.localStorage.setItem(
+      PROJECTS_KEY,
+      JSON.stringify([{ id: 'local-p1', name: 'Local-only project', createdAt: new Date().toISOString() }]),
+    );
+    window.localStorage.setItem(
+      TASKS_KEY,
+      JSON.stringify([
+        {
+          id: 'local-t1',
+          title: 'local-only task',
+          projectId: 'local-p1',
+          size: 'small',
+          category: 'now',
+          done: false,
+          createdAt: new Date().toISOString(),
+        },
+      ]),
+    );
+    // This device already migrated previously — otherwise mounting signed-in would
+    // upload the local seed data above, which isn't what this test is checking.
+    window.localStorage.setItem(MIGRATION_FLAG_KEY, 'true');
+
+    let hubCallback: ((event: { payload: { event: string } }) => void) | undefined;
+    vi.mocked(Hub.listen).mockImplementation((_channel, callback) => {
+      hubCallback = callback as typeof hubCallback;
+      return vi.fn();
+    });
+
+    const { result } = renderHook(() => useTaskStore(), { wrapper });
+    await waitFor(() => expect(client.models.Project.observeQuery).toHaveBeenCalled());
+    // The account's backend data is entirely different from what's sitting locally.
+    act(() =>
+      projectObserveNext?.({
+        items: [{ id: 'acct-p1', name: 'Account project', createdAt: new Date().toISOString() }],
+      }),
+    );
+    act(() =>
+      taskObserveNext?.({
+        items: [
+          {
+            id: 'acct-t1',
+            title: 'account task',
+            projectId: 'acct-p1',
+            size: 'small',
+            category: 'now',
+            done: false,
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      }),
+    );
+    expect(result.current.projects.map((project) => project.name)).toEqual(['Account project']);
+    expect(result.current.tasks.map((task) => task.title)).toEqual(['account task']);
+
+    vi.mocked(amplifyAuth.getCurrentUser).mockRejectedValue(new Error('not signed in'));
+    act(() => {
+      hubCallback?.({ payload: { event: 'signedOut' } });
+    });
+
+    await waitFor(() => expect(result.current.projects.map((project) => project.name)).toEqual(['Local-only project']));
+    expect(result.current.tasks.map((task) => task.title)).toEqual(['local-only task']);
   });
 });
