@@ -75,7 +75,8 @@ TypeScript, Amplify Gen2, testing, security) are in
   only UI that opens the sign-in flow — a fixed top-left button opening a themed Amplify
   UI `<Authenticator>` in the existing `Modal.tsx`. This is deliberately opt-in, not a
   login gate — `localStorage` remains the full default experience for anyone not signed
-  in, and `runAiTool`/`logEvent` stay on the public API key regardless of sign-in state.
+  in, and `runAiTool`/`logEvent` stay on unauthenticated Identity Pool auth (`allow.guest()`
+  — see below) regardless of sign-in state.
   See `src/index.css`'s `.amplify-auth-theme` block for how the Authenticator's
   `--amplify-*` tokens are mapped onto this app's own colors so it doesn't look like a
   bolted-on third-party widget — the card/tabs, field text, and validation-error text
@@ -84,7 +85,7 @@ TypeScript, Amplify Gen2, testing, security) are in
   `designs/user-personalization.md` for the full explanation of why).
 - **Per-user persistence** — `Reminder`, `UserPreferences`, `Project`,
   and `Task` are owner-scoped `a.model()`s in `amplify/data/resource.ts`
-  (`allow.owner()`, distinct from `runAiTool`/`logEvent`'s public API key auth).
+  (`allow.owner()`, distinct from `runAiTool`/`logEvent`'s `allow.guest()` auth).
   `RemindersContext`/`EnergyContext`/`TaskStoreContext` use them via
   `client.models.*.observeQuery()` (see `src/lib/dataClient.ts`) when signed in, and
   fall back to exactly their prior `localStorage`-only behavior when signed out.

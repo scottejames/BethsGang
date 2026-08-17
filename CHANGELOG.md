@@ -1735,3 +1735,34 @@ All notable changes to this project are documented here.
     a Vitest single-file worker-timing artifact, not caused by anything in this change:
     it doesn't appear in the actual `npm test`/`npm run verify` run, and reproduces
     identically on `sideQuestLog/index.test.tsx`, a file this pass didn't touch.
+
+## 2026-08-17
+
+### Fixed
+
+- **Production incident: every AI tool returned "Unauthorized."** The AppSync API
+  key backing `runAiTool`/`logEvent` (`allow.publicApiKey()`, `expiresInDays: 30`)
+  had silently expired on 2026-08-12 — the app kept running, but every AI-backed
+  tool (Call Script and everything else routing through `runAiTool`) failed for
+  every visitor until noticed 5 days later. Immediate fix: extended the existing
+  key's expiration in place via `aws appsync update-api-key` (same key value, so
+  the already-deployed frontend picked it back up with no redeploy needed).
+
+### Changed
+
+- **`runAiTool`/`logEvent` no longer use a public API key.** Root-caused the above
+  incident to the auth model itself — a 30-day static secret with no automated
+  rotation was always going to expire silently again. Switched both operations from
+  `allow.publicApiKey()` to `allow.guest()` (an unauthenticated Cognito Identity
+  Pool role) in `amplify/data/resource.ts`: `src/lib/aiClient.ts` and
+  `src/lib/usageLog.ts` now call `generateClient` with `authMode: 'identityPool'`
+  (mirroring the existing `authMode: 'userPool'` pattern already used by
+  `src/lib/dataClient.ts` for the owner-scoped models), and `apiKeyAuthorizationMode`
+  was dropped from `defineData` entirely since nothing uses API-key auth anymore.
+  Unauthenticated Identity Pool access was already enabled by default in this
+  project's `defineAuth` config, so no change was needed there. Trades a static,
+  leakable, expiring secret for short-lived credentials the Amplify client
+  refreshes automatically — removes the rotation burden and the "key found in the
+  bundle stays valid for up to a year" exposure, though the endpoint is still
+  unauthenticated by design (see `BUGS.md` #7, updated to match). `npm run verify`
+  clean; not yet deployed/smoke-tested against a live backend as of this entry.

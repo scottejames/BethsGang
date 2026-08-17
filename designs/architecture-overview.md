@@ -27,9 +27,12 @@ tool #3's wiring.
 ## The AI backend: one Lambda, one map
 
 Tools that need Claude call a single GraphQL query, `runAiTool(toolId, input)`, defined
-in `amplify/data/resource.ts` with `allow.publicApiKey()` authorization (no login
-required — see `designs/user-personalization.md` for why auth, when it arrived, stayed
-separate from this). One Lambda (`amplify/functions/ai-assist/handler.ts`) resolves it by
+in `amplify/data/resource.ts` with `allow.guest()` authorization — an unauthenticated
+Cognito Identity Pool role, not a static API key, so there's no secret embedded in the
+bundle and nothing to expire/rotate (swapped from `allow.publicApiKey()` in Aug 2026
+after an expired API key silently broke every AI tool; see `src/lib/aiClient.ts`). No
+login required either way — see `designs/user-personalization.md` for why auth, when it
+arrived, stayed separate from this. One Lambda (`amplify/functions/ai-assist/handler.ts`) resolves it by
 looking up `toolId` in a `SYSTEM_PROMPTS` record and calling `@anthropic-ai/sdk` with
 `claude-haiku-4-5` (the cheapest current model — these tools don't need frontier
 reasoning). **Adding a new AI-backed tool is a new map entry, nothing else** — no new

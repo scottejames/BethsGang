@@ -233,22 +233,25 @@ should gate on `AuthContext`'s `loading` flag before rendering anything derived 
 current scale (Anthropic API is internet-scale infrastructure; not a meaningful risk
 here). Left as-is, no code changes.
 
-**Where:** `amplify/data/resource.ts`'s `runAiTool` (`allow.publicApiKey()`, no
+**Where:** `amplify/data/resource.ts`'s `runAiTool` (`allow.guest()`, no
 per-caller limits) and `amplify/functions/ai-assist/handler.ts`'s handler — no
 length check on `input` before it's sent to `client.messages.create()`.
 
 **Trace:** Every tool's textarea (Task Breakdown, Tone Checker, Brain Dump Sorter,
 etc.) has no `maxLength` and no client-side size guard; the Lambda passes whatever it's
-given straight to Claude. Since `runAiTool` is unauthenticated (public API key, by
-design, so signed-out users get full AI functionality), there's currently nothing
-between "someone finds the API key in the bundled JS" (which is unavoidable for a
-public API key, not a bug on its own) and unbounded Anthropic API spend — no per-IP/
-per-key rate limit, no request size cap.
+given straight to Claude. `runAiTool` is unauthenticated by design (so signed-out
+users get full AI functionality) — as of Aug 2026 that's an unauthenticated Cognito
+Identity Pool role rather than a static public API key (see
+`designs/architecture-overview.md`), which removes the "leaked static secret" angle
+but not the underlying exposure: any anonymous visitor can still call it, so there's
+still nothing between that and unbounded Anthropic API spend — no per-IP/per-identity
+rate limit, no request size cap.
 
 **Expected:** Not necessarily a "fix the code" item — more a "decide if this is an
-acceptable risk at your current scale" conversation, since a public-API-key SPA has
-limited options here (WAF rate limiting, a max input length, or a spend alert on the
-Anthropic account are the usual mitigations).
+acceptable risk at your current scale" conversation. Options: WAF rate limiting, a max
+input length, per-identity throttling (Cognito Identity Pool gives each caller a
+distinct identity, unlike a shared API key), or a spend alert on the Anthropic
+account.
 
 ---
 

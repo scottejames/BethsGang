@@ -10,7 +10,10 @@ const schema = a.schema({
       input: a.string().required(),
     })
     .returns(a.string())
-    .authorization((allow) => [allow.publicApiKey()])
+    // Unauthenticated Identity Pool role, not a public API key — no static secret
+    // to leak, no expiry to rotate (see designs/ or CHANGELOG for the Aug 2026
+    // incident where the API key silently expired and broke every AI tool).
+    .authorization((allow) => [allow.guest()])
     .handler(a.handler.function(aiAssistFunction)),
 
   // Fire-and-forget usage tracking — see src/lib/usageLog.ts for what gets sent and
@@ -21,12 +24,12 @@ const schema = a.schema({
       input: a.string().required(),
     })
     .returns(a.string())
-    .authorization((allow) => [allow.publicApiKey()])
+    .authorization((allow) => [allow.guest()])
     .handler(a.handler.function(logEventFunction)),
 
   // User accounts, Phase 2: per-user persistence for signed-in users. Owner-scoped
   // (Cognito user pool auth, distinct from the two operations above which stay on the
-  // public API key) — see designs/user-personalization.md for why these two models
+  // unauthenticated Identity Pool role) — see designs/user-personalization.md for why these two models
   // specifically (they're the only client state that currently persists at all) and
   // src/context/RemindersContext.tsx / EnergyContext.tsx for the signed-in/signed-out
   // branching that reads and writes them.
@@ -104,7 +107,10 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: 'apiKey',
-    apiKeyAuthorizationMode: { expiresInDays: 30 },
+    // No operation actually relies on this default — runAiTool/logEvent explicitly
+    // use identityPool auth (src/lib/aiClient.ts, src/lib/usageLog.ts) and the
+    // owner-scoped models explicitly use userPool auth (src/lib/dataClient.ts) — but
+    // defineData requires a value, and userPool is the closer match conceptually.
+    defaultAuthorizationMode: 'userPool',
   },
 });
