@@ -1796,6 +1796,13 @@ All notable changes to this project are documented here.
   prompt keys must exactly match the tool IDs the frontend calls.
 - `npm run coverage` (`@vitest/coverage-v8`), to measure progress on `TESTING_TODO.md`.
 
+### Added
+
+- Tests for the shared AI path: the real Lambda `handler` (format guard on every tool, energy
+  instruction, screenshots, failures), `useAiTool` through the real client code (including
+  the error box and keeping the user's words out of the usage log), and
+  `parseLabeledOutput`.
+
 ### Changed
 
 - Deploys now run `npm run test` before `ampx pipeline-deploy`, so a failing test stops a

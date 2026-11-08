@@ -30,28 +30,17 @@ Standing rules:
 - A bug fix comes with a test that fails without the fix.
 - Prefer testing what the user sees over how the code is built.
 
-## Phase 1: Quick wins
-
-- [ ] **1.1 Run the tests on every deploy.** Add `npm run test` to `amplify.yml`'s
-      backend build, *before* `ampx pipeline-deploy`. The backend deploys first, so a test
-      step in the frontend phase would be too late to stop a bad backend. Done when a
-      failing test stops the build with nothing deployed.
-
 ## Phase 2: The AI path
 
-- [ ] **2.1 Run the Lambda's real `handler`** with the Anthropic client mocked: unknown
-      tool is rejected, the format guard is always in the system prompt, the energy
-      instruction is added, screenshots skip it, and a response with no text returns `''`.
-- [ ] **2.2 `useAiTool` and `aiClient`.** Success, a GraphQL error reaching the error box,
-      the non-`Error` fallback message, loading resetting, and a usage event either way.
-- [ ] **2.3 `parseLabeledOutput`.** Normal labels, markdown-wrapped labels (the format-guard
-      production crash), missing fields, and plain text with no labels.
 - [ ] **2.4 Tone Checker:** submit, results, error state, context field, screenshot upload.
 - [ ] **2.5 Reply Starter:** submit, drafts, tone and length options, error state.
 - [ ] **2.6 Call Script:** submit, results, error state.
 - [ ] **2.7 Is This Mad?:** submit, results, error state.
 - [ ] **2.8 `imageCapture`:** the resize and encode path, and rejecting a bad file.
 - [ ] **2.9 Task Breakdown:** add the error state and double-send protection.
+- [ ] **2.10 Decide whether the parser should tolerate markdown.** A label like
+      `**Tone:**` isn't recognised, so if the model ignores the format guard on some lines,
+      those fields silently disappear. The guard is the only protection. **Needs a decision.**
 
 ## Phase 3: Failures users never see
 
@@ -60,7 +49,8 @@ Standing rules:
 - [ ] **3.2 Test failed saves and subscription errors** in `TaskStoreContext`,
       `RemindersContext`, `TimetableContext` and `EnergyContext`, to match 3.1.
 - [ ] **3.3 `sendUsageEvent` can never break a feature.** Regression tests for a synchronous
-      throw and a rejected promise (`designs/usage-logging.md`).
+      throw and a rejected promise (`designs/usage-logging.md`). Removing the `.catch` in
+      `sendUsageEvent` currently passes every test, so assert it directly.
 
 ## Phase 4: The app as a whole
 
@@ -100,6 +90,9 @@ Move finished items here with the date and the test file that covers them.
       with Brain Dump Sorter: failing when signed in before the fix, and working both
       signed out and signed in after it. Live check only; the rules are guarded by
       `amplify/data/resource.test.ts`.
+- [x] **1.1 Tests run on every deploy** (2026-11-08). In `amplify.yml`, before
+      `ampx pipeline-deploy`. Build 49 proved a failing test stops the deploy with nothing
+      released; build 50 proved passing tests let it through.
 - [x] **1.2 Auth rule tests for the data models** (2026-11-08). All five models must be
       owner-only, and adding a model means updating the list. `amplify/data/resource.test.ts`.
 - [x] **1.3 `dataClient` uses `authMode: 'userPool'`** (2026-11-08).
@@ -108,3 +101,9 @@ Move finished items here with the date and the test file that covers them.
       exactly match the IDs the tools call. `amplify/functions/ai-assist/handler.test.ts`.
 - [x] **1.5 Coverage reporting** (2026-11-08). `npm run coverage`. Baseline: 81.3% lines,
       70.9% branches, 79.0% functions.
+- [x] **2.1 The Lambda's real `handler`** (2026-11-08), with the Anthropic SDK mocked.
+      `amplify/functions/ai-assist/handler.test.ts`.
+- [x] **2.2 `useAiTool` and `aiClient`** (2026-11-08), through the real client code with
+      only the network mocked. `src/hooks/useAiTool.test.ts`.
+- [x] **2.3 `parseLabeledOutput`** (2026-11-08). `src/lib/parseLabeledOutput.test.ts`.
+      Coverage after 2.1 to 2.3: 83.1% lines, 72.8% branches, 80.8% functions.

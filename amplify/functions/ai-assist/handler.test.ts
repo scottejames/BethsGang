@@ -5,16 +5,17 @@
 // refuses to construct in a browser-like (jsdom) global scope.
 //
 // The Anthropic client is constructed at module scope in handler.ts, so a key
-// must exist before it's imported — never a real network call in these tests,
-// since we only exercise the pure helper functions below.
+// must exist before it's imported — never a real network call in these tests: the SDK
+// is mocked below.
 process.env.ANTHROPIC_API_KEY = 'test-key-not-real';
 
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   SYSTEM_PROMPTS,
+  handler,
   buildAssignmentBreakdownMessage,
   buildCallScriptMessage,
   buildCooksCornerMessage,
@@ -26,6 +27,110 @@ import {
   buildToneCheckerMessage,
   parseEnvelope,
 } from './handler';
+
+const { create } = vi.hoisted(() => ({ create: vi.fn() }));
+vi.mock('@anthropic-ai/sdk', () => ({
+  default: class {
+    messages = { create };
+  },
+}));
+
+function invoke(toolId: string, input: string) {
+  return handler(
+    { arguments: { toolId, input } } as Parameters<typeof handler>[0],
+    {} as never,
+    undefined as never,
+  );
+}
+
+const sentToClaude = () => create.mock.calls[0][0];
+
+describe('handler', () => {
+  beforeEach(() => {
+    create.mockReset();
+    create.mockResolvedValue({ content: [{ type: 'text', text: 'the answer' }] });
+  });
+
+  it('rejects an unknown tool without calling Claude', async () => {
+    await expect(invoke('no-such-tool', 'hello')).rejects.toThrow('Unknown tool: no-such-tool');
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  // The format guard fixed a production crash, and it has to reach every tool.
+  it.each(Object.keys(SYSTEM_PROMPTS))('sends the format guard ahead of the %s prompt', async (toolId) => {
+    const input = toolId === 'screenshot-to-text'
+      ? JSON.stringify({ imageBase64: 'ZmFrZQ==', mediaType: 'image/png' })
+      : 'some text';
+
+    await invoke(toolId, input);
+
+    const { system } = sentToClaude();
+    expect(system).toMatch(/^Respond in plain text only/);
+    expect(system).toContain('never use markdown');
+    expect(system.endsWith(SYSTEM_PROMPTS[toolId])).toBe(true);
+  });
+
+  it('puts the energy instruction ahead of the user message', async () => {
+    await invoke('task-breakdown', JSON.stringify({ spoons: 15, input: 'Sort out my taxes' }));
+
+    expect(sentToClaude().messages).toEqual([
+      { role: 'user', content: `${buildEnergyInstruction(15)}\n\nSort out my taxes` },
+    ]);
+  });
+
+  it('sends the input alone when there is no energy level', async () => {
+    await invoke('task-breakdown', 'Sort out my taxes');
+
+    expect(sentToClaude().messages[0].content).toBe('Sort out my taxes');
+  });
+
+  it("builds the message with the tool's own builder when it has one", async () => {
+    const toolInput = JSON.stringify({ message: 'Fine, whatever.', context: 'my boss' });
+
+    await invoke('tone-checker', JSON.stringify({ spoons: 80, input: toolInput }));
+
+    expect(sentToClaude().messages[0].content).toBe(
+      `${buildEnergyInstruction(80)}\n\n${buildToneCheckerMessage(toolInput)}`,
+    );
+  });
+
+  it('sends a screenshot as an image and leaves out the energy instruction', async () => {
+    const image = JSON.stringify({ imageBase64: 'ZmFrZQ==', mediaType: 'image/png' });
+
+    await invoke('screenshot-to-text', JSON.stringify({ spoons: 5, input: image }));
+
+    expect(sentToClaude().messages[0].content).toEqual(buildScreenshotToTextContent(image));
+    expect(JSON.stringify(sentToClaude().messages)).not.toContain('spoons');
+  });
+
+  it('does not call Claude with a malformed screenshot', async () => {
+    await expect(invoke('screenshot-to-text', 'not an image')).rejects.toThrow();
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('returns the text block, skipping any other kind of content', async () => {
+    create.mockResolvedValue({
+      content: [
+        { type: 'thinking', thinking: 'hmm' },
+        { type: 'text', text: 'the answer' },
+      ],
+    });
+
+    await expect(invoke('task-breakdown', 'x')).resolves.toBe('the answer');
+  });
+
+  it('returns an empty string when Claude sends no text', async () => {
+    create.mockResolvedValue({ content: [] });
+
+    await expect(invoke('task-breakdown', 'x')).resolves.toBe('');
+  });
+
+  it('lets a Claude API failure through, so the tool shows an error', async () => {
+    create.mockRejectedValue(new Error('401 invalid x-api-key'));
+
+    await expect(invoke('task-breakdown', 'x')).rejects.toThrow('401 invalid x-api-key');
+  });
+});
 
 describe('parseEnvelope', () => {
   it('unwraps a plain-string tool payload (e.g. Task Breakdown)', () => {
