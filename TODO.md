@@ -547,6 +547,10 @@ with the three most worth building next marked ⭐. Sources at the bottom.
 
 ## Infrastructure
 
+- [ ] **Transactional email via SES (not started)** — send Cognito verification and
+      password-reset codes from a domain we own, because the default Cognito sender is
+      unreliable (a sign-up code never arrived on 2026-09-01). Planned and paused before
+      implementation; pick up at "Open decisions" in `designs/ses-email.md`.
 - [x] **Progressive Web App** — installable to a device's home screen/dock, requested
       directly. `vite-plugin-pwa` generates a web app manifest + Workbox service worker
       at build time, `registerType: 'autoUpdate'` (silent, no reload prompt). App shell

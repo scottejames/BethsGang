@@ -1787,3 +1787,5 @@ All notable changes to this project are documented here.
   for `runAiTool`/`logEvent` admit both Identity Pool roles and that their clients use
   `identityPool` auth. Fails against the old `allow.guest()`-only rules. `schema` is now
   exported from `amplify/data/resource.ts` so the test can read those rules.
+- `designs/ses-email.md`: the paused work plan for sending auth emails through SES, now
+  committed and tracked as not started in `TODO.md`.
