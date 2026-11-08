@@ -1795,3 +1795,13 @@ All notable changes to this project are documented here.
   models must stay owner-only, `dataClient` must use `userPool` auth, and the Lambda's
   prompt keys must exactly match the tool IDs the frontend calls.
 - `npm run coverage` (`@vitest/coverage-v8`), to measure progress on `TESTING_TODO.md`.
+
+### Changed
+
+- Deploys now run `npm run test` before `ampx pipeline-deploy`, so a failing test stops a
+  release before the backend ships. Its first run found the Remind Me test below.
+
+### Fixed
+
+- A Remind Me test hard-coded the en-GB date format, so it failed on Amplify's en-US build
+  machine. It now formats the expected date the same way the app does.

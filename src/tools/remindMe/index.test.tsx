@@ -142,8 +142,14 @@ describe('RemindMe', () => {
       target: { value: 'remind me at 5.30 to go home, warn me 20 mins before' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Set reminder' }));
-    expect(screen.getByText((_, element) => element?.textContent === 'Reminder: 8 Jul 2026, 17:30')).toBeInTheDocument();
-    expect(screen.getByText((_, element) => element?.textContent === 'Warning: 8 Jul 2026, 17:10')).toBeInTheDocument();
+    // Formatted the way the app does, because the display follows the device's locale
+    // (a hard-coded en-GB string failed on Amplify's en-US build machine).
+    const shown = (date: Date) =>
+      date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    const reminderText = `Reminder: ${shown(new Date(2026, 6, 8, 17, 30))}`;
+    const warningText = `Warning: ${shown(new Date(2026, 6, 8, 17, 10))}`;
+    expect(screen.getByText((_, element) => element?.textContent === reminderText)).toBeInTheDocument();
+    expect(screen.getByText((_, element) => element?.textContent === warningText)).toBeInTheDocument();
 
     fireEvent.change(nlInput, { target: { value: 'remind me every day at 9am to take meds' } });
     fireEvent.click(screen.getByRole('button', { name: 'Set reminder' }));
