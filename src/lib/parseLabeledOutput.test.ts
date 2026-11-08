@@ -6,6 +6,24 @@ Likely to land as: Warm but a little rushed
 Suggestion: Add a thank you`;
 
 describe('makeLabelGetter', () => {
+  it.each([
+    ['bold label and colon', '**Tone:** Calm'],
+    ['colon outside the bold', '**Tone**: Calm'],
+    ['the whole line in bold', '**Tone: Calm**'],
+    ['italics', '*Tone:* Calm'],
+    ['underscores', '__Tone:__ Calm'],
+    ['a heading', '## Tone: Calm'],
+    ['a bold heading', '## **Tone:** Calm'],
+  ])('still reads a value despite %s', (_format, line) => {
+    expect(makeLabelGetter(line)('Tone:')).toBe('Calm');
+  });
+
+  it('leaves markdown-looking characters inside a value alone', () => {
+    expect(makeLabelGetter('**Suggestion:** Use snake_case and 2*3')('Suggestion:')).toBe(
+      'Use snake_case and 2*3',
+    );
+  });
+
   it('reads each labeled value from a well-formed answer', () => {
     const get = makeLabelGetter(TONE_CHECK);
 
@@ -47,11 +65,6 @@ describe('makeLabelGetter', () => {
     expect(makeLabelGetter('Just a plain paragraph.')('Tone:')).toBeUndefined();
   });
 
-  // The parser has no markdown handling: this is why the Lambda's format guard matters.
-  // If this ever changes, the design note on the format-guard incident needs updating.
-  it('does not recognise a markdown-wrapped label', () => {
-    expect(makeLabelGetter('**Tone:** Friendly')('Tone:')).toBeUndefined();
-  });
 });
 
 describe('getBulletList', () => {
@@ -84,5 +97,14 @@ Asks:
 
   it('returns an empty list for a label with no bullets', () => {
     expect(getBulletList('Asks:\nNothing to do', 'Asks:')).toEqual([]);
+  });
+});
+
+describe('getBulletList with markdown', () => {
+  it('finds a bold label and accepts asterisk bullets', () => {
+    expect(getBulletList('**Asks:**\n* Reply today\n- Bring the form', 'Asks:')).toEqual([
+      'Reply today',
+      'Bring the form',
+    ]);
   });
 });

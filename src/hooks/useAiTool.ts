@@ -3,6 +3,8 @@ import { runAiTool } from '../lib/aiClient';
 import { useEnergy } from '../context/EnergyContext';
 import { sendUsageEvent, summarizeInputForLogging } from '../lib/usageLog';
 
+const EMPTY_ANSWER_MESSAGE = "The AI didn't send anything back. Please try again.";
+
 export function useAiTool(toolId: string) {
   const [output, setOutput] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -21,6 +23,7 @@ export function useAiTool(toolId: string) {
       try {
         const envelope = JSON.stringify({ spoons, input });
         const result = await runAiTool(toolId, envelope);
+        if (!result.trim()) throw new Error(EMPTY_ANSWER_MESSAGE);
         setOutput(result);
         sendUsageEvent({
           toolId,

@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { client } from '../lib/dataClient';
-import { watchSave } from '../lib/saveFailures';
+import { moveToAccount, reportSyncFailure, watchSave } from '../lib/saveFailures';
 import { readStored } from '../lib/localStorage';
 import { useSignedOutMirror } from '../hooks/useSignedOutMirror';
 
@@ -155,7 +155,7 @@ export function TimetableProvider({ children }: { children: ReactNode }) {
         setEntries(mapped);
       },
       error: (error: unknown) => {
-        console.error('TimetableEntry subscription error', error);
+        reportSyncFailure('TimetableEntry subscription error', error);
       },
     });
     return () => subscription.unsubscribe();
@@ -167,13 +167,11 @@ export function TimetableProvider({ children }: { children: ReactNode }) {
     if (!isSignedIn) return;
     if (window.localStorage.getItem(MIGRATION_FLAG_KEY)) return;
     const localEntries = readStoredEntries();
-    Promise.all(
-      localEntries.map((entry) =>
-        watchSave(client.models.TimetableEntry.create(toBackendInput(entry)), 'Failed to migrate local timetable entry'),
-      ),
-    ).then(() => {
-      window.localStorage.setItem(MIGRATION_FLAG_KEY, 'true');
-    });
+    void moveToAccount(
+      localEntries.map((entry) => client.models.TimetableEntry.create(toBackendInput(entry))),
+      'Failed to migrate local timetable entries',
+      MIGRATION_FLAG_KEY,
+    );
   }, [isSignedIn]);
 
   // Computes any newly-fired alerts as a plain array first, then commits — same

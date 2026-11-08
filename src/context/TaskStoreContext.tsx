@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { client } from '../lib/dataClient';
-import { watchSave } from '../lib/saveFailures';
+import { moveToAccount, reportSyncFailure, watchSave } from '../lib/saveFailures';
 import { readStored } from '../lib/localStorage';
 import { useSignedOutMirror } from '../hooks/useSignedOutMirror';
 
@@ -142,7 +142,7 @@ export function TaskStoreProvider({ children }: { children: ReactNode }) {
         setProjects(items.map(fromBackendProjectItem));
       },
       error: (error: unknown) => {
-        console.error('Project subscription error', error);
+        reportSyncFailure('Project subscription error', error);
       },
     });
     return () => subscription.unsubscribe();
@@ -155,7 +155,7 @@ export function TaskStoreProvider({ children }: { children: ReactNode }) {
         setTasks(items.map(fromBackendTaskItem));
       },
       error: (error: unknown) => {
-        console.error('Task subscription error', error);
+        reportSyncFailure('Task subscription error', error);
       },
     });
     return () => subscription.unsubscribe();
@@ -163,9 +163,9 @@ export function TaskStoreProvider({ children }: { children: ReactNode }) {
 
   // First sign-in on this device only: upload whatever's in localStorage so it isn't
   // stranded there. Silent, no prompt — same no-login-wall philosophy as Reminders.
-  // Uses each project/task's existing id, so a second run (Strict Mode, or signing in
-  // again later) just fails the duplicate create() harmlessly instead of double-
-  // uploading. Projects and tasks are migrated together, in one batch — there's no
+  // Uses each project/task's existing id, so a second run (Strict Mode, or a retry after
+  // a failed move) can't double-upload. Projects and tasks are migrated together, in one
+  // batch — there's no
   // real foreign-key constraint on the backend (`Task.projectId` is a plain string,
   // not a relation) so upload order between the two doesn't matter.
   useEffect(() => {
@@ -173,16 +173,14 @@ export function TaskStoreProvider({ children }: { children: ReactNode }) {
     if (window.localStorage.getItem(MIGRATION_FLAG_KEY)) return;
     const localProjects = readStored<Project>(PROJECTS_STORAGE_KEY);
     const localTasks = readStored<Task>(TASKS_STORAGE_KEY);
-    Promise.all([
-      ...localProjects.map((project) =>
-        watchSave(client.models.Project.create(toBackendProjectInput(project)), 'Failed to migrate local project'),
-      ),
-      ...localTasks.map((task) =>
-        watchSave(client.models.Task.create(toBackendTaskInput(task)), 'Failed to migrate local task'),
-      ),
-    ]).then(() => {
-      window.localStorage.setItem(MIGRATION_FLAG_KEY, 'true');
-    });
+    void moveToAccount(
+      [
+        ...localProjects.map((project) => client.models.Project.create(toBackendProjectInput(project))),
+        ...localTasks.map((task) => client.models.Task.create(toBackendTaskInput(task))),
+      ],
+      'Failed to migrate local projects and tasks',
+      MIGRATION_FLAG_KEY,
+    );
   }, [isSignedIn]);
 
   function addProject(name: string): Project {

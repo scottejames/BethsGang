@@ -30,28 +30,22 @@ Standing rules:
 - A bug fix comes with a test that fails without the fix.
 - Prefer testing what the user sees over how the code is built.
 
-## Phase 2: The AI path
-
-- [ ] **2.10 Decide whether the parser should tolerate markdown.** A label like
-      `**Tone:**` isn't recognised, so if the model ignores the format guard on some lines,
-      those fields silently disappear. The guard is the only protection. **Needs a decision.**
-
-## Phase 3: Failures users never see
-
-- [ ] **3.4 Decide what a failed live update should do.** If the `observeQuery` connection
-      that loads account data fails, it only writes to the console, so someone could be
-      looking at out-of-date data. **Needs a decision**, because brief reconnects may be
-      normal and a warning for those would be noise.
-- [ ] **3.5 Retry a failed move of local data to an account.** At first sign-in, the
-      "already moved" flag is set even if the move failed, so it is never retried. The
-      user now gets a warning, but the data stays behind on that device.
-- [ ] **3.6 Say something when an AI answer comes back empty.** The tool currently shows
-      nothing at all.
-
 ## Done
 
 Move finished items here with the date and the test file that covers them.
 
+- [x] **2.10 Parser tolerates markdown** (2026-11-08). Decided yes: `**Tone:**`, `**Tone**:`
+      and `## Tone:` are all read, without touching the value. The Lambda's format guard
+      stays as the first line of defence. `src/lib/parseLabeledOutput.test.ts`.
+- [x] **3.4 Failed live update warns** (2026-11-08). Decided yes, telling the person to
+      reload. Amplify recovers from brief dropouts without reporting an error, so this only
+      fires when the connection has really failed. `src/context/saveWarnings.test.tsx`.
+- [x] **3.5 Retry a failed move of local data** (2026-11-08). The "already moved" flag is
+      only set once everything arrives, and "already exists" counts as arrived.
+      `src/lib/saveFailures.test.ts`, `src/context/saveWarnings.test.tsx`; the real server
+      answer is confirmed by `live/backend.live.ts`.
+- [x] **3.6 Empty AI answer** (2026-11-08). Shows an error asking the person to try again.
+      `src/hooks/useAiTool.test.ts`.
 - [x] **5.3 When live checks run** (2026-11-08). Not on every deploy, since each run makes
       real Anthropic calls. They're rerun whenever a change touches code they cover; the
       list is in `.claude/skills/update-project-artifacts/SKILL.md`, step 1.

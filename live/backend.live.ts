@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Schema } from '../amplify/data/resource';
 import { runAiTool } from '../src/lib/aiClient';
 import { client as dataClient } from '../src/lib/dataClient';
+import { isAlreadySaved } from '../src/lib/saveFailures';
 import {
   assertSandbox,
   createDisposableUser,
@@ -110,6 +111,10 @@ describe('the deployed sandbox backend', () => {
 
       const created = await model().create({ id, ...fields });
       expect(created.errors).toBeUndefined();
+
+      // A retried move of local data depends on recognising this exact server answer.
+      const duplicate = await model().create({ id, ...fields });
+      expect(isAlreadySaved(duplicate.errors)).toBe(true);
 
       const read = await model().get({ id });
       expect(read.data).toMatchObject(fields);

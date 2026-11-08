@@ -256,7 +256,8 @@ starting — nothing else persists anything) with real per-user storage.
     that cuts against this app's no-friction philosophy). Implemented as: first time
     `isSignedIn` flips true on a device and a `beths-gang:reminders-migrated` flag isn't
     set, upload every local reminder using its existing id (so a duplicate run just
-    fails the `create()` harmlessly rather than double-uploading), then set the flag.
+    fails the `create()` rather than double-uploading, and that counts as moved), then set
+    the flag only if everything arrived, so a failed move is retried on the next open.
   - **Sign-out must hide account data, not carry it into the local view** — this went
     through a wrong first attempt worth recording, found via direct user testing (not
     caught by any automated test): the first version made the localStorage-persistence

@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { watchSave } from '../lib/saveFailures';
+import { reportSyncFailure, watchSave } from '../lib/saveFailures';
 import { SaveFailureNotice } from './SaveFailureNotice';
 
 const failSave = () =>
@@ -20,6 +20,15 @@ describe('SaveFailureNotice', () => {
     render(<SaveFailureNotice />);
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('tells the user to reload when live updates fail', () => {
+    render(<SaveFailureNotice />);
+
+    act(() => reportSyncFailure('Failed', new Error('connection failed')));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/reload the page/i);
+    expect(screen.getByRole('alert')).not.toHaveTextContent(/couldn't save/i);
   });
 
   it('warns the user when a save fails', async () => {

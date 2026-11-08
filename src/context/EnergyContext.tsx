@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { client } from '../lib/dataClient';
-import { didSave, watchSave } from '../lib/saveFailures';
+import { didSave, reportSyncFailure, watchSave } from '../lib/saveFailures';
 
 const STORAGE_KEY = 'beths-gang:energy-spoons';
 const DEFAULT_SPOONS = 70;
@@ -73,7 +73,7 @@ export function EnergyProvider({ children }: { children: ReactNode }) {
         }
       },
       error: (error: unknown) => {
-        console.error('UserPreferences subscription error', error);
+        reportSyncFailure('UserPreferences subscription error', error);
       },
     });
     return () => subscription.unsubscribe();

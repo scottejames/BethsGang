@@ -63,14 +63,19 @@ describe('useAiTool', () => {
     expect(result.current.loading).toBe(false);
   });
 
-  it('treats a null response as an empty answer', async () => {
-    runAiTool.mockResolvedValue({ data: null });
+  it.each([
+    ['nothing', null],
+    ['an empty answer', ''],
+    ['only whitespace', '  \n '],
+  ])('tells the user when the AI sends back %s', async (_name, data) => {
+    runAiTool.mockResolvedValue({ data });
     const { result } = renderHook(() => useAiTool('task-breakdown'));
 
     await act(() => result.current.run('a task'));
 
-    expect(result.current.output).toBe('');
-    expect(result.current.error).toBeNull();
+    expect(result.current.output).toBeNull();
+    expect(result.current.error).toBe("The AI didn't send anything back. Please try again.");
+    await waitFor(() => expect(loggedEvent().detail.success).toBe(false));
   });
 
   // The pink error box: this is exactly how the Nov 2026 signed-in failure reached users.

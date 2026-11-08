@@ -95,6 +95,9 @@ every tool renders plain text — so a mislabeled field silently broke parsing (
 went missing) or dumped raw markdown straight to the screen, which is what a user
 experienced and described as the app "crashing" after pasting a long real message.
 
+The guard stays the main fix, but since Nov 2026 `parseLabeledOutput.ts` also reads
+markdown-wrapped labels, so a reply that ignores the guard no longer loses fields.
+
 **Diagnosis process, not just the fix:** traced by querying the *deployed* Lambda
 directly via raw AppSync GraphQL requests (bypassing the frontend entirely) to see exact
 raw model output at varying energy levels. First theory: specific to high spoons (67+),

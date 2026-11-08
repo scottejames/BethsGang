@@ -60,6 +60,9 @@ test('a signed-in visit: AI tool, saved reminder, sign out, sign back in', async
 
   await signOut(page);
   await expect(reminder(page, message)).toHaveCount(0);
+  // Closing the live connection at sign-out must not look like a sync failure.
+  await page.waitForTimeout(2_000);
+  await expect(page.getByRole('alert')).toHaveCount(0);
   await page.reload();
   await openTool(page, 'Remind Me');
   await expect(reminder(page, message)).toHaveCount(0);

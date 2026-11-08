@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import * as amplifyAuth from 'aws-amplify/auth';
 import { Hub } from 'aws-amplify/utils';
 import { client } from '../lib/dataClient';
-import { subscribeToSaveFailures } from '../lib/saveFailures';
+import { subscribeToSaveFailures, subscribeToSyncFailures } from '../lib/saveFailures';
 import { AuthProvider } from './AuthContext';
 import { EnergyProvider, useEnergy } from './EnergyContext';
 import { RemindersProvider, useReminders } from './RemindersContext';
@@ -104,6 +104,7 @@ const useEverything = () => ({
 type Everything = ReturnType<typeof useEverything>;
 
 const emitters = new Map<ModelName, (data: { items: unknown[] }) => void>();
+const errorEmitters = new Map<ModelName, (error: unknown) => void>();
 
 async function renderSignedIn(data: Partial<Record<ModelName, unknown[]>> = SIGNED_IN_DATA) {
   const view = renderHook(useEverything, { wrapper: Providers });
@@ -170,8 +171,9 @@ describe('warning when a signed-in save fails', () => {
     MODELS.forEach((name) => {
       const model = mockModel(name);
       model.observeQuery.mockReset().mockImplementation(() => ({
-        subscribe: (handlers: { next: (data: { items: unknown[] }) => void }) => {
+        subscribe: (handlers: { next: (data: { items: unknown[] }) => void; error: (error: unknown) => void }) => {
           emitters.set(name, handlers.next);
+          errorEmitters.set(name, handlers.error);
           return { unsubscribe: vi.fn() };
         },
       }));
@@ -336,6 +338,75 @@ describe('warning when a signed-in save fails', () => {
       await waitFor(() => expect(model.update).toHaveBeenCalled());
       await act(async () => {});
       expect(model.create).not.toHaveBeenCalled();
+    });
+  });
+
+  it.each(MODELS)('warns when live updates for %s fail', async (name) => {
+    const onSync = vi.fn();
+    const stop = subscribeToSyncFailures(onSync);
+    await renderSignedIn();
+
+    act(() => errorEmitters.get(name)?.(new Error('connection failed')));
+
+    expect(onSync).toHaveBeenCalledTimes(1);
+    stop();
+  });
+
+  describe.each([
+    {
+      store: 'reminders',
+      model: 'Reminder',
+      flag: 'beths-gang:reminders-migrated',
+      localKey: 'beths-gang:reminders',
+      local: { id: 'local-1', message: 'Lunch', fireAt: FUTURE, repeat: { kind: 'none' } },
+    },
+    {
+      store: 'timetable',
+      model: 'TimetableEntry',
+      flag: 'beths-gang:timetable-migrated',
+      localKey: 'beths-gang:timetable',
+      local: { id: 'local-1', dayOfWeek: 'monday', startTime: '09:00', label: 'Maths' },
+    },
+    {
+      store: 'tasks',
+      model: 'Task',
+      flag: 'beths-gang:tasks-migrated',
+      localKey: 'beths-gang:tasks',
+      local: { id: 'local-1', title: 'Tape', size: 'small', category: 'now', done: false, createdAt: FUTURE },
+    },
+  ] as const)('moving local $store to an account', ({ model, flag, localKey, local }) => {
+    const create = () => mockModel(model).create;
+
+    beforeEach(() => {
+      window.localStorage.setItem(localKey, JSON.stringify([local]));
+    });
+
+    it('tries again next time after a failed move', async () => {
+      create().mockResolvedValueOnce({ data: null, errors: [{ errorType: 'Unauthorized' }] });
+      const first = await renderSignedIn();
+      await waitFor(() => expect(onFailure).toHaveBeenCalled());
+      expect(window.localStorage.getItem(flag)).toBeNull();
+      first.unmount();
+      emitters.clear();
+      onFailure.mockReset();
+
+      await renderSignedIn();
+
+      await waitFor(() => expect(window.localStorage.getItem(flag)).toBe('true'));
+      expect(create()).toHaveBeenCalledTimes(2);
+      expect(onFailure).not.toHaveBeenCalled();
+    });
+
+    it('does not warn when a retry finds the item already moved', async () => {
+      create().mockResolvedValue({
+        data: null,
+        errors: [{ errorType: 'DynamoDB:ConditionalCheckFailedException' }],
+      });
+
+      await renderSignedIn();
+
+      await waitFor(() => expect(window.localStorage.getItem(flag)).toBe('true'));
+      expect(onFailure).not.toHaveBeenCalled();
     });
   });
 });

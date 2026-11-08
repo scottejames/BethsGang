@@ -1842,3 +1842,15 @@ All notable changes to this project are documented here.
 - Both refuse to run unless AWS tags the user pool as a sandbox, and neither runs during
   `npm test` or a deploy, because they create real users and make real AI calls.
 
+### Fixed (silent failures)
+
+- A failed move of local data into an account is now retried the next time the app
+  opens. The "already moved" flag used to be set even after a failure, stranding that
+  data on the device. Items that arrived first time count as moved rather than warning.
+- AI answers with markdown labels (`**Tone:**`) no longer lose those fields. The model
+  occasionally ignores the plain-text instruction, and the parser was the only thing
+  that couldn't cope.
+- An empty AI answer now shows an error asking to try again, instead of nothing at all.
+- If live updates fail for good, a notice now says to reload. Until now it only reached
+  the console, leaving someone looking at out-of-date data.
+

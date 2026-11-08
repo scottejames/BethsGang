@@ -67,7 +67,8 @@ a user experienced as the app "crashing." Traced by querying the deployed Lambda
 (high-spoons-only) once a spoons=9 report reproduced it too. Fixed at the shared level —
 a `FORMAT_GUARD_INSTRUCTION` constant unconditionally prepended to *every* tool's system
 prompt — rather than patching the one tool that surfaced it, since the same risk existed
-for all of them. See `designs/ai-assist-tools.md` for the full incident.
+for all of them. Since Nov 2026 the label parser also tolerates markdown as a backstop.
+See `designs/ai-assist-tools.md` for the full incident.
 
 ## The energy envelope: one wrapper, zero per-tool code
 

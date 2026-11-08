@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { RepeatRule } from '../lib/reminderParser';
 import { useAuth } from './AuthContext';
 import { client } from '../lib/dataClient';
-import { watchSave } from '../lib/saveFailures';
+import { moveToAccount, reportSyncFailure, watchSave } from '../lib/saveFailures';
 import { readStored } from '../lib/localStorage';
 import { useSignedOutMirror } from '../hooks/useSignedOutMirror';
 
@@ -183,7 +183,7 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
         setReminders(mapped);
       },
       error: (error: unknown) => {
-        console.error('Reminder subscription error', error);
+        reportSyncFailure('Reminder subscription error', error);
       },
     });
     return () => subscription.unsubscribe();
@@ -192,19 +192,16 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
   // First sign-in on this device only: upload whatever's in localStorage so it isn't
   // stranded there. Silent, no prompt — matches this app's no-login-wall philosophy
   // (see designs/user-personalization.md). Uses each reminder's existing id, so a
-  // second run (e.g. Strict Mode, or signing in again later) just fails the duplicate
-  // create() harmlessly instead of double-uploading.
+  // second run (Strict Mode, or a retry after a failed move) can't double-upload.
   useEffect(() => {
     if (!isSignedIn) return;
     if (window.localStorage.getItem(MIGRATION_FLAG_KEY)) return;
     const localReminders = readStoredReminders();
-    Promise.all(
-      localReminders.map((reminder) =>
-        watchSave(client.models.Reminder.create(toBackendInput(reminder)), 'Failed to migrate local reminder'),
-      ),
-    ).then(() => {
-      window.localStorage.setItem(MIGRATION_FLAG_KEY, 'true');
-    });
+    void moveToAccount(
+      localReminders.map((reminder) => client.models.Reminder.create(toBackendInput(reminder))),
+      'Failed to migrate local reminders',
+      MIGRATION_FLAG_KEY,
+    );
   }, [isSignedIn]);
 
   // Computes the new reminders array and any newly-fired events as plain values first,
