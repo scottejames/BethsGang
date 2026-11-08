@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { client } from '../lib/dataClient';
+import { watchSave } from '../lib/saveFailures';
 import { readStored } from '../lib/localStorage';
 import { useSignedOutMirror } from '../hooks/useSignedOutMirror';
 
@@ -168,9 +169,7 @@ export function TimetableProvider({ children }: { children: ReactNode }) {
     const localEntries = readStoredEntries();
     Promise.all(
       localEntries.map((entry) =>
-        client.models.TimetableEntry.create(toBackendInput(entry)).catch((error: unknown) => {
-          console.error('Failed to migrate local timetable entry', error);
-        }),
+        watchSave(client.models.TimetableEntry.create(toBackendInput(entry)), 'Failed to migrate local timetable entry'),
       ),
     ).then(() => {
       window.localStorage.setItem(MIGRATION_FLAG_KEY, 'true');
@@ -229,9 +228,7 @@ export function TimetableProvider({ children }: { children: ReactNode }) {
     const entry: TimetableEntry = { id: crypto.randomUUID(), ...input };
     setEntries((current) => [...current, entry]);
     if (isSignedInRef.current) {
-      client.models.TimetableEntry.create(toBackendInput(entry)).catch((error: unknown) => {
-        console.error('Failed to create timetable entry', error);
-      });
+      watchSave(client.models.TimetableEntry.create(toBackendInput(entry)), 'Failed to create timetable entry');
     }
   }
 
@@ -239,18 +236,14 @@ export function TimetableProvider({ children }: { children: ReactNode }) {
     const entry: TimetableEntry = { id, ...input };
     setEntries((current) => current.map((existing) => (existing.id === id ? entry : existing)));
     if (isSignedInRef.current) {
-      client.models.TimetableEntry.update(toBackendInput(entry)).catch((error: unknown) => {
-        console.error('Failed to update timetable entry', error);
-      });
+      watchSave(client.models.TimetableEntry.update(toBackendInput(entry)), 'Failed to update timetable entry');
     }
   }
 
   function deleteEntry(id: string) {
     setEntries((current) => current.filter((entry) => entry.id !== id));
     if (isSignedInRef.current) {
-      client.models.TimetableEntry.delete({ id }).catch((error: unknown) => {
-        console.error('Failed to delete timetable entry', error);
-      });
+      watchSave(client.models.TimetableEntry.delete({ id }), 'Failed to delete timetable entry');
     }
   }
 
@@ -273,14 +266,10 @@ export function TimetableProvider({ children }: { children: ReactNode }) {
     setEntries([...remaining, ...additions]);
     if (isSignedInRef.current) {
       removed.forEach((entry) => {
-        client.models.TimetableEntry.delete({ id: entry.id }).catch((error: unknown) => {
-          console.error('Failed to delete timetable entry during copy', error);
-        });
+        watchSave(client.models.TimetableEntry.delete({ id: entry.id }), 'Failed to delete timetable entry during copy');
       });
       additions.forEach((entry) => {
-        client.models.TimetableEntry.create(toBackendInput(entry)).catch((error: unknown) => {
-          console.error('Failed to create timetable entry during copy', error);
-        });
+        watchSave(client.models.TimetableEntry.create(toBackendInput(entry)), 'Failed to create timetable entry during copy');
       });
     }
   }

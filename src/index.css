@@ -1085,6 +1085,40 @@ textarea {
 /* Undo toast stack — fixed bottom-right, the one corner not already used by the
    alert banner (top-center), now-playing bar (bottom-center), or the Energy/
    Account buttons (top-right/top-left). */
+.save-failure-notice {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 76px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 360px;
+  padding: 12px 14px;
+  border: 1px solid var(--error);
+  border-radius: 10px;
+  /* --error-bg is translucent, so it needs a solid layer under it to stay readable
+     over whatever the notice is floating above. */
+  background: linear-gradient(var(--error-bg), var(--error-bg)), var(--surface);
+  color: var(--error);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.save-failure-notice span {
+  flex: 1;
+}
+
+.save-failure-notice button {
+  padding: 6px 12px;
+  border: 1px solid var(--error);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--error);
+  font: inherit;
+  cursor: pointer;
+}
+
 .undo-toast-stack {
   position: fixed;
   bottom: 20px;

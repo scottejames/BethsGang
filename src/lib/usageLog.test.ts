@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { summarizeInputForLogging } from './usageLog';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { sendUsageEvent, summarizeInputForLogging } from './usageLog';
+
+const { logEvent } = vi.hoisted(() => ({ logEvent: vi.fn() }));
+vi.mock('aws-amplify/data', () => ({
+  generateClient: () => ({ mutations: { logEvent } }),
+}));
 
 describe('summarizeInputForLogging', () => {
   it('keeps short string values as-is (e.g. tone/verbosity choices)', () => {
@@ -46,5 +51,49 @@ describe('summarizeInputForLogging', () => {
     const value = 'a'.repeat(25);
     const input = JSON.stringify({ field: value });
     expect(summarizeInputForLogging(input)).toEqual({ field: { length: 25 } });
+  });
+});
+
+// Telemetry must never be able to break the feature it's attached to.
+describe('sendUsageEvent', () => {
+  const event = { toolId: 'task-breakdown', event: 'opened' as const };
+
+  beforeEach(() => {
+    logEvent.mockReset();
+  });
+
+  it('sends the event with a timestamp', () => {
+    logEvent.mockResolvedValue({ data: 'ok' });
+
+    sendUsageEvent(event);
+
+    const sent = JSON.parse(logEvent.mock.calls[0][0].input);
+    expect(sent).toMatchObject(event);
+    expect(new Date(sent.timestamp).getTime()).not.toBeNaN();
+  });
+
+  // Regression: logEvent can be missing from the deployed backend straight after a
+  // release, which throws immediately and once broke tool navigation.
+  it('does not throw when the call itself throws', () => {
+    logEvent.mockImplementation(() => {
+      throw new TypeError('logEvent is not a function');
+    });
+
+    expect(() => sendUsageEvent(event)).not.toThrow();
+  });
+
+  it('handles a rejected request, so it cannot become an unhandled error', () => {
+    const request = { catch: vi.fn() };
+    logEvent.mockReturnValue(request);
+
+    sendUsageEvent(event);
+
+    expect(request.catch).toHaveBeenCalledTimes(1);
+  });
+
+  it('copes with a call that returns nothing', () => {
+    logEvent.mockReturnValue(undefined);
+
+    expect(() => sendUsageEvent(event)).not.toThrow();
   });
 });

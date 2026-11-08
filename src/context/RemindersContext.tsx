@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { RepeatRule } from '../lib/reminderParser';
 import { useAuth } from './AuthContext';
 import { client } from '../lib/dataClient';
+import { watchSave } from '../lib/saveFailures';
 import { readStored } from '../lib/localStorage';
 import { useSignedOutMirror } from '../hooks/useSignedOutMirror';
 
@@ -199,9 +200,7 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
     const localReminders = readStoredReminders();
     Promise.all(
       localReminders.map((reminder) =>
-        client.models.Reminder.create(toBackendInput(reminder)).catch((error: unknown) => {
-          console.error('Failed to migrate local reminder', error);
-        }),
+        watchSave(client.models.Reminder.create(toBackendInput(reminder)), 'Failed to migrate local reminder'),
       ),
     ).then(() => {
       window.localStorage.setItem(MIGRATION_FLAG_KEY, 'true');
@@ -277,13 +276,9 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
     for (const reminder of current) {
       const updated = nextById.get(reminder.id);
       if (!updated) {
-        client.models.Reminder.delete({ id: reminder.id }).catch((error: unknown) => {
-          console.error('Failed to delete fired reminder', error);
-        });
+        watchSave(client.models.Reminder.delete({ id: reminder.id }), 'Failed to delete fired reminder');
       } else if (updated !== reminder) {
-        client.models.Reminder.update(toBackendInput(updated)).catch((error: unknown) => {
-          console.error('Failed to update reminder', error);
-        });
+        watchSave(client.models.Reminder.update(toBackendInput(updated)), 'Failed to update reminder');
       }
     }
   }
@@ -316,18 +311,14 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
     // reconciles this against whatever the backend actually stored.
     setReminders((currentReminders) => [...currentReminders, reminder]);
     if (isSignedInRef.current) {
-      client.models.Reminder.create(toBackendInput(reminder)).catch((error: unknown) => {
-        console.error('Failed to create reminder', error);
-      });
+      watchSave(client.models.Reminder.create(toBackendInput(reminder)), 'Failed to create reminder');
     }
   }
 
   function cancelReminder(id: string) {
     setReminders((currentReminders) => currentReminders.filter((reminder) => reminder.id !== id));
     if (isSignedInRef.current) {
-      client.models.Reminder.delete({ id }).catch((error: unknown) => {
-        console.error('Failed to delete reminder', error);
-      });
+      watchSave(client.models.Reminder.delete({ id }), 'Failed to delete reminder');
     }
   }
 

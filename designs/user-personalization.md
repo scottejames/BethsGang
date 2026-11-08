@@ -233,7 +233,9 @@ starting — nothing else persists anything) with real per-user storage.
   — this doesn't show up in unit tests (the client is mocked) or in casual manual
   testing (errors are caught and only logged to the console), and was only caught by
   scanning the actual DynamoDB tables directly during sandbox verification and seeing
-  them empty despite the UI appearing to work. Worth remembering for any future
+  them empty despite the UI appearing to work. (Since Nov 2026, `src/lib/saveFailures.ts`
+  checks each save's returned `errors` and warns the user, because a `.catch` never saw
+  this kind of failure at all.) Worth remembering for any future
   owner-scoped model: **the generated client's default authMode is the schema's
   `defaultAuthorizationMode`, not whatever a specific model's own authorization rule
   requires** — it has to be set explicitly, either per-client (as done here) or per-call.

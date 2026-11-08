@@ -1804,6 +1804,13 @@ All notable changes to this project are documented here.
   `parseLabeledOutput`.
 - Component tests for Tone Checker (including screenshot upload and paste), Reply Starter,
   Call Script, and Is This Mad?, which had none. Shared setup in `src/test-utils/aiTool.tsx`.
+- **A warning when a signed-in save fails.** Previously a failed save looked like it had
+  worked. All 22 save points now go through `watchSave` (`src/lib/saveFailures.ts`), and
+  `SaveFailureNotice` stays on screen until dismissed. It checks the returned `errors` as
+  well as rejections, because Amplify resolves normally for server errors such as "Not
+  Authorized", so the old `.catch` handlers never saw them.
+- Tests for `imageCapture`, Task Breakdown's error state and double-send protection, and
+  `sendUsageEvent` never throwing.
 
 ### Changed
 
@@ -1814,3 +1821,6 @@ All notable changes to this project are documented here.
 
 - A Remind Me test hard-coded the en-GB date format, so it failed on Amplify's en-US build
   machine. It now formats the expected date the same way the app does.
+- **Spoons were not saved for a new account if the slider moved early.** The fallback that
+  creates the missing row used `.catch`, which never ran because Amplify reports that
+  failure as a normal result. Its old test passed only because the mock rejected.

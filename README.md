@@ -89,6 +89,8 @@ TypeScript, Amplify Gen2, testing, security) are in
   `RemindersContext`/`EnergyContext`/`TaskStoreContext` use them via
   `client.models.*.observeQuery()` (see `src/lib/dataClient.ts`) when signed in, and
   fall back to exactly their prior `localStorage`-only behavior when signed out.
+  Every signed-in save goes through `watchSave` (`src/lib/saveFailures.ts`), which warns
+  the user through `SaveFailureNotice` if the save fails.
   Reminders and the Task Store both migrate from `localStorage` to the account
   silently on first sign-in per device; see `designs/user-personalization.md`'s "What
   Phase 2 built" for the migration-UX decision and a real bug worth knowing about for

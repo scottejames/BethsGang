@@ -4,6 +4,7 @@ import { NowPlayingBar } from './components/NowPlayingBar';
 import { EnergyButton } from './components/EnergyButton';
 import { AlertBanner } from './components/AlertBanner';
 import { AccountButton } from './components/AccountButton';
+import { SaveFailureNotice } from './components/SaveFailureNotice';
 import { useToolNavigation } from './context/ToolNavigationContext';
 import { getTool } from './tools/registry';
 
@@ -20,6 +21,7 @@ function App() {
       <EnergyButton />
       <AccountButton />
       <AlertBanner />
+      <SaveFailureNotice />
       {activeTool ? (
         <ToolShell icon={activeTool.meta.icon} name={activeTool.meta.name} onBack={goHome}>
           <activeTool.Component />

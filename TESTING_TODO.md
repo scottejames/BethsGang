@@ -32,26 +32,27 @@ Standing rules:
 
 ## Phase 2: The AI path
 
-- [ ] **2.8 `imageCapture`:** the resize and encode path, and rejecting a bad file.
-- [ ] **2.9 Task Breakdown:** add the error state and double-send protection.
 - [ ] **2.10 Decide whether the parser should tolerate markdown.** A label like
       `**Tone:**` isn't recognised, so if the model ignores the format guard on some lines,
       those fields silently disappear. The guard is the only protection. **Needs a decision.**
 
 ## Phase 3: Failures users never see
 
-- [ ] **3.1 Decide what a failed save should do.** Today a signed-in save that fails only
-      writes to the console, so it looks like it worked. **Needs a product decision.**
-- [ ] **3.2 Test failed saves and subscription errors** in `TaskStoreContext`,
-      `RemindersContext`, `TimetableContext` and `EnergyContext`, to match 3.1.
-- [ ] **3.3 `sendUsageEvent` can never break a feature.** Regression tests for a synchronous
-      throw and a rejected promise (`designs/usage-logging.md`). Removing the `.catch` in
-      `sendUsageEvent` currently passes every test, so assert it directly.
+- [ ] **3.4 Decide what a failed live update should do.** If the `observeQuery` connection
+      that loads account data fails, it only writes to the console, so someone could be
+      looking at out-of-date data. **Needs a decision**, because brief reconnects may be
+      normal and a warning for those would be noise.
+- [ ] **3.5 Retry a failed move of local data to an account.** At first sign-in, the
+      "already moved" flag is set even if the move failed, so it is never retried. The
+      user now gets a warning, but the data stays behind on that device.
+- [ ] **3.6 Say something when an AI answer comes back empty.** The tool currently shows
+      nothing at all.
 
 ## Phase 4: The app as a whole
 
 - [ ] **4.1 Every tool opens.** Render `App` with the real providers and open every tool in
-      the registry, then go back Home, with no crash.
+      the registry, then go back Home, with no crash. Also confirm `SaveFailureNotice` is
+      mounted: nothing fails today if it is removed from `App`.
 - [ ] **4.2 Distract Me:** audio keeps playing when switching tools, `NowPlayingBar` shows
       and stops it, and `DistractMeContext` start, stop and switch work.
 - [ ] **4.3 Pomodoro:** presets, stop and resume, reset.
@@ -105,3 +106,13 @@ Move finished items here with the date and the test file that covers them.
       Coverage after 2.1 to 2.3: 83.1% lines, 72.8% branches, 80.8% functions.
 - [x] **2.4 to 2.7 Tone Checker, Reply Starter, Call Script, Is This Mad?** (2026-11-08).
       `index.test.tsx` next to each tool, including screenshot upload and paste.
+- [x] **2.8 `imageCapture`** (2026-11-08). `src/lib/imageCapture.test.ts`.
+- [x] **2.9 Task Breakdown** error state and double-send protection (2026-11-08).
+- [x] **3.1 A failed save warns the user** (2026-11-08). Decided and built:
+      `src/lib/saveFailures.ts` and `SaveFailureNotice`, which stays until dismissed.
+- [x] **3.2 Failed saves tested** (2026-11-08) at all 22 save points, for both server errors
+      and network failures. `src/context/saveWarnings.test.tsx`. Live-update errors moved
+      to 3.4.
+- [x] **3.3 `sendUsageEvent` can never break a feature** (2026-11-08).
+      `src/lib/usageLog.test.ts`. Coverage after Phase 3: 92.0% lines, 81.9% branches,
+      90.1% functions.

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { client } from '../lib/dataClient';
+import { watchSave } from '../lib/saveFailures';
 import { readStored } from '../lib/localStorage';
 import { useSignedOutMirror } from '../hooks/useSignedOutMirror';
 
@@ -174,14 +175,10 @@ export function TaskStoreProvider({ children }: { children: ReactNode }) {
     const localTasks = readStored<Task>(TASKS_STORAGE_KEY);
     Promise.all([
       ...localProjects.map((project) =>
-        client.models.Project.create(toBackendProjectInput(project)).catch((error: unknown) => {
-          console.error('Failed to migrate local project', error);
-        }),
+        watchSave(client.models.Project.create(toBackendProjectInput(project)), 'Failed to migrate local project'),
       ),
       ...localTasks.map((task) =>
-        client.models.Task.create(toBackendTaskInput(task)).catch((error: unknown) => {
-          console.error('Failed to migrate local task', error);
-        }),
+        watchSave(client.models.Task.create(toBackendTaskInput(task)), 'Failed to migrate local task'),
       ),
     ]).then(() => {
       window.localStorage.setItem(MIGRATION_FLAG_KEY, 'true');
@@ -199,9 +196,7 @@ export function TaskStoreProvider({ children }: { children: ReactNode }) {
     // reconciles this against whatever the backend actually stored.
     setProjects((current) => [...current, project]);
     if (isSignedIn) {
-      client.models.Project.create(toBackendProjectInput(project)).catch((error: unknown) => {
-        console.error('Failed to create project', error);
-      });
+      watchSave(client.models.Project.create(toBackendProjectInput(project)), 'Failed to create project');
     }
     return project;
   }
@@ -209,9 +204,7 @@ export function TaskStoreProvider({ children }: { children: ReactNode }) {
   function updateProject(id: string, patch: Partial<Pick<Project, 'name'>>) {
     setProjects((current) => current.map((project) => (project.id === id ? { ...project, ...patch } : project)));
     if (isSignedIn) {
-      client.models.Project.update({ id, ...patch }).catch((error: unknown) => {
-        console.error('Failed to update project', error);
-      });
+      watchSave(client.models.Project.update({ id, ...patch }), 'Failed to update project');
     }
   }
 
@@ -222,13 +215,9 @@ export function TaskStoreProvider({ children }: { children: ReactNode }) {
       current.map((task) => (task.projectId === id ? { ...task, projectId: undefined } : task)),
     );
     if (isSignedIn) {
-      client.models.Project.delete({ id }).catch((error: unknown) => {
-        console.error('Failed to delete project', error);
-      });
+      watchSave(client.models.Project.delete({ id }), 'Failed to delete project');
       affectedTaskIds.forEach((taskId) => {
-        client.models.Task.update({ id: taskId, projectId: null }).catch((error: unknown) => {
-          console.error('Failed to detach task from deleted project', error);
-        });
+        watchSave(client.models.Task.update({ id: taskId, projectId: null }), 'Failed to detach task from deleted project');
       });
     }
   }
@@ -245,27 +234,21 @@ export function TaskStoreProvider({ children }: { children: ReactNode }) {
     };
     setTasks((current) => [...current, task]);
     if (isSignedIn) {
-      client.models.Task.create(toBackendTaskInput(task)).catch((error: unknown) => {
-        console.error('Failed to create task', error);
-      });
+      watchSave(client.models.Task.create(toBackendTaskInput(task)), 'Failed to create task');
     }
   }
 
   function updateTask(id: string, patch: TaskUpdatePatch) {
     setTasks((current) => current.map((task) => (task.id === id ? { ...task, ...patch } : task)));
     if (isSignedIn) {
-      client.models.Task.update(toTaskUpdatePatch(id, patch)).catch((error: unknown) => {
-        console.error('Failed to update task', error);
-      });
+      watchSave(client.models.Task.update(toTaskUpdatePatch(id, patch)), 'Failed to update task');
     }
   }
 
   function deleteTask(id: string) {
     setTasks((current) => current.filter((task) => task.id !== id));
     if (isSignedIn) {
-      client.models.Task.delete({ id }).catch((error: unknown) => {
-        console.error('Failed to delete task', error);
-      });
+      watchSave(client.models.Task.delete({ id }), 'Failed to delete task');
     }
   }
 

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { client } from '../lib/dataClient';
+import { didSave, watchSave } from '../lib/saveFailures';
 
 const STORAGE_KEY = 'beths-gang:energy-spoons';
 const DEFAULT_SPOONS = 70;
@@ -59,11 +60,7 @@ export function EnergyProvider({ children }: { children: ReactNode }) {
         if (!hasReconciled) {
           hasReconciled = true;
           if (items.length === 0) {
-            client.models.UserPreferences.create({ id: username, spoons: spoonsRef.current }).catch(
-              (error: unknown) => {
-                console.error('Failed to create user preferences', error);
-              },
-            );
+            watchSave(client.models.UserPreferences.create({ id: username, spoons: spoonsRef.current }), 'Failed to create user preferences');
             return; // wait for the create() to echo back via the next emission
           }
         }
@@ -91,12 +88,14 @@ export function EnergyProvider({ children }: { children: ReactNode }) {
       persistLocally(clamped);
     }
     if (isSignedIn && username) {
-      client.models.UserPreferences.update({ id: username, spoons: clamped }).catch(() => {
+      void didSave(client.models.UserPreferences.update({ id: username, spoons: clamped })).then((saved) => {
+        if (saved) return;
         // No row yet (e.g. slider moved before the sign-in reconciliation above
         // finished creating one) — create it instead.
-        client.models.UserPreferences.create({ id: username, spoons: clamped }).catch((error: unknown) => {
-          console.error('Failed to persist spoons', error);
-        });
+        void watchSave(
+          client.models.UserPreferences.create({ id: username, spoons: clamped }),
+          'Failed to persist spoons',
+        );
       });
     }
   }

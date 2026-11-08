@@ -155,6 +155,10 @@ modules instead of classes. Treat "a class" below as "a function, hook, or modul
   needs `allow.authenticated('identityPool')` as well, and any auth change needs trying
   in both states against a live backend (`amplify/data/resource.test.ts` guards the
   rules for `runAiTool`/`logEvent`).
+- **Wrap every signed-in save in `watchSave` (`src/lib/saveFailures.ts`).** Amplify model
+  operations only reject on network failures. Server errors such as "Not Authorized"
+  resolve normally with `errors` set, so a `.catch` alone never sees them, and test mocks
+  must use that `{ data: null, errors: [...] }` shape to be realistic.
 - **Keep secrets server-side, always.** The Anthropic API key lives only as an
   Amplify secret injected into the `ai-assist` Lambda's environment — it is never
   read from a frontend env var, never bundled, never logged. Don't add a new

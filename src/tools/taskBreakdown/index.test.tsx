@@ -150,6 +150,54 @@ describe('TaskBreakdown', () => {
     expect(taskList).toContain('|small|now');
   });
 
+  it('shows the error when the request fails', async () => {
+    vi.mocked(runAiTool).mockRejectedValue(new Error('Not Authorized'));
+    renderTool();
+
+    fireEvent.change(screen.getByPlaceholderText('e.g. Sort out my taxes'), {
+      target: { value: 'Grout the kitchen' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Break it down' }));
+
+    expect(await screen.findByText('Not Authorized')).toHaveClass('tool-error');
+    expect(screen.queryByRole('button', { name: 'Send to Everything Pile' })).not.toBeInTheDocument();
+  });
+
+  it('a fast double-click only sends the steps once', async () => {
+    vi.mocked(runAiTool).mockResolvedValue('1. Buy tape\n2. Buy tile spacers');
+    renderTool();
+
+    fireEvent.change(screen.getByPlaceholderText('e.g. Sort out my taxes'), {
+      target: { value: 'Grout the kitchen' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Break it down' }));
+    const send = await screen.findByRole('button', { name: 'Send to Everything Pile' });
+
+    fireEvent.click(send);
+    fireEvent.click(send);
+
+    expect(screen.getByTestId('project-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('task-list').querySelectorAll('li')).toHaveLength(2);
+  });
+
+  it('a new breakdown can be sent after an earlier one', async () => {
+    vi.mocked(runAiTool).mockResolvedValue('1. Buy tape');
+    renderTool();
+
+    fireEvent.change(screen.getByPlaceholderText('e.g. Sort out my taxes'), {
+      target: { value: 'Grout the kitchen' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Break it down' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Send to Everything Pile' }));
+    await waitFor(() => expect(screen.getByTestId('project-count')).toHaveTextContent('1'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Break it down' }));
+    await waitFor(() => expect(vi.mocked(runAiTool)).toHaveBeenCalledTimes(2));
+    fireEvent.click(await screen.findByRole('button', { name: 'Send to Everything Pile' }));
+
+    await waitFor(() => expect(screen.getByTestId('project-count')).toHaveTextContent('2'));
+  });
+
   it('pre-fills from an Everything Pile handoff and sends steps back into that same project (no new one)', async () => {
     vi.mocked(runAiTool).mockResolvedValue('1. Buy tape\n2. Buy tile spacers');
     renderToolWithHandoff({ projectId: 'existing-id', projectName: 'Kitchen reno', prefillText: 'Kitchen reno' });
