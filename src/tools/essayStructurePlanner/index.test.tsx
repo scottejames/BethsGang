@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import * as amplifyAuth from 'aws-amplify/auth';
@@ -162,5 +162,26 @@ describe('EssayStructurePlanner', () => {
     expect(taskList).toContain('Alliance systems — how they escalated the conflict.|');
     expect(taskList).toContain('The assassination of Franz Ferdinand — the immediate trigger.|');
     expect(taskList).toContain('|small|now');
+  });
+
+  // Both clicks land before React re-renders, which is what a real double-click does.
+  it('a fast double-click only sends the structure once', async () => {
+    vi.mocked(runAiTool).mockResolvedValue('1. Alliance systems — how they escalated the conflict.');
+    renderTool();
+    fireEvent.change(screen.getByPlaceholderText('e.g. The Causes of WWI'), {
+      target: { value: 'History essay' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/a short description of the assignment/i), {
+      target: { value: '2000 words' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Suggest a structure' }));
+    const send = await screen.findByRole('button', { name: 'Send "History essay" to Everything Pile' });
+
+    act(() => {
+      send.click();
+      send.click();
+    });
+
+    expect(screen.getByTestId('task-list').querySelectorAll('li')).toHaveLength(1);
   });
 });

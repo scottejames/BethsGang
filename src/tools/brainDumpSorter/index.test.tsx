@@ -201,4 +201,21 @@ describe('BrainDumpSorter', () => {
       expect(screen.getByRole('button', { name: '🎙️ Dictate' })).toBeInTheDocument();
     });
   });
+
+  // Both clicks land before React re-renders, which is what a real double-click does.
+  it('a fast double-click only sends the tasks once', async () => {
+    vi.mocked(runAiTool).mockResolvedValue('1. Email the landlord');
+    renderTool();
+    typeAndSort('brain dump text');
+    await screen.findByDisplayValue('Email the landlord');
+    const send = screen.getByRole('button', { name: 'Send 1 to Everything Pile' });
+
+    act(() => {
+      send.click();
+      send.click();
+    });
+
+    const stored = screen.getByTestId('task-spy').textContent ?? '';
+    expect(stored.match(/Email the landlord/g)).toHaveLength(1);
+  });
 });

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import * as amplifyAuth from 'aws-amplify/auth';
@@ -163,5 +163,26 @@ describe('AssignmentBreakdown', () => {
     expect(taskList).toContain('Read the brief|');
     expect(taskList).toContain('Draft an outline|');
     expect(taskList).toContain('|small|now');
+  });
+
+  // Both clicks land before React re-renders, which is what a real double-click does.
+  it('a fast double-click only sends the steps once', async () => {
+    vi.mocked(runAiTool).mockResolvedValue('1. Read the brief');
+    renderTool();
+    fireEvent.change(screen.getByPlaceholderText('e.g. Essay: The Causes of WWI'), {
+      target: { value: 'History essay' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/paste the assignment instructions/i), {
+      target: { value: '2000 words' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Break it down' }));
+    const send = await screen.findByRole('button', { name: 'Send "History essay" to Everything Pile' });
+
+    act(() => {
+      send.click();
+      send.click();
+    });
+
+    expect(screen.getByTestId('task-list').querySelectorAll('li')).toHaveLength(1);
   });
 });

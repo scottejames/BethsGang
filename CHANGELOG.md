@@ -1811,9 +1811,16 @@ All notable changes to this project are documented here.
   Authorized", so the old `.catch` handlers never saw them.
 - Tests for `imageCapture`, Task Breakdown's error state and double-send protection, and
   `sendUsageEvent` never throwing.
+- Whole-app tests: every tool opens and returns Home through the real provider stack, the
+  tool registry is complete, and a sound keeps playing across tools. Also tests for Distract
+  Me, Pomodoro's controls, `AccountButton`, `EnergyButton`, reminder browser notifications,
+  and double-click protection in every tool that has it.
+- Minimum coverage thresholds in `vite.config.ts`, enforced by `npm run coverage`.
 
 ### Changed
 
+- The app's provider stack moved from `main.tsx` to `src/AppProviders.tsx`, so the whole-app
+  test runs the real thing instead of a copy that could drift.
 - Deploys now run `npm run test` before `ampx pipeline-deploy`, so a failing test stops a
   release before the backend ships. Its first run found the Remind Me test below.
 

@@ -85,7 +85,7 @@ Tools are normally mounted/unmounted as the user navigates — fine for stateles
 wrong for anything that must keep running in the background (Distract Me's audio
 shouldn't stop because you switched tools; a Reminder must still fire). The pattern:
 put the actual state in a React Context provider mounted once at the app root
-(`main.tsx`), not inside the tool component. The tool's own page becomes one consumer of
+(`AppProviders.tsx`), not inside the tool component. The tool's own page becomes one consumer of
 that context; a persistent UI element outside the tool tree (rendered unconditionally in
 `App.tsx`) can be another.
 
@@ -99,7 +99,7 @@ Five providers now use this shape, each extending it slightly further:
 | `TimetableContext` | `AlertBanner` (shared) | A second "fires independent of what's on screen" source feeding the *same* banner as `RemindersContext` — every screen corner was already claimed, and this was the Rule-of-Three case for merging the display layer rather than adding a competing one. See `designs/timetable.md`. |
 | `AuthContext` | `AccountButton` | Reflects state Amplify itself already persists (session tokens) rather than owning storage directly — see `designs/user-personalization.md` |
 
-All five are wired into `main.tsx` in the same nested-provider block, and their
+All five are wired into `AppProviders.tsx` in the same nested-provider block, and their
 persistent UI components are rendered unconditionally in `App.tsx` alongside each other
 (`EnergyButton` top-right, `AccountButton` top-left, `AlertBanner` top-center,
 `NowPlayingBar` bottom-center — corners/edges claimed in build order, worth checking

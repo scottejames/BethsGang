@@ -118,7 +118,7 @@ modules instead of classes. Treat "a class" below as "a function, hook, or modul
   into an existing provider because it's convenient — add a new context (see
   `designs/architecture-overview.md`'s persistent-provider pattern for how this
   project already extends the pattern one provider at a time).
-- **Mount persistent providers once, at the app root** (`main.tsx`), not inside the
+- **Mount persistent providers once, at the app root** (`AppProviders.tsx`), not inside the
   tree of whichever tool happens to need them — this is what lets Distract Me's
   audio, Reminders' timers, and the Task Store all keep working while the user
   navigates to an unrelated tool.

@@ -14,7 +14,7 @@ architecture, dependencies, and deployment to AWS Amplify Hosting, see `README.m
 | `npm run typecheck:amplify` | Typechecks the Amplify backend/Lambda code |
 | `npm run lint` | oxlint |
 | `npm test` | Runs the test suite (Vitest) |
-| `npm run coverage` | Runs the tests and reports coverage (summary in the terminal, full report in `coverage/index.html`) |
+| `npm run coverage` | Runs the tests and reports coverage (summary in the terminal, full report in `coverage/index.html`). Fails if coverage drops below the minimums in `vite.config.ts` |
 | `npm run verify` | Lint + backend typecheck + build + test, in one command |
 
 ## Prerequisites

@@ -48,21 +48,6 @@ Standing rules:
 - [ ] **3.6 Say something when an AI answer comes back empty.** The tool currently shows
       nothing at all.
 
-## Phase 4: The app as a whole
-
-- [ ] **4.1 Every tool opens.** Render `App` with the real providers and open every tool in
-      the registry, then go back Home, with no crash. Also confirm `SaveFailureNotice` is
-      mounted: nothing fails today if it is removed from `App`.
-- [ ] **4.2 Distract Me:** audio keeps playing when switching tools, `NowPlayingBar` shows
-      and stops it, and `DistractMeContext` start, stop and switch work.
-- [ ] **4.3 Pomodoro:** presets, stop and resume, reset.
-- [ ] **4.4 `AccountButton` and `EnergyButton`:** signed-in and signed-out display, opening
-      the sign-in modal, signing out, changing spoons.
-- [ ] **4.5 Reminder browser notifications:** permission requested once, shown when due,
-      and the in-app banner still works if notifications are denied or unavailable.
-- [ ] **4.6 `useOnceGuard` double-click protection** (`BUGS.md` #1), in each tool using it.
-- [ ] **4.7 Set a minimum coverage threshold** once Phases 2 to 4 have raised the numbers.
-
 ## Phase 5: Live checks against real infrastructure
 
 - [ ] **5.1 Automated live AI check**, `npm run test:live`, against a sandbox with a
@@ -116,3 +101,16 @@ Move finished items here with the date and the test file that covers them.
 - [x] **3.3 `sendUsageEvent` can never break a feature** (2026-11-08).
       `src/lib/usageLog.test.ts`. Coverage after Phase 3: 92.0% lines, 81.9% branches,
       90.1% functions.
+- [x] **4.1 Every tool opens** (2026-11-08), through the real provider stack, now shared
+      with `main.tsx` in `src/AppProviders.tsx`. Also checks the registry is complete and
+      `SaveFailureNotice` is mounted. `src/App.test.tsx`.
+- [x] **4.2 Distract Me** (2026-11-08), including audio surviving a tool switch.
+      `src/context/DistractMeContext.test.tsx`, `src/App.test.tsx`.
+- [x] **4.3 Pomodoro** presets, stop and resume, reset (2026-11-08).
+- [x] **4.4 `AccountButton` and `EnergyButton`** (2026-11-08).
+- [x] **4.5 Reminder browser notifications** (2026-11-08).
+      `src/context/RemindersContext.notifications.test.tsx`.
+- [x] **4.6 Double-click protection** in all four tools that use it (2026-11-08).
+- [x] **4.7 Minimum coverage** set in `vite.config.ts` (2026-11-08), checked by
+      `npm run coverage` but not on deploys. Coverage after Phase 4: 97.3% lines, 88.4%
+      branches, 95.9% functions.

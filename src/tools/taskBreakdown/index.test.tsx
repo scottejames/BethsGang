@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import * as amplifyAuth from 'aws-amplify/auth';
@@ -173,8 +173,11 @@ describe('TaskBreakdown', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Break it down' }));
     const send = await screen.findByRole('button', { name: 'Send to Everything Pile' });
 
-    fireEvent.click(send);
-    fireEvent.click(send);
+    // Both clicks land before React re-renders, which is what a real double-click does.
+    act(() => {
+      send.click();
+      send.click();
+    });
 
     expect(screen.getByTestId('project-count')).toHaveTextContent('1');
     expect(screen.getByTestId('task-list').querySelectorAll('li')).toHaveLength(2);

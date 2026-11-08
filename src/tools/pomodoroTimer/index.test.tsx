@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { pomodoroTimerTool } from './index';
 
@@ -59,5 +59,105 @@ describe('PomodoroTimer pop sound', () => {
 
     expect(screen.getByText(/time's up/i)).toBeInTheDocument();
     expect(playSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('PomodoroTimer controls', () => {
+  const start = (minutes: number) =>
+    fireEvent.click(screen.getByRole('button', { name: `${minutes} min` }));
+  const pass = (seconds: number) => act(() => vi.advanceTimersByTimeAsync(seconds * 1000));
+  const clock = (time: string) => expect(screen.getByText(time)).toBeInTheDocument();
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.spyOn(window.HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+    render(<Component />);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('waits at 5:00 with no controls until a length is picked', async () => {
+    clock('5:00');
+    expect(screen.queryByRole('button', { name: 'Reset' })).not.toBeInTheDocument();
+
+    await pass(3);
+
+    clock('5:00');
+  });
+
+  it.each([
+    [5, '4:59'],
+    [10, '9:59'],
+    [15, '14:59'],
+  ])('counts down from a %i minute preset', async (minutes, afterOneSecond) => {
+    start(minutes);
+    clock(`${minutes}:00`);
+
+    await pass(1);
+
+    clock(afterOneSecond);
+  });
+
+  it('holds the time while stopped and continues on Resume', async () => {
+    start(5);
+    await pass(3);
+    clock('4:57');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Stop' }));
+    await pass(10);
+    clock('4:57');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
+    await pass(2);
+    clock('4:55');
+  });
+
+  it('returns to the chosen length on Reset and stops counting', async () => {
+    start(15);
+    await pass(5);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+    clock('15:00');
+    expect(screen.queryByRole('button', { name: 'Reset' })).not.toBeInTheDocument();
+
+    await pass(5);
+    clock('15:00');
+  });
+
+  it('restarts cleanly when another length is picked mid-countdown', async () => {
+    start(5);
+    await pass(3);
+
+    start(10);
+    clock('10:00');
+
+    await pass(1);
+    clock('9:59'); // exactly one tick: the old countdown must not still be running
+  });
+
+  it('offers only Reset once the time is up', async () => {
+    start(5);
+
+    await pass(5 * 60);
+
+    clock('0:00');
+    expect(screen.queryByRole('button', { name: 'Stop' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Resume' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reset' })).toBeInTheDocument();
+  });
+
+  it('can start again after finishing', async () => {
+    start(5);
+    await pass(5 * 60);
+
+    start(5);
+    await pass(1);
+
+    clock('4:59');
+    expect(screen.queryByText(/time's up/i)).not.toBeInTheDocument();
   });
 });

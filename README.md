@@ -320,7 +320,7 @@ wasn't yet a strong enough case to build it ahead of time.
 Tools are normally mounted/unmounted as you navigate — fine for stateless tools, but wrong
 for anything that needs to keep running in the background (e.g. Distract Me's audio
 shouldn't stop just because you switched to another tool). For that, put the actual state
-in a React context provider mounted once at the app root (`main.tsx`), not inside the tool
+in a React context provider mounted once at the app root (`AppProviders.tsx`), not inside the tool
 component itself — see `src/context/DistractMeContext.tsx` and how `DistractMeProvider`
 wraps `<App />`. The tool's own page just becomes one consumer of that context; a
 persistent UI element outside the tool tree (see `src/components/NowPlayingBar.tsx`,

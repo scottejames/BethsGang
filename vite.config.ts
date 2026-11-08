@@ -73,6 +73,8 @@ export default defineConfig({
       reporter: ['text-summary', 'html'],
       include: ['src/**/*.{ts,tsx}', 'amplify/**/*.ts'],
       exclude: ['**/*.test.*', '**/*.d.ts', '**/meta.ts', 'src/test-setup.ts', 'src/test-utils/**'],
+      // Set just below the Nov 2026 baseline, as a floor against slipping backwards.
+      thresholds: { lines: 95, statements: 94, functions: 94, branches: 85 },
     },
   },
 })
