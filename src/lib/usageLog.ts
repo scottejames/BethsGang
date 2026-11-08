@@ -1,7 +1,7 @@
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
 
-// identityPool: logEvent is allow.guest() — see src/lib/aiClient.ts for why.
+// identityPool: logEvent admits both Identity Pool roles — see src/lib/aiClient.ts for why.
 const client = generateClient<Schema>({ authMode: 'identityPool' });
 
 // Assumed to cover this codebase's actual fixed vocabulary (tone/verbosity/repeat-kind

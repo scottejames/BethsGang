@@ -27,8 +27,10 @@ tool #3's wiring.
 ## The AI backend: one Lambda, one map
 
 Tools that need Claude call a single GraphQL query, `runAiTool(toolId, input)`, defined
-in `amplify/data/resource.ts` with `allow.guest()` authorization — an unauthenticated
-Cognito Identity Pool role, not a static API key, so there's no secret embedded in the
+in `amplify/data/resource.ts` with `allow.guest()` and
+`allow.authenticated('identityPool')` authorization — Cognito Identity Pool roles for
+signed-out and signed-in callers respectively (`allow.guest()` alone rejects signed-in
+users, which broke every AI tool for them from Aug to Nov 2026), not a static API key, so there's no secret embedded in the
 bundle and nothing to expire/rotate (swapped from `allow.publicApiKey()` in Aug 2026
 after an expired API key silently broke every AI tool; see `src/lib/aiClient.ts`). No
 login required either way — see `designs/user-personalization.md` for why auth, when it

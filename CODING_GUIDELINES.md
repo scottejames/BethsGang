@@ -141,7 +141,7 @@ modules instead of classes. Treat "a class" below as "a function, hook, or modul
 
 - **Deny-by-default, and the most specific rule wins.** Every model must declare its
   own `.authorization(...)` — never rely on `defaultAuthorizationMode` alone for a
-  model that needs different rules than `runAiTool`/`logEvent`'s public API key (see
+  model that needs different rules than `runAiTool`/`logEvent`'s Identity Pool rules (see
   `amplify/data/resource.ts`).
 - **Set `authMode` explicitly on any client used against an owner-scoped model.** The
   generated Data client's default `authMode` follows the *schema's*
@@ -150,6 +150,11 @@ modules instead of classes. Treat "a class" below as "a function, hook, or modul
   server-side with a silent "Not Authorized" that looks fine in the UI (see
   `src/lib/dataClient.ts`'s comment, and `designs/user-personalization.md`'s "What
   Phase 2 built" for the real incident this caused).
+- **`allow.guest()` does not include signed-in users.** It admits only the Identity
+  Pool's unauthenticated role. Anything that must work both signed out and signed in
+  needs `allow.authenticated('identityPool')` as well, and any auth change needs trying
+  in both states against a live backend (`amplify/data/resource.test.ts` guards the
+  rules for `runAiTool`/`logEvent`).
 - **Keep secrets server-side, always.** The Anthropic API key lives only as an
   Amplify secret injected into the `ai-assist` Lambda's environment — it is never
   read from a frontend env var, never bundled, never logged. Don't add a new

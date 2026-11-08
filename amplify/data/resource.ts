@@ -2,7 +2,7 @@ import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
 import { aiAssistFunction } from '../functions/ai-assist/resource';
 import { logEventFunction } from '../functions/log-event/resource';
 
-const schema = a.schema({
+export const schema = a.schema({
   runAiTool: a
     .query()
     .arguments({
@@ -10,10 +10,11 @@ const schema = a.schema({
       input: a.string().required(),
     })
     .returns(a.string())
-    // Unauthenticated Identity Pool role, not a public API key — no static secret
-    // to leak, no expiry to rotate (see designs/ or CHANGELOG for the Aug 2026
-    // incident where the API key silently expired and broke every AI tool).
-    .authorization((allow) => [allow.guest()])
+    // Identity Pool roles, not a public API key — no static secret to leak, no expiry
+    // to rotate (see designs/ or CHANGELOG for the Aug 2026 incident where the API key
+    // silently expired and broke every AI tool). Both rules are needed: guest() only
+    // admits the unauthenticated role, and signed-in users assume the authenticated one.
+    .authorization((allow) => [allow.guest(), allow.authenticated('identityPool')])
     .handler(a.handler.function(aiAssistFunction)),
 
   // Fire-and-forget usage tracking — see src/lib/usageLog.ts for what gets sent and
@@ -24,12 +25,12 @@ const schema = a.schema({
       input: a.string().required(),
     })
     .returns(a.string())
-    .authorization((allow) => [allow.guest()])
+    .authorization((allow) => [allow.guest(), allow.authenticated('identityPool')])
     .handler(a.handler.function(logEventFunction)),
 
   // User accounts, Phase 2: per-user persistence for signed-in users. Owner-scoped
   // (Cognito user pool auth, distinct from the two operations above which stay on the
-  // unauthenticated Identity Pool role) — see designs/user-personalization.md for why these two models
+  // Identity Pool roles) — see designs/user-personalization.md for why these two models
   // specifically (they're the only client state that currently persists at all) and
   // src/context/RemindersContext.tsx / EnergyContext.tsx for the signed-in/signed-out
   // branching that reads and writes them.

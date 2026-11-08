@@ -1766,3 +1766,24 @@ All notable changes to this project are documented here.
   bundle stays valid for up to a year" exposure, though the endpoint is still
   unauthenticated by design (see `BUGS.md` #7, updated to match). `npm run verify`
   clean; not yet deployed/smoke-tested against a live backend as of this entry.
+
+## 2026-11-08
+
+### Fixed
+
+- **Every AI tool failed for signed-in users with "Not Authorized to access runAiTool
+  on type Query", while working when signed out.** Introduced by the Aug 2026 switch to
+  `allow.guest()`: that rule admits only the Identity Pool's *unauthenticated* role, but
+  a signed-in user's `identityPool` credentials assume the *authenticated* role, so the
+  generated AppSync resolver rejected them. That switch was recorded as not yet
+  smoke-tested live, and signed-out use kept working, which hid it. `runAiTool` and
+  `logEvent` now also carry `allow.authenticated('identityPool')`. `logEvent` had the
+  same bug, so usage events from signed-in users were being dropped too; the client
+  discards those failures by design, so nothing showed it.
+
+### Added
+
+- `amplify/data/resource.test.ts`: regression test asserting the generated `@auth` rules
+  for `runAiTool`/`logEvent` admit both Identity Pool roles and that their clients use
+  `identityPool` auth. Fails against the old `allow.guest()`-only rules. `schema` is now
+  exported from `amplify/data/resource.ts` so the test can read those rules.

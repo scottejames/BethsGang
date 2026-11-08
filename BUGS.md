@@ -233,7 +233,7 @@ should gate on `AuthContext`'s `loading` flag before rendering anything derived 
 current scale (Anthropic API is internet-scale infrastructure; not a meaningful risk
 here). Left as-is, no code changes.
 
-**Where:** `amplify/data/resource.ts`'s `runAiTool` (`allow.guest()`, no
+**Where:** `amplify/data/resource.ts`'s `runAiTool` (open to any Identity Pool caller, no
 per-caller limits) and `amplify/functions/ai-assist/handler.ts`'s handler — no
 length check on `input` before it's sent to `client.messages.create()`.
 
