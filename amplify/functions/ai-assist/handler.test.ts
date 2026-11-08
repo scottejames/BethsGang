@@ -9,8 +9,12 @@
 // since we only exercise the pure helper functions below.
 process.env.ANTHROPIC_API_KEY = 'test-key-not-real';
 
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
+  SYSTEM_PROMPTS,
   buildAssignmentBreakdownMessage,
   buildCallScriptMessage,
   buildCooksCornerMessage,
@@ -322,5 +326,45 @@ describe('buildScreenshotToTextContent', () => {
   it('throws if mediaType is not a supported image type', () => {
     const raw = JSON.stringify({ imageBase64: 'ZmFrZQ==', mediaType: 'application/pdf' });
     expect(() => buildScreenshotToTextContent(raw)).toThrow();
+  });
+});
+
+// Reads the tools' source rather than importing them: the frontend tool IDs and this
+// Lambda's prompt keys are separate lists that nothing else keeps in step.
+function toolIdsUsedByFrontend(): string[] {
+  const toolsDir = fileURLToPath(new URL('../../../src/tools/', import.meta.url));
+  const toolDirs = readdirSync(toolsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => join(toolsDir, entry.name));
+
+  const ids = new Set<string>();
+  for (const dir of toolDirs) {
+    const components = readdirSync(dir).filter(
+      (file) => file.endsWith('.tsx') && !file.includes('.test.'),
+    );
+    for (const file of components) {
+      const source = readFileSync(join(dir, file), 'utf8');
+      for (const [, argument] of source.matchAll(/useAiTool\(([^)]*)\)/g)) {
+        const literal = argument.match(/^'([^']+)'$/)?.[1];
+        const metaId = readFileSync(join(dir, 'meta.ts'), 'utf8').match(/id: '([^']+)'/)?.[1];
+        const id = argument === 'meta.id' ? metaId : literal;
+        if (!id) throw new Error(`Can't resolve useAiTool(${argument}) in ${dir}/${file}`);
+        ids.add(id);
+      }
+    }
+  }
+  return [...ids].sort();
+}
+
+describe('tool ID contract', () => {
+  // An ID with no prompt only fails at runtime, with "Unknown tool" in the error box.
+  it('has exactly one system prompt for each AI tool the frontend calls', () => {
+    expect(Object.keys(SYSTEM_PROMPTS).sort()).toEqual(toolIdsUsedByFrontend());
+  });
+
+  it('finds the known tools, so the check above cannot pass on an empty scan', () => {
+    expect(toolIdsUsedByFrontend()).toEqual(
+      expect.arrayContaining(['brain-dump-sorter', 'screenshot-to-text']),
+    );
   });
 });

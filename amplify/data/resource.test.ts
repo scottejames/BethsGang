@@ -29,15 +29,40 @@ describe.each(['runAiTool', 'logEvent'])('%s authorization', (field) => {
   });
 });
 
-// The rules above only help if the clients actually call with Identity Pool credentials.
+const OWNER_ONLY = '{allow: owner, ownerField: "owner"}';
+
+function modelAuthRules(): Record<string, string> {
+  const matches = schema
+    .transform()
+    .schema.matchAll(/^type (\w+) @model @auth\(rules: \[([\s\S]*?)\]\)/gm);
+  return Object.fromEntries([...matches].map(([, model, rules]) => [model, rules]));
+}
+
+// These tables hold people's personal data. The exact match is deliberate: adding a
+// model, or loosening any rule, has to be a conscious change to this list.
+describe('data model authorization', () => {
+  it('keeps every model readable and writable only by its owner', () => {
+    expect(modelAuthRules()).toEqual({
+      Reminder: OWNER_ONLY,
+      UserPreferences: OWNER_ONLY,
+      Project: OWNER_ONLY,
+      Task: OWNER_ONLY,
+      TimetableEntry: OWNER_ONLY,
+    });
+  });
+});
+
+// The rules above only help if each client calls with the credentials those rules expect.
+// Getting this wrong is invisible in the mocked unit tests: the server rejects the call.
 describe.each([
-  ['runAiTool', '../../src/lib/aiClient'],
-  ['logEvent', '../../src/lib/usageLog'],
-])('%s client', (_field, modulePath) => {
-  it('uses identityPool auth, matching the schema rules', async () => {
+  ['runAiTool', '../../src/lib/aiClient', 'identityPool'],
+  ['logEvent', '../../src/lib/usageLog', 'identityPool'],
+  ['owner-scoped models', '../../src/lib/dataClient', 'userPool'],
+])('%s client', (_field, modulePath, authMode) => {
+  it(`uses ${authMode} auth, matching the schema rules`, async () => {
     vi.resetModules();
     generateClient.mockClear();
     await import(/* @vite-ignore */ modulePath);
-    expect(generateClient).toHaveBeenCalledWith({ authMode: 'identityPool' });
+    expect(generateClient).toHaveBeenCalledWith({ authMode });
   });
 });

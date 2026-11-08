@@ -5,9 +5,8 @@ mechanics — most of these are just a new system prompt away.
 
 ## Up next
 
-- [ ] Smoke-test the AI tools live, both signed out and signed in, after the Nov 2026
-      Identity Pool auth fix; consider a repeatable check, since only a live call proves
-      the deployed resolver accepts both roles.
+- [ ] Testing work, including the live smoke test of the Nov 2026 Identity Pool auth fix,
+      is tracked in [`TESTING_TODO.md`](./TESTING_TODO.md).
 ~~- [ ] **Side Quest Log**~~ — shipped, see Shipped below.
 ~~- [ ] **Is This Mad?**~~ — shipped, see Shipped below.
 ~~- [ ] **Just The Facts**~~ — merged into Is This Mad? rather than shipped separately,

@@ -1,0 +1,110 @@
+# Testing TODO
+
+The plan for closing the gaps found in the 2026-11-08 test coverage review. Feature ideas
+stay in [`TODO.md`](./TODO.md); this file is only about testing.
+
+**Starting point (2026-11-08):** 244 tests, 81% line and 71% branch coverage. The logic
+inside the app is tested well, but every test replaces Amplify with a mock, and deploys
+don't run the tests.
+
+**Why this exists:** from August to November 2026, every AI tool failed for signed-in
+users. The unit tests couldn't see it, because the bug was in the agreement between the
+app and the deployed backend, which is the part the mocks replace.
+
+## Strategy
+
+Each kind of test has one job. When a bug is fixed, add the test at the layer that would
+have caught it.
+
+| Layer | Job | Tool |
+|---|---|---|
+| **Unit and component** | Logic and UI behaviour inside the app. Mocks are fine here. | Vitest, Testing Library |
+| **Contract** | The app and backend definitions agree, without calling AWS: auth rules, `authMode`, tool IDs. | Vitest against the generated schema |
+| **Whole app** | The real providers and every tool work together. | Vitest, Testing Library |
+| **Live** | The real deployed backend accepts and rejects the right callers. Small and few. | Script against a sandbox, Playwright where a browser matters |
+| **Release gate** | A failing test stops a deploy. | `amplify.yml` |
+
+Standing rules:
+
+- Any change to auth rules or `authMode` must be tried both signed out and signed in.
+- A bug fix comes with a test that fails without the fix.
+- Prefer testing what the user sees over how the code is built.
+
+## Phase 1: Quick wins
+
+- [ ] **1.1 Run the tests on every deploy.** Add `npm run test` to `amplify.yml`'s
+      backend build, *before* `ampx pipeline-deploy`. The backend deploys first, so a test
+      step in the frontend phase would be too late to stop a bad backend. Done when a
+      failing test stops the build with nothing deployed.
+
+## Phase 2: The AI path
+
+- [ ] **2.1 Run the Lambda's real `handler`** with the Anthropic client mocked: unknown
+      tool is rejected, the format guard is always in the system prompt, the energy
+      instruction is added, screenshots skip it, and a response with no text returns `''`.
+- [ ] **2.2 `useAiTool` and `aiClient`.** Success, a GraphQL error reaching the error box,
+      the non-`Error` fallback message, loading resetting, and a usage event either way.
+- [ ] **2.3 `parseLabeledOutput`.** Normal labels, markdown-wrapped labels (the format-guard
+      production crash), missing fields, and plain text with no labels.
+- [ ] **2.4 Tone Checker:** submit, results, error state, context field, screenshot upload.
+- [ ] **2.5 Reply Starter:** submit, drafts, tone and length options, error state.
+- [ ] **2.6 Call Script:** submit, results, error state.
+- [ ] **2.7 Is This Mad?:** submit, results, error state.
+- [ ] **2.8 `imageCapture`:** the resize and encode path, and rejecting a bad file.
+- [ ] **2.9 Task Breakdown:** add the error state and double-send protection.
+
+## Phase 3: Failures users never see
+
+- [ ] **3.1 Decide what a failed save should do.** Today a signed-in save that fails only
+      writes to the console, so it looks like it worked. **Needs a product decision.**
+- [ ] **3.2 Test failed saves and subscription errors** in `TaskStoreContext`,
+      `RemindersContext`, `TimetableContext` and `EnergyContext`, to match 3.1.
+- [ ] **3.3 `sendUsageEvent` can never break a feature.** Regression tests for a synchronous
+      throw and a rejected promise (`designs/usage-logging.md`).
+
+## Phase 4: The app as a whole
+
+- [ ] **4.1 Every tool opens.** Render `App` with the real providers and open every tool in
+      the registry, then go back Home, with no crash.
+- [ ] **4.2 Distract Me:** audio keeps playing when switching tools, `NowPlayingBar` shows
+      and stops it, and `DistractMeContext` start, stop and switch work.
+- [ ] **4.3 Pomodoro:** presets, stop and resume, reset.
+- [ ] **4.4 `AccountButton` and `EnergyButton`:** signed-in and signed-out display, opening
+      the sign-in modal, signing out, changing spoons.
+- [ ] **4.5 Reminder browser notifications:** permission requested once, shown when due,
+      and the in-app banner still works if notifications are denied or unavailable.
+- [ ] **4.6 `useOnceGuard` double-click protection** (`BUGS.md` #1), in each tool using it.
+- [ ] **4.7 Set a minimum coverage threshold** once Phases 2 to 4 have raised the numbers.
+
+## Phase 5: Live checks against real infrastructure
+
+- [ ] **5.1 Automated live AI check**, `npm run test:live`, against a sandbox with a
+      disposable Cognito test user: `runAiTool` and `logEvent` work signed out and signed
+      in. This is the check that would have caught the August bug.
+- [ ] **5.2 Live data check:** signed-in create, read and delete on each model, and a second
+      user cannot read the first user's data.
+- [ ] **5.3 Decide when live checks run:** by hand before a push, or automatically after
+      each deploy. **Needs a decision**, since each run makes real Anthropic calls.
+- [ ] **5.4 Browser end-to-end test (Playwright):** sign in, use an AI tool, add a reminder,
+      sign out, and confirm account data disappears.
+- [ ] **5.5 PWA check:** the app installs, the local tools work offline, and a new deploy
+      reaches an already-installed app.
+- [ ] **5.6 Cross-device sync:** a change in one session appears in another through
+      `observeQuery`.
+
+## Done
+
+Move finished items here with the date and the test file that covers them.
+
+- [x] **Phase 0: Confirm the signed-in fix on production** (2026-11-08). Checked by hand
+      with Brain Dump Sorter: failing when signed in before the fix, and working both
+      signed out and signed in after it. Live check only; the rules are guarded by
+      `amplify/data/resource.test.ts`.
+- [x] **1.2 Auth rule tests for the data models** (2026-11-08). All five models must be
+      owner-only, and adding a model means updating the list. `amplify/data/resource.test.ts`.
+- [x] **1.3 `dataClient` uses `authMode: 'userPool'`** (2026-11-08).
+      `amplify/data/resource.test.ts`.
+- [x] **1.4 Tool ID contract test** (2026-11-08). The Lambda's `SYSTEM_PROMPTS` keys must
+      exactly match the IDs the tools call. `amplify/functions/ai-assist/handler.test.ts`.
+- [x] **1.5 Coverage reporting** (2026-11-08). `npm run coverage`. Baseline: 81.3% lines,
+      70.9% branches, 79.0% functions.

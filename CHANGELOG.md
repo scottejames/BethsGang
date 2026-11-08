@@ -1789,3 +1789,9 @@ All notable changes to this project are documented here.
   exported from `amplify/data/resource.ts` so the test can read those rules.
 - `designs/ses-email.md`: the paused work plan for sending auth emails through SES, now
   committed and tracked as not started in `TODO.md`.
+- `TESTING_TODO.md`: testing strategy and a phased task list from the 2026-11-08
+  coverage review, prompted by the signed-in AI tools bug getting past 244 passing tests.
+- Contract tests that need no AWS, for mistakes that only fail once deployed: all five data
+  models must stay owner-only, `dataClient` must use `userPool` auth, and the Lambda's
+  prompt keys must exactly match the tool IDs the frontend calls.
+- `npm run coverage` (`@vitest/coverage-v8`), to measure progress on `TESTING_TODO.md`.

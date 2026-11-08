@@ -68,5 +68,11 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test-setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'html'],
+      include: ['src/**/*.{ts,tsx}', 'amplify/**/*.ts'],
+      exclude: ['**/*.test.*', '**/*.d.ts', '**/meta.ts', 'src/test-setup.ts'],
+    },
   },
 })

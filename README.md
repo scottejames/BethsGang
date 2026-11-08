@@ -137,6 +137,7 @@ TypeScript, Amplify Gen2, testing, security) are in
 | `chrono-node` | Parses natural-language reminder text (Remind Me) into an actual date/time, entirely client-side |
 | `oxlint` | Linting |
 | `vitest` | Test runner (shares config with Vite via `vite.config.ts`'s `test` block) |
+| `@vitest/coverage-v8` | Test coverage reports for `npm run coverage` |
 | `@testing-library/react`, `@testing-library/jest-dom`, `jsdom` | Component tests (DOM environment for tests that render React components) |
 | `@aws-sdk/client-cognito-identity-provider`, `@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb` | `utils/user-admin/`'s admin CLI only — not used by the app itself |
 
@@ -365,7 +366,8 @@ only renders when the API actually exists), since browser support isn't universa
 
 ## Roadmap
 
-Ideas for future tools, and what's up next, are tracked in [`TODO.md`](./TODO.md).
+Ideas for future tools, and what's up next, are tracked in [`TODO.md`](./TODO.md). The testing strategy and
+its outstanding work are in [`TESTING_TODO.md`](./TESTING_TODO.md).
 
 ## Assets
 

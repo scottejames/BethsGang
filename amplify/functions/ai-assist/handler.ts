@@ -5,7 +5,7 @@ const client = new Anthropic();
 
 // Adding a new AI-backed tool only requires a new entry here plus a
 // matching frontend tool component — no new infrastructure.
-const SYSTEM_PROMPTS: Record<string, string> = {
+export const SYSTEM_PROMPTS: Record<string, string> = {
   'task-breakdown': `You help people with ADHD turn big tasks into small, concrete, startable steps.
 Given a task, break it into a short ordered checklist of 3-8 steps.
 Each step should be small enough to start immediately, described as a physical or concrete action (not "plan" or "think about").
