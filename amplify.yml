@@ -4,6 +4,9 @@ backend:
     build:
       commands:
         - npm install --cache .npm --prefer-offline
+        # Before the deploy on purpose: the backend ships first, so a failing test has
+        # to stop the build here or a bad backend would already be live.
+        - npm run test
         - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
 frontend:
   phases:
