@@ -11,7 +11,7 @@ function caption(spoons: number): string {
 }
 
 export function EnergyButton() {
-  const { spoons, setSpoons } = useEnergy();
+  const { spoons, spoonsLoading, setSpoons } = useEnergy();
   const [open, setOpen] = useState(false);
   const filledSpoons = Math.round(spoons / 10);
 
@@ -21,9 +21,10 @@ export function EnergyButton() {
         type="button"
         className="energy-button"
         onClick={() => setOpen(true)}
-        aria-label={`Energy level: ${spoons} out of 100 spoons. Click to change.`}
+        disabled={spoonsLoading}
+        aria-label={spoonsLoading ? 'Energy level loading' : `Energy level: ${spoons} out of 100 spoons. Click to change.`}
       >
-        <span aria-hidden="true">🥄</span> {spoons}
+        <span aria-hidden="true">🥄</span> {spoonsLoading ? '…' : spoons}
       </button>
 
       {open && (

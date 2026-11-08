@@ -4,6 +4,7 @@ import type { Project, Task, TaskCategory, TaskSize } from '../../context/TaskSt
 import { useToolNavigation } from '../../context/ToolNavigationContext';
 import { useUndoableDelete } from '../../hooks/useUndoableDelete';
 import { UndoToastStack } from '../../components/UndoToastStack';
+import { LoadStatusMessage } from '../../components/LoadStatusMessage';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
 
@@ -368,7 +369,7 @@ function TaskListItem({
 }
 
 function EverythingPile() {
-  const { projects, tasks, addProject, addTask, updateProject, deleteProject, updateTask, deleteTask } = useTaskStore();
+  const { projects, tasks, status, addProject, addTask, updateProject, deleteProject, updateTask, deleteTask } = useTaskStore();
   const { requestTaskBreakdown, navigateToTool } = useToolNavigation();
 
   const [newProjectName, setNewProjectName] = useState('');
@@ -512,62 +513,66 @@ function EverythingPile() {
         </button>
       </form>
 
-      <div className="task-tree">
-        {groups.map((group) => {
-          const collapsed = !expandedGroupIds.has(group.id);
-          const isRenamingThisGroup = group.project !== undefined && editingProjectId === group.project.id;
+      {status !== 'loaded' ? (
+        <LoadStatusMessage status={status} noun="tasks" />
+      ) : (
+        <div className="task-tree">
+          {groups.map((group) => {
+            const collapsed = !expandedGroupIds.has(group.id);
+            const isRenamingThisGroup = group.project !== undefined && editingProjectId === group.project.id;
 
-          return (
-            <div key={group.id} className="task-group">
-              <div className="task-group-header">
-                <TaskGroupHeader
-                  group={group}
-                  collapsed={collapsed}
-                  onToggleExpanded={() => toggleExpanded(group.id)}
-                  isRenaming={isRenamingThisGroup}
-                  draftName={projectDraftName}
-                  onDraftNameChange={setProjectDraftName}
-                  onSaveRename={saveProjectName}
-                  onCancelRename={() => setEditingProjectId(null)}
-                  onStartRename={() => group.project && startEditingProject(group.project)}
-                  onBreakdown={() => group.project && handleBreakdown(group.project)}
-                  onProjectToTask={() => group.project && handleProjectToTask(group.project)}
-                  onDelete={() => group.project && handleDeleteProject(group.project)}
-                />
-              </div>
-
-              {!collapsed && (
-                <div className="task-group-body">
-                  <AddTaskRow projectId={group.project?.id} />
-                  {group.tasks.length === 0 ? (
-                    <p className="task-empty">Nothing here.</p>
-                  ) : (
-                    <ul className="task-list">
-                      {group.tasks.map((task) => (
-                        <TaskListItem
-                          key={task.id}
-                          task={task}
-                          projects={projects}
-                          isEditing={editingTaskId === task.id}
-                          draft={taskDraft}
-                          onDraftChange={(patch) => setTaskDraft((draft) => ({ ...draft, ...patch }))}
-                          onStartEdit={() => startEditingTask(task)}
-                          onSaveEdit={saveTaskEdit}
-                          onCancelEdit={() => setEditingTaskId(null)}
-                          onToggleDone={(done) => updateTask(task.id, { done })}
-                          onCategoryChange={(category) => updateTask(task.id, { category })}
-                          onTaskToProject={() => handleTaskToProject(task)}
-                          onDelete={() => handleDeleteTask(task)}
-                        />
-                      ))}
-                    </ul>
-                  )}
+            return (
+              <div key={group.id} className="task-group">
+                <div className="task-group-header">
+                  <TaskGroupHeader
+                    group={group}
+                    collapsed={collapsed}
+                    onToggleExpanded={() => toggleExpanded(group.id)}
+                    isRenaming={isRenamingThisGroup}
+                    draftName={projectDraftName}
+                    onDraftNameChange={setProjectDraftName}
+                    onSaveRename={saveProjectName}
+                    onCancelRename={() => setEditingProjectId(null)}
+                    onStartRename={() => group.project && startEditingProject(group.project)}
+                    onBreakdown={() => group.project && handleBreakdown(group.project)}
+                    onProjectToTask={() => group.project && handleProjectToTask(group.project)}
+                    onDelete={() => group.project && handleDeleteProject(group.project)}
+                  />
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+
+                {!collapsed && (
+                  <div className="task-group-body">
+                    <AddTaskRow projectId={group.project?.id} />
+                    {group.tasks.length === 0 ? (
+                      <p className="task-empty">Nothing here.</p>
+                    ) : (
+                      <ul className="task-list">
+                        {group.tasks.map((task) => (
+                          <TaskListItem
+                            key={task.id}
+                            task={task}
+                            projects={projects}
+                            isEditing={editingTaskId === task.id}
+                            draft={taskDraft}
+                            onDraftChange={(patch) => setTaskDraft((draft) => ({ ...draft, ...patch }))}
+                            onStartEdit={() => startEditingTask(task)}
+                            onSaveEdit={saveTaskEdit}
+                            onCancelEdit={() => setEditingTaskId(null)}
+                            onToggleDone={(done) => updateTask(task.id, { done })}
+                            onCategoryChange={(category) => updateTask(task.id, { category })}
+                            onTaskToProject={() => handleTaskToProject(task)}
+                            onDelete={() => handleDeleteTask(task)}
+                          />
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <UndoToastStack
         items={pendingDeletes.map((entry) => ({ id: entry.id, label: entry.label }))}

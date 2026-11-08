@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import * as amplifyAuth from 'aws-amplify/auth';
@@ -30,8 +30,10 @@ function wrapper({ children }: { children: ReactNode }) {
   );
 }
 
-function renderHome(onSelectTool = vi.fn()) {
+async function renderHome(onSelectTool = vi.fn()) {
   render(<Home onSelectTool={onSelectTool} />, { wrapper });
+  // Lets the sign-in check finish, as it would before anyone could touch the screen.
+  await act(async () => {});
   return onSelectTool;
 }
 
@@ -59,8 +61,8 @@ describe('Home', () => {
     window.localStorage.removeItem('beths-gang:energy-spoons');
   });
 
-  it('defaults to the Everyday Helpers tab, showing general tools but not planning ones', () => {
-    renderHome();
+  it('defaults to the Everyday Helpers tab, showing general tools but not planning ones', async () => {
+    await renderHome();
     expect(screen.getByRole('button', { name: 'Everyday Helpers' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('Distract Me')).toBeInTheDocument();
     expect(screen.getByText('Pomodoro Timer')).toBeInTheDocument();
@@ -68,8 +70,8 @@ describe('Home', () => {
     expect(screen.queryByText('Task Breakdown')).not.toBeInTheDocument();
   });
 
-  it('switches to the Get Organized tab, showing only the tools wired into the Shared Task Store', () => {
-    renderHome();
+  it('switches to the Get Organized tab, showing only the tools wired into the Shared Task Store', async () => {
+    await renderHome();
     fireEvent.click(screen.getByRole('button', { name: 'Get Organized' }));
 
     expect(screen.getByRole('button', { name: 'Get Organized' })).toHaveAttribute('aria-pressed', 'true');
@@ -81,13 +83,13 @@ describe('Home', () => {
     expect(screen.queryByText('Remind Me')).not.toBeInTheDocument();
   });
 
-  it('selecting a tool card calls onSelectTool with its id', () => {
-    const onSelectTool = renderHome();
+  it('selecting a tool card calls onSelectTool with its id', async () => {
+    const onSelectTool = await renderHome();
     fireEvent.click(screen.getByText('Pomodoro Timer'));
     expect(onSelectTool).toHaveBeenCalledWith('pomodoro-timer');
   });
 
-  it('keeps the active-reminder badge working on the Everyday Helpers tab', () => {
+  it('keeps the active-reminder badge working on the Everyday Helpers tab', async () => {
     window.localStorage.setItem(
       'beths-gang:reminders',
       JSON.stringify([
@@ -100,7 +102,7 @@ describe('Home', () => {
         },
       ]),
     );
-    renderHome();
+    await renderHome();
     expect(screen.getByText('1')).toBeInTheDocument();
   });
 

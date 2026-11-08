@@ -1250,7 +1250,8 @@ textarea {
   }
 }
 
-.reminder-empty {
+.reminder-empty,
+.load-status {
   opacity: 0.7;
 }
 

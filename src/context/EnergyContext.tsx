@@ -2,13 +2,16 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { client } from '../lib/dataClient';
+import { useAccountLoadStatus } from '../hooks/useAccountLoadStatus';
 import { didSave, reportSyncFailure, watchSave } from '../lib/saveFailures';
 
 const STORAGE_KEY = 'beths-gang:energy-spoons';
 const DEFAULT_SPOONS = 70;
+const LOAD_SOURCES = ['spoons'];
 
 interface EnergyContextValue {
   spoons: number;
+  spoonsLoading: boolean;
   setSpoons: (value: number) => void;
 }
 
@@ -26,6 +29,7 @@ function readStoredSpoons(): number {
 export function EnergyProvider({ children }: { children: ReactNode }) {
   const { isSignedIn, user } = useAuth();
   const username = user?.username ?? null;
+  const { status, markArrived, markFailed } = useAccountLoadStatus(LOAD_SOURCES);
   const [spoons, setSpoonsState] = useState<number>(readStoredSpoons);
   const spoonsRef = useRef(spoons);
   spoonsRef.current = spoons;
@@ -57,6 +61,7 @@ export function EnergyProvider({ children }: { children: ReactNode }) {
     let hasReconciled = false;
     const subscription = client.models.UserPreferences.observeQuery().subscribe({
       next: ({ items }) => {
+        markArrived('spoons', items.length);
         if (!hasReconciled) {
           hasReconciled = true;
           if (items.length === 0) {
@@ -73,11 +78,12 @@ export function EnergyProvider({ children }: { children: ReactNode }) {
         }
       },
       error: (error: unknown) => {
+        markFailed('spoons');
         reportSyncFailure('UserPreferences subscription error', error);
       },
     });
     return () => subscription.unsubscribe();
-  }, [isSignedIn, username]);
+  }, [isSignedIn, username, markArrived, markFailed]);
 
   function setSpoons(value: number) {
     const clamped = Math.min(100, Math.max(0, Math.round(value)));
@@ -100,7 +106,7 @@ export function EnergyProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  return <EnergyContext.Provider value={{ spoons, setSpoons }}>{children}</EnergyContext.Provider>;
+  return <EnergyContext.Provider value={{ spoons, spoonsLoading: status === 'loading', setSpoons }}>{children}</EnergyContext.Provider>;
 }
 
 export function useEnergy(): EnergyContextValue {

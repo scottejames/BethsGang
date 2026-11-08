@@ -55,14 +55,17 @@ function NavigationSpy() {
   );
 }
 
-function renderTool() {
-  return render(
+async function renderTool() {
+  const view = render(
     <>
       <Component />
       <NavigationSpy />
     </>,
     { wrapper },
   );
+  // Lets the sign-in check finish, as it would before anyone could touch the screen.
+  await act(async () => {});
+  return view;
 }
 
 function group(name: string): HTMLElement {
@@ -120,8 +123,8 @@ describe('EverythingPile', () => {
     window.localStorage.removeItem('beths-gang:tasks');
   });
 
-  it('always shows an Everything Else group for standalone tasks, collapsed by default', () => {
-    renderTool();
+  it('always shows an Everything Else group for standalone tasks, collapsed by default', async () => {
+    await renderTool();
     expect(screen.getByText('Everything Else', { selector: '.task-group-name' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Expand Everything Else' })).toBeInTheDocument();
 
@@ -129,14 +132,14 @@ describe('EverythingPile', () => {
     expect(within(group('Everything Else')).getByText('water the plants')).toBeInTheDocument();
   });
 
-  it('a freshly created project starts expanded, ready to add a task right away', () => {
-    renderTool();
+  it('a freshly created project starts expanded, ready to add a task right away', async () => {
+    await renderTool();
     addProject('Kitchen reno');
     expect(screen.getByRole('button', { name: 'Collapse Kitchen reno' })).toBeInTheDocument();
   });
 
-  it('always lists Everything Else first, ahead of every project', () => {
-    renderTool();
+  it('always lists Everything Else first, ahead of every project', async () => {
+    await renderTool();
     addProject('Kitchen reno');
     addProject('Side hustle');
 
@@ -144,8 +147,8 @@ describe('EverythingPile', () => {
     expect(names).toEqual(['Everything Else', 'Kitchen reno', 'Side hustle']);
   });
 
-  it('adding a task from inside a project group ties it to that project, not Everything Else', () => {
-    renderTool();
+  it('adding a task from inside a project group ties it to that project, not Everything Else', async () => {
+    await renderTool();
     addProject('Kitchen reno');
     ensureExpanded('Everything Else');
 
@@ -155,8 +158,8 @@ describe('EverythingPile', () => {
     expect(within(group('Everything Else')).queryByText('grout tiles')).not.toBeInTheDocument();
   });
 
-  it('re-triages a task to a different category via its tag select', () => {
-    renderTool();
+  it('re-triages a task to a different category via its tag select', async () => {
+    await renderTool();
     addTaskTo('Everything Else', 'call the dentist', 'Later');
 
     const item = within(group('Everything Else')).getByText('call the dentist').closest('li') as HTMLElement;
@@ -167,8 +170,8 @@ describe('EverythingPile', () => {
     expect(select.value).toBe('now');
   });
 
-  it('deletes a task', () => {
-    renderTool();
+  it('deletes a task', async () => {
+    await renderTool();
     addTaskTo('Everything Else', 'cancel gym membership', 'Now');
 
     const item = within(group('Everything Else')).getByText('cancel gym membership').closest('li') as HTMLElement;
@@ -178,8 +181,8 @@ describe('EverythingPile', () => {
     expect(within(group('Everything Else')).getByText('Nothing here.')).toBeInTheDocument();
   });
 
-  it('deleting a task shows an undo toast, and Undo restores the task', () => {
-    renderTool();
+  it('deleting a task shows an undo toast, and Undo restores the task', async () => {
+    await renderTool();
     addTaskTo('Everything Else', 'cancel gym membership', 'Now');
 
     const item = within(group('Everything Else')).getByText('cancel gym membership').closest('li') as HTMLElement;
@@ -194,10 +197,10 @@ describe('EverythingPile', () => {
     expect(screen.queryByText('"cancel gym membership" deleted.')).not.toBeInTheDocument();
   });
 
-  it('a deleted task is actually removed once the undo window elapses with no undo', () => {
+  it('a deleted task is actually removed once the undo window elapses with no undo', async () => {
     vi.useFakeTimers();
     try {
-      renderTool();
+      await renderTool();
       addTaskTo('Everything Else', 'cancel gym membership', 'Now');
 
       const item = within(group('Everything Else')).getByText('cancel gym membership').closest('li') as HTMLElement;
@@ -217,8 +220,8 @@ describe('EverythingPile', () => {
     }
   });
 
-  it('deleting a project moves its tasks into Everything Else instead of losing them', () => {
-    renderTool();
+  it('deleting a project moves its tasks into Everything Else instead of losing them', async () => {
+    await renderTool();
     addProject('Kitchen reno');
     addTaskTo('Kitchen reno', 'grout tiles', 'Later');
 
@@ -228,8 +231,8 @@ describe('EverythingPile', () => {
     expect(within(group('Everything Else')).getByText('grout tiles')).toBeInTheDocument();
   });
 
-  it('marking a task done strikes it through and sinks it to the bottom of its group', () => {
-    renderTool();
+  it('marking a task done strikes it through and sinks it to the bottom of its group', async () => {
+    await renderTool();
     addTaskTo('Everything Else', 'first task', 'Now');
     addTaskTo('Everything Else', 'second task', 'Now');
 
@@ -241,8 +244,8 @@ describe('EverythingPile', () => {
     expect(firstItem.className).toContain('task-item-done');
   });
 
-  it('collapsing a group hides its tasks and add-task row; expanding shows them again', () => {
-    renderTool();
+  it('collapsing a group hides its tasks and add-task row; expanding shows them again', async () => {
+    await renderTool();
     addProject('Kitchen reno');
     addTaskTo('Kitchen reno', 'grout tiles', 'Later');
 
@@ -256,8 +259,8 @@ describe('EverythingPile', () => {
     expect(within(group('Kitchen reno')).getByText('grout tiles')).toBeInTheDocument();
   });
 
-  it('renames a project', () => {
-    renderTool();
+  it('renames a project', async () => {
+    await renderTool();
     addProject('Kitchen reno');
 
     fireEvent.click(screen.getByRole('button', { name: 'Rename project Kitchen reno' }));
@@ -269,8 +272,8 @@ describe('EverythingPile', () => {
     expect(screen.queryByText('Kitchen reno', { selector: '.task-group-name' })).not.toBeInTheDocument();
   });
 
-  it('cancelling a project rename leaves the name unchanged', () => {
-    renderTool();
+  it('cancelling a project rename leaves the name unchanged', async () => {
+    await renderTool();
     addProject('Kitchen reno');
 
     fireEvent.click(screen.getByRole('button', { name: 'Rename project Kitchen reno' }));
@@ -280,8 +283,8 @@ describe('EverythingPile', () => {
     expect(screen.getByText('Kitchen reno', { selector: '.task-group-name' })).toBeInTheDocument();
   });
 
-  it('edits a task\'s title and size in place', () => {
-    renderTool();
+  it('edits a task\'s title and size in place', async () => {
+    await renderTool();
     addTaskTo('Everything Else', 'water the plants', 'Now');
 
     const item = within(group('Everything Else')).getByText('water the plants').closest('li') as HTMLElement;
@@ -296,8 +299,8 @@ describe('EverythingPile', () => {
     expect(within(updatedItem).getByLabelText('Size: large')).toBeInTheDocument();
   });
 
-  it('moves a task to a different project via the edit form, and back to Everything Else', () => {
-    renderTool();
+  it('moves a task to a different project via the edit form, and back to Everything Else', async () => {
+    await renderTool();
     addProject('Kitchen reno');
     addProject('Side hustle');
     addTaskTo('Kitchen reno', 'grout tiles', 'Later');
@@ -322,8 +325,8 @@ describe('EverythingPile', () => {
     expect(within(group('Everything Else')).getByText('grout tiles')).toBeInTheDocument();
   });
 
-  it('cancelling a task edit discards the draft', () => {
-    renderTool();
+  it('cancelling a task edit discards the draft', async () => {
+    await renderTool();
     addTaskTo('Everything Else', 'water the plants', 'Now');
 
     const item = within(group('Everything Else')).getByText('water the plants').closest('li') as HTMLElement;
@@ -335,8 +338,8 @@ describe('EverythingPile', () => {
     expect(within(group('Everything Else')).queryByText('something else entirely')).not.toBeInTheDocument();
   });
 
-  it('the Break down button hands the project off to Task Breakdown and navigates there', () => {
-    renderTool();
+  it('the Break down button hands the project off to Task Breakdown and navigates there', async () => {
+    await renderTool();
     addProject('Kitchen reno');
 
     fireEvent.click(screen.getByRole('button', { name: 'Break down project Kitchen reno' }));
@@ -348,13 +351,13 @@ describe('EverythingPile', () => {
     expect(typeof pending.projectId).toBe('string');
   });
 
-  it('Everything Else does not get a Break down button (not a real project)', () => {
-    renderTool();
+  it('Everything Else does not get a Break down button (not a real project)', async () => {
+    await renderTool();
     expect(screen.queryByRole('button', { name: 'Break down project Everything Else' })).not.toBeInTheDocument();
   });
 
-  it('an empty project can be turned into a task in Everything Else', () => {
-    renderTool();
+  it('an empty project can be turned into a task in Everything Else', async () => {
+    await renderTool();
     addProject('Kitchen reno');
 
     fireEvent.click(screen.getByLabelText('Turn project "Kitchen reno" into a task'));
@@ -365,16 +368,16 @@ describe('EverythingPile', () => {
     expect(within(item).getByLabelText('Size: small')).toBeInTheDocument();
   });
 
-  it('a project with tasks in it does not offer the turn-into-a-task button', () => {
-    renderTool();
+  it('a project with tasks in it does not offer the turn-into-a-task button', async () => {
+    await renderTool();
     addProject('Kitchen reno');
     addTaskTo('Kitchen reno', 'grout tiles', 'Later');
 
     expect(screen.queryByLabelText('Turn project "Kitchen reno" into a task')).not.toBeInTheDocument();
   });
 
-  it('a standalone task can be turned into its own project', () => {
-    renderTool();
+  it('a standalone task can be turned into its own project', async () => {
+    await renderTool();
     addTaskTo('Everything Else', 'redo the bathroom', 'Later');
 
     fireEvent.click(screen.getByLabelText('Turn "redo the bathroom" into a project'));
@@ -385,8 +388,8 @@ describe('EverythingPile', () => {
     expect(screen.getByRole('button', { name: 'Collapse redo the bathroom' })).toBeInTheDocument();
   });
 
-  it('a task already inside a project can also be turned into its own project', () => {
-    renderTool();
+  it('a task already inside a project can also be turned into its own project', async () => {
+    await renderTool();
     addProject('Kitchen reno');
     addTaskTo('Kitchen reno', 'grout tiles', 'Later');
 

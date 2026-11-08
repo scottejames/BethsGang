@@ -1854,3 +1854,13 @@ All notable changes to this project are documented here.
 - If live updates fail for good, a notice now says to reload. Until now it only reached
   the console, leaving someone looking at out-of-date data.
 
+### Changed (loading states)
+
+- Remind Me, the Home reminder count, Everything Pile, Timetable and the Spoons button now
+  say when a signed-in account's data is still loading. They used to show "No reminders
+  set yet" or a default value for several seconds, which looked like lost data and invited
+  adding a reminder twice.
+- Those lists now have three states: loading, loaded, or "Couldn't load your…". Amplify
+  reports nothing if its first fetch hits a network failure, so loading gives up after 30
+  seconds, and data arriving later still appears.
+

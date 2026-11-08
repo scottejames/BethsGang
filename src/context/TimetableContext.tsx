@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { client } from '../lib/dataClient';
+import { useAccountLoadStatus, type LoadStatus } from '../hooks/useAccountLoadStatus';
 import { moveToAccount, reportSyncFailure, watchSave } from '../lib/saveFailures';
 import { readStored } from '../lib/localStorage';
 import { useSignedOutMirror } from '../hooks/useSignedOutMirror';
@@ -38,6 +39,7 @@ export interface TimetableEntryInput {
 }
 
 const STORAGE_KEY = 'beths-gang:timetable';
+const LOAD_SOURCES = ['timetable'];
 const MIGRATION_FLAG_KEY = 'beths-gang:timetable-migrated';
 // Coarser than Reminders' 15s — a 15-minute alert window doesn't need to-the-second
 // precision the way a reminder's exact fireAt does.
@@ -108,6 +110,7 @@ function dateStamp(date: Date): string {
 }
 
 interface TimetableContextValue {
+  status: LoadStatus;
   entries: TimetableEntry[];
   alerts: TimetableAlert[];
   addEntry: (input: TimetableEntryInput) => void;
@@ -123,6 +126,7 @@ const TimetableContext = createContext<TimetableContextValue | null>(null);
 // RemindersContext, so lesson alerts keep firing no matter which tool is open.
 export function TimetableProvider({ children }: { children: ReactNode }) {
   const { isSignedIn } = useAuth();
+  const { status, markArrived, markFailed } = useAccountLoadStatus(LOAD_SOURCES);
   const [entries, setEntries] = useState<TimetableEntry[]>(readStoredEntries);
   const [alerts, setAlerts] = useState<TimetableAlert[]>([]);
   const entriesRef = useRef(entries);
@@ -153,13 +157,15 @@ export function TimetableProvider({ children }: { children: ReactNode }) {
         const mapped = items.map(fromBackendItem);
         entriesRef.current = mapped;
         setEntries(mapped);
+        markArrived('timetable', items.length);
       },
       error: (error: unknown) => {
+        markFailed('timetable');
         reportSyncFailure('TimetableEntry subscription error', error);
       },
     });
     return () => subscription.unsubscribe();
-  }, [isSignedIn]);
+  }, [isSignedIn, markArrived, markFailed]);
 
   // First sign-in on this device only — same silent migration as every other
   // localStorage-backed context.
@@ -278,7 +284,7 @@ export function TimetableProvider({ children }: { children: ReactNode }) {
 
   return (
     <TimetableContext.Provider
-      value={{ entries, alerts, addEntry, updateEntry, deleteEntry, copyDay, dismissAlert }}
+      value={{ entries, status, alerts, addEntry, updateEntry, deleteEntry, copyDay, dismissAlert }}
     >
       {children}
     </TimetableContext.Provider>

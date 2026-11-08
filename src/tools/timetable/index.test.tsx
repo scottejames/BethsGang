@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import * as amplifyAuth from 'aws-amplify/auth';
@@ -41,8 +41,11 @@ function wrapper({ children }: { children: ReactNode }) {
   );
 }
 
-function renderTool() {
-  return render(<Component />, { wrapper });
+async function renderTool() {
+  const view = render(<Component />, { wrapper });
+  // Lets the sign-in check finish, as it would before anyone could touch the screen.
+  await act(async () => {});
+  return view;
 }
 
 function dayColumn(dayLabel: string): HTMLElement {
@@ -63,15 +66,15 @@ describe('Timetable', () => {
     window.localStorage.removeItem(STORAGE_KEY);
   });
 
-  it('renders all seven days, empty by default', () => {
-    renderTool();
+  it('renders all seven days, empty by default', async () => {
+    await renderTool();
     expect(screen.getByRole('heading', { name: 'Monday' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Sunday' })).toBeInTheDocument();
     expect(screen.getAllByText('No lessons yet')).toHaveLength(7);
   });
 
-  it('adds a lesson to the day it was added from', () => {
-    renderTool();
+  it('adds a lesson to the day it was added from', async () => {
+    await renderTool();
     const monday = dayColumn('Monday');
 
     fireEvent.click(within(monday).getByRole('button', { name: '+ Add lesson' }));
@@ -84,8 +87,8 @@ describe('Timetable', () => {
     expect(within(dayColumn('Monday')).getByText('1 lesson')).toBeInTheDocument();
   });
 
-  it('editing an existing lesson updates it in place', () => {
-    renderTool();
+  it('editing an existing lesson updates it in place', async () => {
+    await renderTool();
     const monday = dayColumn('Monday');
     fireEvent.click(within(monday).getByRole('button', { name: '+ Add lesson' }));
     fireEvent.change(screen.getByPlaceholderText('e.g. Maths'), { target: { value: 'Maths' } });
@@ -100,8 +103,8 @@ describe('Timetable', () => {
     expect(within(dayColumn('Monday')).queryByText('Maths')).not.toBeInTheDocument();
   });
 
-  it('deleting a lesson from the edit modal removes it', () => {
-    renderTool();
+  it('deleting a lesson from the edit modal removes it', async () => {
+    await renderTool();
     const monday = dayColumn('Monday');
     fireEvent.click(within(monday).getByRole('button', { name: '+ Add lesson' }));
     fireEvent.change(screen.getByPlaceholderText('e.g. Maths'), { target: { value: 'Maths' } });
@@ -113,8 +116,8 @@ describe('Timetable', () => {
     expect(within(dayColumn('Monday')).getByText('No lessons yet')).toBeInTheDocument();
   });
 
-  it('copying a day replaces the target day\'s lessons with the source day\'s', () => {
-    renderTool();
+  it('copying a day replaces the target day\'s lessons with the source day\'s', async () => {
+    await renderTool();
     fireEvent.click(within(dayColumn('Monday')).getByRole('button', { name: '+ Add lesson' }));
     fireEvent.change(screen.getByPlaceholderText('e.g. Maths'), { target: { value: 'Maths' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));

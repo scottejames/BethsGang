@@ -3,6 +3,7 @@ import type { CSSProperties, FormEvent } from 'react';
 import { DAYS, useTimetable } from '../../context/TimetableContext';
 import type { DayOfWeek, TimetableEntry, TimetableEntryInput } from '../../context/TimetableContext';
 import { Modal } from '../../components/Modal';
+import { LoadStatusMessage } from '../../components/LoadStatusMessage';
 import { meta } from './meta';
 import type { ToolDefinition } from '../types';
 
@@ -67,7 +68,7 @@ interface EditingState {
 }
 
 function Timetable() {
-  const { entries, addEntry, updateEntry, deleteEntry, copyDay } = useTimetable();
+  const { entries, status, addEntry, updateEntry, deleteEntry, copyDay } = useTimetable();
   const [editing, setEditing] = useState<EditingState | null>(null);
   const [copyingDay, setCopyingDay] = useState<DayOfWeek | null>(null);
   const [copyTargets, setCopyTargets] = useState<Set<DayOfWeek>>(new Set());
@@ -166,65 +167,69 @@ function Timetable() {
         before each lesson starts, no matter which tool you're in.
       </p>
 
-      <div className="timetable-week-wrap">
-        <div className="timetable-week-grid">
-          {DAYS.map((day) => (
-            <div
-              key={day}
-              className={`timetable-day-col${day === today ? ' timetable-day-col-today' : ''}`}
-            >
-              <div className="timetable-day-head">
-                <h2>{DAY_LABELS[day]}</h2>
-                <span className="timetable-day-count">
-                  {entriesByDay[day].length} {entriesByDay[day].length === 1 ? 'lesson' : 'lessons'}
-                </span>
-              </div>
+      {status !== 'loaded' ? (
+        <LoadStatusMessage status={status} noun="lessons" />
+      ) : (
+        <div className="timetable-week-wrap">
+          <div className="timetable-week-grid">
+            {DAYS.map((day) => (
+              <div
+                key={day}
+                className={`timetable-day-col${day === today ? ' timetable-day-col-today' : ''}`}
+              >
+                <div className="timetable-day-head">
+                  <h2>{DAY_LABELS[day]}</h2>
+                  <span className="timetable-day-count">
+                    {entriesByDay[day].length} {entriesByDay[day].length === 1 ? 'lesson' : 'lessons'}
+                  </span>
+                </div>
 
-              <ul className="timetable-lesson-list">
-                {entriesByDay[day].length === 0 ? (
-                  <li className="timetable-empty-day">No lessons yet</li>
-                ) : (
-                  entriesByDay[day].map((entry) => {
-                    const colorKey = colorForLabel(entry.label);
-                    const style = { '--lc': `var(--${colorKey})`, '--lc-bg': `var(--${colorKey}-bg)` } as CSSProperties;
-                    return (
-                      <li key={entry.id}>
-                        <button
-                          type="button"
-                          className="timetable-lesson-card"
-                          style={style}
-                          onClick={() => openEdit(day, entry)}
-                        >
-                          <span className="timetable-lesson-time">{formatTimeRange(entry.startTime, entry.endTime)}</span>
-                          <span className="timetable-lesson-label">{entry.label}</span>
-                          {entry.location && <span className="timetable-lesson-location">{entry.location}</span>}
-                        </button>
-                      </li>
-                    );
-                  })
-                )}
-              </ul>
+                <ul className="timetable-lesson-list">
+                  {entriesByDay[day].length === 0 ? (
+                    <li className="timetable-empty-day">No lessons yet</li>
+                  ) : (
+                    entriesByDay[day].map((entry) => {
+                      const colorKey = colorForLabel(entry.label);
+                      const style = { '--lc': `var(--${colorKey})`, '--lc-bg': `var(--${colorKey}-bg)` } as CSSProperties;
+                      return (
+                        <li key={entry.id}>
+                          <button
+                            type="button"
+                            className="timetable-lesson-card"
+                            style={style}
+                            onClick={() => openEdit(day, entry)}
+                          >
+                            <span className="timetable-lesson-time">{formatTimeRange(entry.startTime, entry.endTime)}</span>
+                            <span className="timetable-lesson-label">{entry.label}</span>
+                            {entry.location && <span className="timetable-lesson-location">{entry.location}</span>}
+                          </button>
+                        </li>
+                      );
+                    })
+                  )}
+                </ul>
 
-              <div className="timetable-day-foot">
-                <button type="button" className="timetable-add-btn" onClick={() => openAdd(day)}>
-                  + Add lesson
-                </button>
-                {entriesByDay[day].length > 0 && (
-                  <button
-                    type="button"
-                    className="timetable-copy-btn"
-                    onClick={() => openCopy(day)}
-                    aria-label={`Copy ${DAY_LABELS[day]} to other days`}
-                    title="Copy to…"
-                  >
-                    ⧉
+                <div className="timetable-day-foot">
+                  <button type="button" className="timetable-add-btn" onClick={() => openAdd(day)}>
+                    + Add lesson
                   </button>
-                )}
+                  {entriesByDay[day].length > 0 && (
+                    <button
+                      type="button"
+                      className="timetable-copy-btn"
+                      onClick={() => openCopy(day)}
+                      aria-label={`Copy ${DAY_LABELS[day]} to other days`}
+                      title="Copy to…"
+                    >
+                      ⧉
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {editing && (
         <Modal onClose={() => setEditing(null)}>

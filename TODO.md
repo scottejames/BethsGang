@@ -7,8 +7,9 @@ mechanics — most of these are just a new system prompt away.
 
 - [ ] Testing work, including the live smoke test of the Nov 2026 Identity Pool auth fix,
       is tracked in [`TESTING_TODO.md`](./TESTING_TODO.md).
-- [ ] Show "Loading…" rather than "No reminders set yet" while a signed-in account's
-      reminders are still loading. That first load can take several seconds.
+- [ ] A change made on another device in the few seconds between a list loading and its
+      live connection opening isn't delivered until the next reload (Amplify's
+      `observeQuery` behaviour, found by the cross-device browser test).
 ~~- [ ] **Side Quest Log**~~ — shipped, see Shipped below.
 ~~- [ ] **Is This Mad?**~~ — shipped, see Shipped below.
 ~~- [ ] **Just The Facts**~~ — merged into Is This Mad? rather than shipped separately,
@@ -16,6 +17,9 @@ mechanics — most of these are just a new system prompt away.
 
 ## Shipped
 
+- [x] **Loading states for account data** — Remind Me, Home's reminder count, Everything
+      Pile, Timetable and Spoons say when data is on its way or couldn't load, rather than
+      claiming to be empty. See `src/hooks/useAccountLoadStatus.ts`.
 - [x] **Reply Starter** — stuck on a message you owe a reply to; get 3 short, low-effort
       draft replies (with a one-click copy button) to break initiation paralysis. Now also
       has Tone / Length / optional intent controls.

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { RepeatRule } from '../lib/reminderParser';
 import { useAuth } from './AuthContext';
 import { client } from '../lib/dataClient';
+import { useAccountLoadStatus, type LoadStatus } from '../hooks/useAccountLoadStatus';
 import { moveToAccount, reportSyncFailure, watchSave } from '../lib/saveFailures';
 import { readStored } from '../lib/localStorage';
 import { useSignedOutMirror } from '../hooks/useSignedOutMirror';
@@ -29,6 +30,7 @@ export interface FiredEvent {
 const STORAGE_KEY = 'beths-gang:reminders';
 const MIGRATION_FLAG_KEY = 'beths-gang:reminders-migrated';
 const CHECK_INTERVAL_MS = 15_000;
+const LOAD_SOURCES = ['reminders'];
 
 function readStoredReminders(): Reminder[] {
   return readStored<Reminder>(STORAGE_KEY);
@@ -110,6 +112,7 @@ export interface AddReminderInput {
 }
 
 interface RemindersContextValue {
+  status: LoadStatus;
   reminders: Reminder[];
   firedEvents: FiredEvent[];
   addReminder: (input: AddReminderInput) => void;
@@ -153,6 +156,7 @@ function makeFiredEvent(reminder: Reminder, kind: FiredEvent['kind']): FiredEven
 // EnergyProvider, so reminders keep ticking and firing no matter which tool is open.
 export function RemindersProvider({ children }: { children: ReactNode }) {
   const { isSignedIn } = useAuth();
+  const { status, markArrived, markFailed } = useAccountLoadStatus(LOAD_SOURCES);
   const [reminders, setReminders] = useState<Reminder[]>(readStoredReminders);
   const [firedEvents, setFiredEvents] = useState<FiredEvent[]>([]);
   const remindersRef = useRef(reminders);
@@ -181,13 +185,15 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
         const mapped = items.map(fromBackendItem);
         remindersRef.current = mapped;
         setReminders(mapped);
+        markArrived('reminders', items.length);
       },
       error: (error: unknown) => {
+        markFailed('reminders');
         reportSyncFailure('Reminder subscription error', error);
       },
     });
     return () => subscription.unsubscribe();
-  }, [isSignedIn]);
+  }, [isSignedIn, markArrived, markFailed]);
 
   // First sign-in on this device only: upload whatever's in localStorage so it isn't
   // stranded there. Silent, no prompt — matches this app's no-login-wall philosophy
@@ -324,7 +330,7 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <RemindersContext.Provider value={{ reminders, firedEvents, addReminder, cancelReminder, dismissEvent }}>
+    <RemindersContext.Provider value={{ reminders, status, firedEvents, addReminder, cancelReminder, dismissEvent }}>
       {children}
     </RemindersContext.Provider>
   );

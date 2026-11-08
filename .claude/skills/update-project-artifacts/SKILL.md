@@ -29,7 +29,8 @@ as part of finishing the task, not an optional extra pass at the end.
       - `npm run test:live` for changes to `amplify/` (schema, auth rules, Lambdas) or the
         clients in `src/lib/` (`aiClient`, `dataClient`, `usageLog`) or `src/amplifyConfig.ts`.
       - `npm run test:e2e` for changes to sign-in or sign-out (`AuthContext`, `AccountButton`),
-        signed-in data handling (`observeQuery`, `watchSave`, `useSignedOutMirror`, the data
+        signed-in data handling (`observeQuery`, `watchSave`, `useAccountLoadStatus`,
+        `useSignedOutMirror`, the data
         contexts), `AppProviders`, or the PWA setup in `vite.config.ts`. Also run it after a
         change to a user-visible step those tests walk through.
       - Run both when unsure. Skip them for changes that can't reach these paths, such as

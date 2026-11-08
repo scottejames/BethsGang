@@ -258,6 +258,12 @@ starting — nothing else persists anything) with real per-user storage.
     set, upload every local reminder using its existing id (so a duplicate run just
     fails the `create()` rather than double-uploading, and that counts as moved), then set
     the flag only if everything arrived, so a failed move is retried on the next open.
+  - **Never claim a list is empty before it has loaded** — a signed-in account's data
+    takes several seconds to arrive, and "No reminders set yet" during that wait looked
+    like lost data. Every screen reading account data uses `useAccountLoadStatus`
+    (loading, loaded or failed). Failure beats an empty result, because Amplify emits an
+    empty list just before a failed fetch's error, and a 30-second limit covers network
+    failures, which `observeQuery` doesn't report at all.
   - **Sign-out must hide account data, not carry it into the local view** — this went
     through a wrong first attempt worth recording, found via direct user testing (not
     caught by any automated test): the first version made the localStorage-persistence

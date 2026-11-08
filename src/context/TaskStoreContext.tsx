@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { client } from '../lib/dataClient';
+import { useAccountLoadStatus, type LoadStatus } from '../hooks/useAccountLoadStatus';
 import { moveToAccount, reportSyncFailure, watchSave } from '../lib/saveFailures';
 import { readStored } from '../lib/localStorage';
 import { useSignedOutMirror } from '../hooks/useSignedOutMirror';
@@ -28,6 +29,7 @@ export interface Task {
   createdAt: string;
 }
 
+const LOAD_SOURCES = ['projects', 'tasks'];
 const PROJECTS_STORAGE_KEY = 'beths-gang:projects';
 const TASKS_STORAGE_KEY = 'beths-gang:tasks';
 const MIGRATION_FLAG_KEY = 'beths-gang:tasks-migrated';
@@ -93,6 +95,7 @@ function toTaskUpdatePatch(id: string, patch: TaskUpdatePatch) {
 }
 
 interface TaskStoreContextValue {
+  status: LoadStatus;
   projects: Project[];
   tasks: Task[];
   // Returns the created Project so a caller (e.g. Task Breakdown creating a new
@@ -121,6 +124,7 @@ const TaskStoreContext = createContext<TaskStoreContextValue | null>(null);
 // live in DynamoDB (owner-scoped, see amplify/data/resource.ts) instead.
 export function TaskStoreProvider({ children }: { children: ReactNode }) {
   const { isSignedIn } = useAuth();
+  const { status, markArrived, markFailed } = useAccountLoadStatus(LOAD_SOURCES);
   const [projects, setProjects] = useState<Project[]>(() => readStored<Project>(PROJECTS_STORAGE_KEY));
   const [tasks, setTasks] = useState<Task[]>(() => readStored<Task>(TASKS_STORAGE_KEY));
 
@@ -140,26 +144,30 @@ export function TaskStoreProvider({ children }: { children: ReactNode }) {
     const subscription = client.models.Project.observeQuery().subscribe({
       next: ({ items }) => {
         setProjects(items.map(fromBackendProjectItem));
+        markArrived('projects', items.length);
       },
       error: (error: unknown) => {
+        markFailed('projects');
         reportSyncFailure('Project subscription error', error);
       },
     });
     return () => subscription.unsubscribe();
-  }, [isSignedIn]);
+  }, [isSignedIn, markArrived, markFailed]);
 
   useEffect(() => {
     if (!isSignedIn) return;
     const subscription = client.models.Task.observeQuery().subscribe({
       next: ({ items }) => {
         setTasks(items.map(fromBackendTaskItem));
+        markArrived('tasks', items.length);
       },
       error: (error: unknown) => {
+        markFailed('tasks');
         reportSyncFailure('Task subscription error', error);
       },
     });
     return () => subscription.unsubscribe();
-  }, [isSignedIn]);
+  }, [isSignedIn, markArrived, markFailed]);
 
   // First sign-in on this device only: upload whatever's in localStorage so it isn't
   // stranded there. Silent, no prompt — same no-login-wall philosophy as Reminders.
@@ -252,7 +260,7 @@ export function TaskStoreProvider({ children }: { children: ReactNode }) {
 
   return (
     <TaskStoreContext.Provider
-      value={{ projects, tasks, addProject, updateProject, deleteProject, addTask, updateTask, deleteTask }}
+      value={{ projects, tasks, status, addProject, updateProject, deleteProject, addTask, updateTask, deleteTask }}
     >
       {children}
     </TaskStoreContext.Provider>
