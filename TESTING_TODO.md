@@ -32,10 +32,6 @@ Standing rules:
 
 ## Phase 2: The AI path
 
-- [ ] **2.4 Tone Checker:** submit, results, error state, context field, screenshot upload.
-- [ ] **2.5 Reply Starter:** submit, drafts, tone and length options, error state.
-- [ ] **2.6 Call Script:** submit, results, error state.
-- [ ] **2.7 Is This Mad?:** submit, results, error state.
 - [ ] **2.8 `imageCapture`:** the resize and encode path, and rejecting a bad file.
 - [ ] **2.9 Task Breakdown:** add the error state and double-send protection.
 - [ ] **2.10 Decide whether the parser should tolerate markdown.** A label like
@@ -107,3 +103,5 @@ Move finished items here with the date and the test file that covers them.
       only the network mocked. `src/hooks/useAiTool.test.ts`.
 - [x] **2.3 `parseLabeledOutput`** (2026-11-08). `src/lib/parseLabeledOutput.test.ts`.
       Coverage after 2.1 to 2.3: 83.1% lines, 72.8% branches, 80.8% functions.
+- [x] **2.4 to 2.7 Tone Checker, Reply Starter, Call Script, Is This Mad?** (2026-11-08).
+      `index.test.tsx` next to each tool, including screenshot upload and paste.

@@ -1802,6 +1802,8 @@ All notable changes to this project are documented here.
   instruction, screenshots, failures), `useAiTool` through the real client code (including
   the error box and keeping the user's words out of the usage log), and
   `parseLabeledOutput`.
+- Component tests for Tone Checker (including screenshot upload and paste), Reply Starter,
+  Call Script, and Is This Mad?, which had none. Shared setup in `src/test-utils/aiTool.tsx`.
 
 ### Changed
 

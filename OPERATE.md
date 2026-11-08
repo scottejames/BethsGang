@@ -136,7 +136,8 @@ these tests — only the exported pure helper functions are exercised).
 **When adding a component test:** render via `@testing-library/react`, and if it touches
 timers or audio, check `index.test.tsx` for the pattern (`vi.useFakeTimers()` +
 `vi.advanceTimersByTimeAsync()`, spying on `HTMLMediaElement.prototype.play` rather than
-letting jsdom attempt real playback).
+letting jsdom attempt real playback). AI tools can use the shared setup in
+`src/test-utils/aiTool.tsx`; `src/tools/isThisMad/index.test.tsx` is a short example.
 
 ## Verify — run this before pushing
 

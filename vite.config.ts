@@ -72,7 +72,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text-summary', 'html'],
       include: ['src/**/*.{ts,tsx}', 'amplify/**/*.ts'],
-      exclude: ['**/*.test.*', '**/*.d.ts', '**/meta.ts', 'src/test-setup.ts'],
+      exclude: ['**/*.test.*', '**/*.d.ts', '**/meta.ts', 'src/test-setup.ts', 'src/test-utils/**'],
     },
   },
 })
