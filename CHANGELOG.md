@@ -1831,3 +1831,14 @@ All notable changes to this project are documented here.
 - **Spoons were not saved for a new account if the slider moved early.** The fallback that
   creates the missing row used `.catch`, which never ran because Amplify reports that
   failure as a normal result. Its old test passed only because the mock rejected.
+
+### Added (live checks)
+
+- `npm run test:live` runs 22 checks against the real sandbox backend: AI tools signed out
+  and signed in, and owner-only access on every data model. Unit tests use a fake backend,
+  which is how the signed-in "Not Authorized" bug reached production.
+- `npm run test:e2e` drives the production build in a real browser with Playwright:
+  a signed-in visit, cross-device sync, and PWA install, offline and update behaviour.
+- Both refuse to run unless AWS tags the user pool as a sandbox, and neither runs during
+  `npm test` or a deploy, because they create real users and make real AI calls.
+

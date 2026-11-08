@@ -1,0 +1,88 @@
+import { expect, test, type Page } from '@playwright/test';
+import {
+  assertSandbox,
+  createDisposableUser,
+  deleteDisposableUser,
+  type DisposableUser,
+} from '../live/liveEnv';
+import { goHome, openTool, signIn, signOut } from './helpers';
+
+test.use({ serviceWorkers: 'block' });
+test.describe.configure({ mode: 'serial' });
+
+let user: DisposableUser;
+
+test.beforeAll(() => {
+  assertSandbox();
+  user = createDisposableUser();
+});
+
+test.afterAll(() => {
+  if (user) deleteDisposableUser(user.username);
+});
+
+const uniqueReminder = () => `e2e check ${crypto.randomUUID().slice(0, 8)}`;
+
+async function addReminder(page: Page, message: string) {
+  await page.getByPlaceholder(/^Remind me in 20 mins/).fill(`Remind me in 20 mins to ${message}`);
+  const saved = page.waitForResponse((response) => response.request().postData()?.includes('createReminder') ?? false);
+  await page.getByRole('button', { name: 'Set reminder' }).click();
+  await expect(reminder(page, message)).toBeVisible();
+  expect((await (await saved).json()).errors).toBeUndefined();
+}
+
+const reminder = (page: Page, message: string) => page.getByRole('listitem').filter({ hasText: message });
+
+// The first load of account data waits for the live connection, which can take several seconds.
+const expectLoadedFromAccount = (page: Page, message: string) =>
+  expect(reminder(page, message)).toBeVisible({ timeout: 20_000 });
+
+test('a signed-in visit: AI tool, saved reminder, sign out, sign back in', async ({ page }) => {
+  const message = uniqueReminder();
+  await page.goto('/');
+  await signIn(page, user);
+
+  await openTool(page, 'Task Breakdown');
+  await page.getByPlaceholder('e.g. Sort out my taxes').fill('Water the plant');
+  await page.getByRole('button', { name: 'Break it down' }).click();
+  await expect(page.getByRole('button', { name: 'Send to Everything Pile' })).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator('.tool-error')).toHaveCount(0);
+
+  await goHome(page);
+  await openTool(page, 'Remind Me');
+  await addReminder(page, message);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+
+  // After a reload the reminder can only have come from the account.
+  await page.reload();
+  await openTool(page, 'Remind Me');
+  await expectLoadedFromAccount(page, message);
+
+  await signOut(page);
+  await expect(reminder(page, message)).toHaveCount(0);
+  await page.reload();
+  await openTool(page, 'Remind Me');
+  await expect(reminder(page, message)).toHaveCount(0);
+  expect(await page.evaluate(() => JSON.stringify(window.localStorage))).not.toContain(message);
+
+  await signIn(page, user);
+  await expectLoadedFromAccount(page, message);
+  await reminder(page, message).getByRole('button').click();
+  await expect(reminder(page, message)).toHaveCount(0);
+});
+
+test('a change on one device appears on another without a reload', async ({ browser }) => {
+  const message = uniqueReminder();
+  const [laptop, phone] = await Promise.all([browser.newPage(), browser.newPage()]);
+  for (const device of [laptop, phone]) {
+    await device.goto('/');
+    await signIn(device, user);
+    await openTool(device, 'Remind Me');
+  }
+
+  await addReminder(laptop, message);
+  await expect(reminder(phone, message)).toBeVisible({ timeout: 20_000 });
+
+  await reminder(phone, message).getByRole('button').click();
+  await expect(reminder(laptop, message)).toHaveCount(0, { timeout: 20_000 });
+});

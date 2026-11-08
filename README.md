@@ -140,6 +140,7 @@ TypeScript, Amplify Gen2, testing, security) are in
 | `oxlint` | Linting |
 | `vitest` | Test runner (shares config with Vite via `vite.config.ts`'s `test` block) |
 | `@vitest/coverage-v8` | Test coverage reports for `npm run coverage` |
+| `@playwright/test` | Real-browser checks for `npm run test:e2e` |
 | `@testing-library/react`, `@testing-library/jest-dom`, `jsdom` | Component tests (DOM environment for tests that render React components) |
 | `@aws-sdk/client-cognito-identity-provider`, `@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb` | `utils/user-admin/`'s admin CLI only — not used by the app itself |
 

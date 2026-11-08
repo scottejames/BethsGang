@@ -41,3 +41,7 @@ utils/user-admin/config.json
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright output
+test-results
+playwright-report

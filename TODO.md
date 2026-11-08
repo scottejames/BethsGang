@@ -7,6 +7,8 @@ mechanics — most of these are just a new system prompt away.
 
 - [ ] Testing work, including the live smoke test of the Nov 2026 Identity Pool auth fix,
       is tracked in [`TESTING_TODO.md`](./TESTING_TODO.md).
+- [ ] Show "Loading…" rather than "No reminders set yet" while a signed-in account's
+      reminders are still loading. That first load can take several seconds.
 ~~- [ ] **Side Quest Log**~~ — shipped, see Shipped below.
 ~~- [ ] **Is This Mad?**~~ — shipped, see Shipped below.
 ~~- [ ] **Just The Facts**~~ — merged into Is This Mad? rather than shipped separately,

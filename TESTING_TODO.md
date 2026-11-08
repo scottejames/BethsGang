@@ -48,26 +48,27 @@ Standing rules:
 - [ ] **3.6 Say something when an AI answer comes back empty.** The tool currently shows
       nothing at all.
 
-## Phase 5: Live checks against real infrastructure
-
-- [ ] **5.1 Automated live AI check**, `npm run test:live`, against a sandbox with a
-      disposable Cognito test user: `runAiTool` and `logEvent` work signed out and signed
-      in. This is the check that would have caught the August bug.
-- [ ] **5.2 Live data check:** signed-in create, read and delete on each model, and a second
-      user cannot read the first user's data.
-- [ ] **5.3 Decide when live checks run:** by hand before a push, or automatically after
-      each deploy. **Needs a decision**, since each run makes real Anthropic calls.
-- [ ] **5.4 Browser end-to-end test (Playwright):** sign in, use an AI tool, add a reminder,
-      sign out, and confirm account data disappears.
-- [ ] **5.5 PWA check:** the app installs, the local tools work offline, and a new deploy
-      reaches an already-installed app.
-- [ ] **5.6 Cross-device sync:** a change in one session appears in another through
-      `observeQuery`.
-
 ## Done
 
 Move finished items here with the date and the test file that covers them.
 
+- [x] **5.3 When live checks run** (2026-11-08). Not on every deploy, since each run makes
+      real Anthropic calls. They're rerun whenever a change touches code they cover; the
+      list is in `.claude/skills/update-project-artifacts/SKILL.md`, step 1.
+- [x] **5.1 Automated live AI check** (2026-11-08). `npm run test:live`, sandbox only:
+      AI and usage logging signed out and signed in. Putting the August bug back in the
+      sandbox failed this check with the original "Not Authorized" error. `live/backend.live.ts`.
+- [x] **5.2 Live data check** (2026-11-08). Owner create, read, update and delete on all
+      five models; another user and a signed-out visitor are refused. Loosening Reminder's
+      rule in the sandbox failed the check. `live/backend.live.ts`.
+- [x] **5.4 Browser end-to-end test** (2026-11-08). Sign in, AI tool, reminder, reload, sign
+      out, sign back in, against the sandbox. `e2e/account.e2e.ts`.
+- [x] **5.5 PWA check** (2026-11-08). Manifest and icons, local tools offline, and a new
+      deploy reaching an installed app. The browser's install prompt itself isn't exercised.
+      `e2e/pwa.e2e.ts`.
+- [x] **5.6 Cross-device sync** (2026-11-08). A reminder added in one signed-in browser
+      session appears in another, and a cancel carries back, with no reload.
+      `e2e/account.e2e.ts`.
 - [x] **Phase 0: Confirm the signed-in fix on production** (2026-11-08). Checked by hand
       with Brain Dump Sorter: failing when signed in before the fix, and working both
       signed out and signed in after it. Live check only; the rules are guarded by

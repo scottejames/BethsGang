@@ -15,6 +15,8 @@ architecture, dependencies, and deployment to AWS Amplify Hosting, see `README.m
 | `npm run lint` | oxlint |
 | `npm test` | Runs the test suite (Vitest) |
 | `npm run coverage` | Runs the tests and reports coverage (summary in the terminal, full report in `coverage/index.html`). Fails if coverage drops below the minimums in `vite.config.ts` |
+| `npm run test:live` | Checks the real sandbox backend: AI signed in and out, owner-only data. Takes about 5 minutes and makes a few real Anthropic calls. Needs a deployed sandbox and AWS credentials. |
+| `npm run test:e2e` | Runs the production build in a real browser against the sandbox: sign-in journey, cross-device sync, PWA. Needs the same setup, plus `npx playwright install chromium` once. |
 | `npm run verify` | Lint + backend typecheck + build + test, in one command |
 
 ## Prerequisites

@@ -22,6 +22,18 @@ as part of finishing the task, not an optional extra pass at the end.
       `USER_MESSAGE_BUILDERS`, anything in the energy-instruction envelope in
       `amplify/functions/ai-assist/handler.ts`), add or update a test in
       `handler.test.ts` rather than only eyeballing it.
+- [ ] If the change is relevant to the real backend or browser behavior, run the live
+      checks yourself before reporting it done. They never run on deploy, so this step is
+      the only thing that runs them. First run `npx ampx sandbox --once` if `amplify/`
+      changed, so the sandbox has the new code. Never point these at production.
+      - `npm run test:live` for changes to `amplify/` (schema, auth rules, Lambdas) or the
+        clients in `src/lib/` (`aiClient`, `dataClient`, `usageLog`) or `src/amplifyConfig.ts`.
+      - `npm run test:e2e` for changes to sign-in or sign-out (`AuthContext`, `AccountButton`),
+        signed-in data handling (`observeQuery`, `watchSave`, `useSignedOutMirror`, the data
+        contexts), `AppProviders`, or the PWA setup in `vite.config.ts`. Also run it after a
+        change to a user-visible step those tests walk through.
+      - Run both when unsure. Skip them for changes that can't reach these paths, such as
+        copy, styling or a purely local tool, since each run makes real Anthropic calls.
 - [ ] If you find yourself testing something by hand more than once, write it down as a
       real test instead — see `OPERATE.md`'s "Test" section for the patterns already in
       use (fake timers, mocked `HTMLMediaElement.play`, the `@vitest-environment node`
