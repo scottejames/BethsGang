@@ -3,7 +3,7 @@ backend:
   phases:
     build:
       commands:
-        - npm install --cache .npm --prefer-offline
+        - npm install --cache .npm
         # Before the deploy on purpose: the backend ships first, so a failing test has
         # to stop the build here or a bad backend would already be live.
         - npm run test
@@ -12,7 +12,7 @@ frontend:
   phases:
     preBuild:
       commands:
-        - npm install --cache .npm --prefer-offline
+        - npm install --cache .npm
     build:
       commands:
         - npm run build
